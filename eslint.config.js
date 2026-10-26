@@ -3,6 +3,7 @@ export default tseslint.config(
   {
     ignores: [
       "dist/**",
+      ".staging-dry-run/**",
       "node_modules/**",
       "apps/apple/**",
       "**/.wrangler/**",

@@ -134,3 +134,16 @@ Final follow-up results (2026-10-26):
 | Native builds/Swift tests | Not rerun for this browser-only change; earlier results above are historical |
 
 Screenshots of the recovered controller are under `docs/screenshots/*-reconnected-controller.png` for all three languages and both viewports. Visual review of the mobile Russian controller found readable wrapped labels and accessible large controls; the page scrolls to the remaining controls. No production site, public WSS, physical iPhone/Safari, Apple signing or CloudKit verification is claimed for this follow-up.
+
+
+## Follow-up: isolated Cloudflare staging — 2026-10-26
+
+Prepared a separate teleo-staging Worker with actual ASSETS binding + the existing Room Durable Object implementation, same-origin /api/WSS, SPA deep links, enforced noindex/security headers and a self-only CSP. It has no production domain/DNS routes and a separate DO namespace. A dedicated staging build clears VITE_RELAY_URL so production relay configuration cannot leak into staging. Existing browser/native library boundaries remain unchanged.
+
+`npx wrangler whoami` initially reported not authenticated. The owner subsequently explicitly approved OAuth login and publication of staging only; the official Wrangler browser login was started. No passwords/API tokens are requested in chat. Any successful publication/public verification is recorded separately below; local dry-run does not prove public deployment.
+
+`npm run staging:check` passed: typecheck + Vite build + Wrangler bundle/assets/ROOMS binding dry-run. An initial sandbox attempt rejected a relative output path outside the workspace; the output path was corrected to the ignored workspace-local .staging-dry-run. No upload happened in dry-run.
+
+`npm run test:e2e -- staging.spec.ts` passed **8/8** checks: desktop/mobile assets and security headers, no-Origin/foreign-Origin rejection including forged forwarding header, same-origin room creation, API-vs-SPA routing and independent browser phone pairing/commands/ACK/revoke in EN/UK/RU. Physical iPhone, public TLS/WSS and account deployment are separate from these local checks. Screenshots: docs/screenshots/*-staging-controller.png. Full-suite/public results follow below.
+
+Cloudflare OAuth completed successfully after owner approval. `wrangler whoami` showed one account; `wrangler deployments list --name teleo-staging --config services/staging/wrangler.jsonc` returned code 10007 (Worker does not exist), so initial staging publication will not replace an existing Worker. Account identifiers/tokens are not added to source. The full local browser suite passed **46/46** checks, including the 8 staging checks. Public deployment results are recorded in a later checkpoint.

@@ -49,3 +49,7 @@ Both apps default to a persistent local SwiftData store and run without iCloud. 
 - [Deployment](docs/CLOUDFLARE_DEPLOYMENT.md), [verification and release gaps](docs/QA_REPORT.md)
 
 No accounts, subscriptions, AI, recording, public sharing or Android. System fonts only. Never commit credentials, Xcode user state or personal scripts.
+
+## Phone-test staging
+
+The isolated staging Worker combines built assets and the real relay on one origin. `npm run staging:check` builds and dry-runs it without publishing; `npm run staging:local` serves it at port 8788. `npm run test:staging` checks routes/security/real pairing locally. After owner-approved publication, set `TELEO_STAGING_URL` to the returned workers.dev URL and rerun `npm run test:staging` against public HTTPS/WSS. [Setup and physical phone checklist](docs/CLOUDFLARE_DEPLOYMENT.md#isolated-phone-test-staging-worker). No Apple Developer Team is required.

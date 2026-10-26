@@ -13,6 +13,11 @@ export default defineConfig({
   ],
   webServer: [
     {
+      command: "npm run staging:local",
+      url: "http://127.0.0.1:8788",
+      reuseExistingServer: true,
+    },
+    {
       command: "npx vite preview --host 127.0.0.1 --port 5174",
       url: "http://127.0.0.1:5174",
       reuseExistingServer: true,

@@ -1,0 +1,8 @@
+{
+  "extends": "../remote-relay/tsconfig.json",
+  "include": [
+    "worker.ts",
+    "../remote-relay/worker.ts",
+    "../../packages/protocol/domain.ts"
+  ]
+}

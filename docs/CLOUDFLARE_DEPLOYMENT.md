@@ -1,6 +1,6 @@
 # Cloudflare deployment (prepared, NOT deployed)
 
-The owner already owns `teleo.cc` at Cloudflare Registrar. No registration, transfer, purchase, DNS mutation, credential request or deployment has occurred. No remote is configured in Git. All commands below are for an owner-authorized deployment, not instructions that were executed against production.
+The owner already owns `teleo.cc` at Cloudflare Registrar. No registration, transfer, purchase, DNS mutation, credential request or deployment has occurred. The GitHub source remote is configured; this does not grant Cloudflare access. All commands below are for an owner-authorized deployment, not instructions that were executed against production.
 
 Local prerequisites: Node 24+, `npm ci`, `npm run dev`, `npm run relay`. Vite proxies same-origin `/api` to port 8787. Another phone cannot reach 127.0.0.1; use approved HTTPS staging hosting for physical-browser validation. Do not expose a plaintext dev session as production.
 
@@ -12,3 +12,32 @@ Local prerequisites: Node 24+, `npm ci`, `npm run dev`, `npm run relay`. Vite pr
 6. Verify HTTPS certificate, DNS/Worker routing, Origin/CORS/WSS upgrade, two real browsers, approval, pause/speed/ACK, expiry/replay/revoke, relay outage, permissions and service-worker upgrade/offline behavior. Do not claim production success from local tests. Configure Cloudflare edge rate rules to supplement per-IP application limits.
 
 Static `apps/web/public/_headers` sets security headers when supported by the selected hosting path. Confirm actual response headers after deployment. No download/store route is offered because signed releases and store URLs are unavailable.
+
+
+## Isolated phone-test staging Worker
+
+`services/staging/wrangler.jsonc` deploys **teleo-staging** only on the account's workers.dev hostname. It declares no custom domains, zones or routes and does not change teleo.cc/api.teleo.cc/DNS. The separate Worker has its own ROOMS Durable Object namespace. The staging entry reuses the tested relay implementation rather than maintaining a second protocol. Web assets, /api and WSS live on the same origin, so QR links work on a phone without an API hostname override.
+
+All asset requests run through the wrapper to set noindex/nofollow, no-referrer, nosniff, DENY, a self-only CSP and disabled camera/microphone/geolocation policy. API requests are allowed only when Origin exactly equals the request's own origin; forwarded/Origin headers cannot choose the trusted hostname. Unknown /api paths never fall back to index.html. This is a publicly reachable test app, not access-controlled hosting; use disposable test scripts and keep pairing invitations private. Library content remains browser-local. It consumes Cloudflare account quotas; no plan purchase/upgrade is authorized.
+
+```sh
+npm run staging:check   # typecheck, same-origin production build, Wrangler dry-run; NO publication
+npm run staging:local   # local combined Worker at http://127.0.0.1:8788
+npm run test:staging    # desktop/mobile route/header/Origin/real pairing checks locally
+```
+
+`build:staging` explicitly clears VITE_RELAY_URL at build time, so a local .env or shell override cannot accidentally embed the production relay in staging. The generated dist and dry-run bundles are ignored by Git. Staging is HTTP locally; only the actual workers.dev deployment proves public HTTPS/WSS.
+
+After explicit owner approval, run `npx wrangler login` through the owner's browser. Check `npx wrangler whoami` and confirm the account. Before publishing, check existing deployments for teleo-staging; do not overwrite an unrelated Worker with that name. Then:
+
+```sh
+npm run staging:check
+WRANGLER_SEND_METRICS=false npx wrangler deploy --config services/staging/wrangler.jsonc
+TELEO_STAGING_URL=https://teleo-staging.ACCOUNT-SUBDOMAIN.workers.dev npm run test:staging
+```
+
+The public check configuration uses only the given staging URL and does not start local servers. It consumes about eight room creations; wait at least a minute between repeated public runs so the real per-IP creation limit is respected. Do not disable production rate limits to make tests pass. Actual hostname comes from successful Wrangler output; the example is not a verified URL.
+
+Physical checklist: on Mac open staging /studio, write a disposable script, Read → Connect phone; scan QR with iPhone camera; confirm Allow on Mac; verify Play/Pause, speed/paragraph, Revoke and a brief phone network interruption. Refreshing either tab requires a fresh invitation. Record exact phone/browser versions and network behavior; mobile viewport emulation is not physical iPhone proof.
+
+To suspend the test service, stop using/close both tabs and request removal of the staging deployment through the owner's account. Do not run blanket Worker deletion or remove Durable Object namespaces without checking ownership/retention. Production release remains a separate approval.

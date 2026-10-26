@@ -6,12 +6,16 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit && tsc -p services/remote-relay/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc -p services/remote-relay/tsconfig.json && tsc -p services/staging/tsconfig.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "relay": "WRANGLER_SEND_METRICS=false wrangler dev --config services/remote-relay/wrangler.jsonc --port 8787",
-    "apple:test": "swift test --package-path apps/apple"
+    "apple:test": "swift test --package-path apps/apple",
+    "build:staging": "npm run typecheck && node scripts/build-staging.mjs",
+    "staging:local": "WRANGLER_SEND_METRICS=false wrangler dev --config services/staging/wrangler.jsonc --port 8788",
+    "staging:check": "npm run build:staging && WRANGLER_SEND_METRICS=false wrangler deploy --config services/staging/wrangler.jsonc --dry-run --outdir .staging-dry-run",
+    "test:staging": "playwright test --config playwright.staging.config.ts"
   },
   "dependencies": {
     "idb": "^8.0.3",

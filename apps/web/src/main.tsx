@@ -35,6 +35,15 @@ import { DraftWriter } from "./drafts";
 import { RemoteLink } from "./remote";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet } from "./ui";
+import { TeleoSelect, TeleoMenu } from "./menus";
+import { RemoteController } from "./RemoteController";
+import { HostPreview } from "./host-preview";
+import {
+  PreviewReceiver,
+  paragraphs as previewParagraphs,
+  type PreviewPermission,
+  type PreviewEnvelope,
+} from "../../../packages/protocol/preview";
 import "./style.css";
 const engine = new Playback();
 function download(name: string, text: string, type = "text/plain") {
@@ -57,6 +66,14 @@ function App() {
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
   const libraryBeforeReading = useRef(libraryOpen);
+  const [wide, setWide] = useState(innerWidth >= 1180);
+  const [settingsCollapsed, setSettingsCollapsed] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("playback");
+  const [previewAllowed, setPreviewAllowed] = useState(false);
+  const [previewPending, setPreviewPending] = useState(false);
+  const receiver = useRef(new PreviewReceiver());
+  const lastPreviewPosition = useRef({ paragraph: 0, offset: 0 });
+  const [, refreshPreview] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [immersive, setImmersive] = useState(false);
   const [focusPosition, setFocusPosition] = useState(
@@ -134,6 +151,15 @@ function App() {
     currentRef = useRef<Script | null>(null),
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
+  const sender = useRef<HostPreview | null>(null);
+  if (!sender.current) sender.current = new HostPreview(remote.current);
+  useEffect(() => {
+    const mq = matchMedia("(min-width: 1180px)");
+    const resize = () => setWide(mq.matches);
+    mq.addEventListener("change", resize);
+    return () => mq.removeEventListener("change", resize);
+  }, []);
+  useEffect(() => () => sender.current?.dispose(), []);
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
   const wordCount = useMemo(
     () => current?.body.trim().split(/\s+/u).filter(Boolean).length || 0,
@@ -155,6 +181,10 @@ function App() {
         `${visual?.height || innerHeight}px`,
       );
       root.style.setProperty("--visual-top", `${visual?.offsetTop || 0}px`);
+      root.style.setProperty(
+        "--visual-bottom",
+        `${Math.max(0, innerHeight - (visual?.height || innerHeight) - (visual?.offsetTop || 0))}px`,
+      );
     };
     visual?.addEventListener("resize", resize);
     visual?.addEventListener("scroll", resize);
@@ -164,6 +194,7 @@ function App() {
       visual?.removeEventListener("scroll", resize);
       document.documentElement.style.removeProperty("--visual-height");
       document.documentElement.style.removeProperty("--visual-top");
+      document.documentElement.style.removeProperty("--visual-bottom");
     };
   }, []);
   useEffect(() => {
@@ -172,6 +203,13 @@ function App() {
     localSet("teleo.theme", theme);
   }, [focusPosition, focusDimming, theme]);
   currentRef.current = current;
+  const previewOffsets = useMemo(
+    () => previewParagraphs(current?.body || ""),
+    [current?.body],
+  );
+  useEffect(() => {
+    void sender.current?.script(current);
+  }, [current?.scriptId, current?.title, current?.body]);
   const writer = useRef<DraftWriter | null>(null);
   if (!writer.current)
     writer.current = new DraftWriter(
@@ -299,7 +337,7 @@ function App() {
     const pop = () => {
       engine.suspend();
       setReading(false);
-      remote.current.close();
+      endRemote();
       setRemoteStatus(null);
       setRoute(location.pathname === "/" ? "/studio" : location.pathname);
     };
@@ -308,6 +346,7 @@ function App() {
   }, []);
   useEffect(() => {
     engine.suspend();
+    lastPreviewPosition.current = { paragraph: 0, offset: 0 };
     engine.position = Number(localGet("teleo.position." + selected)) || 0;
     engine.speed = current?.preferences.speed || 1;
   }, [selected]);
@@ -380,9 +419,11 @@ function App() {
       if (intro || settingsOpen) {
         if (!learn && !testing) return;
       }
+      if (e.defaultPrevented) return;
       const target = e.target as HTMLElement;
+      if (target.closest("dialog") && !learn && !testing) return;
       const editable = !!target.closest(
-        "input,textarea,select,[contenteditable=true],[role=dialog]",
+        "input,textarea,select,[contenteditable=true],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
       );
       if (e.key === "Escape" && reading && !settingsOpen) {
         exitReader();
@@ -436,33 +477,98 @@ function App() {
         unavailable: "unavailable",
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
+      if (
+        [
+          "connecting",
+          "waiting",
+          "reconnecting",
+          "disconnected",
+          "unavailable",
+        ].includes(e.type)
+      ) {
+        sender.current?.disconnect();
+        setPreviewAllowed(false);
+        setPreviewPending(false);
+        receiver.current.allowed = false;
+        receiver.current.clear();
+        refreshPreview((x) => x + 1);
+      }
+      if (e.type === "previewPermission" && e.preview) {
+        const permission = e.preview as PreviewPermission;
+        if (route === "/remote") {
+          receiver.current.permission(permission);
+          refreshPreview((x) => x + 1);
+        } else {
+          setPreviewAllowed(permission.allowed);
+          setPreviewPending(false);
+          sender.current?.permission(permission);
+        }
+      }
+      if (
+        (e.type === "previewContent" ||
+          e.type === "previewPosition" ||
+          e.type === "previewUnavailable") &&
+        e.preview &&
+        route === "/remote"
+      ) {
+        if (receiver.current.receive(e.preview as PreviewEnvelope))
+          refreshPreview((x) => x + 1);
+      }
+      if (e.type === "previewRequest" && route !== "/remote")
+        sender.current?.publish();
       if (e.type === "approval") setApproval(true);
       if (e.type === "unconfirmed") setNotice("unconfirmed");
-      if (e.type === "stateRequest" && reading)
+      if (
+        e.type === "stateRequest" &&
+        currentRef.current &&
+        route === "/studio"
+      )
         remote.current.state({
           playing: engine.playing,
           speed: engine.speed,
           position: engine.position,
         });
       if (e.type === "state" && e.state) setRemoteState(e.state);
-      if (e.type === "command" && e.command && reading) {
-        command(e.command);
-        remote.current.send({
-          type: "ack",
-          id: e.id,
-          state: {
-            playing: engine.playing,
-            speed: engine.speed,
-            position: engine.position,
-          },
-        });
+      if (
+        e.type === "command" &&
+        e.command &&
+        currentRef.current &&
+        route === "/studio"
+      ) {
+        const socket = remote.current.socket,
+          requested = e.command;
+        const apply = () => {
+          if (
+            remote.current.socket !== socket ||
+            socket?.readyState !== WebSocket.OPEN
+          )
+            return;
+          command(requested);
+          remote.current.send({
+            type: "ack",
+            id: e.id,
+            state: {
+              playing: engine.playing,
+              speed: engine.speed,
+              position: engine.position,
+            },
+          });
+        };
+        if (reading) apply();
+        else
+          void flush().then(() => {
+            if (remote.current.socket !== socket) return;
+            setLibraryOpen(false);
+            setReading(true);
+            requestAnimationFrame(apply);
+          });
       }
       if (e.type === "ack" && e.id === lastAck.current && e.state)
         setRemoteState(e.state);
     };
   });
   useEffect(() => {
-    if (!reading || remoteStatus !== "connected") return;
+    if (remoteStatus !== "connected" || route === "/remote") return;
     const snapshot = () =>
       remote.current.state({
         playing: engine.playing,
@@ -473,6 +579,48 @@ function App() {
     const timer = setInterval(snapshot, 1000);
     return () => clearInterval(timer);
   }, [reading, remoteStatus]);
+  useEffect(() => {
+    if (remoteStatus !== "connected" || route === "/remote") return;
+    const update = () => {
+      const view = viewport.current,
+        article = content.current;
+      if (!view || !article) {
+        const index = Math.min(
+          lastPreviewPosition.current.paragraph,
+          previewOffsets.length - 1,
+        );
+        sender.current?.position(
+          { playing: false, speed: engine.speed, position: engine.position },
+          Math.max(0, index),
+          previewOffsets[Math.max(0, index)]?.offset || 0,
+        );
+        return;
+      }
+      const target = view.scrollTop + (view.clientHeight * focusPosition) / 100;
+      let index = 0;
+      Array.from(
+        article.querySelectorAll<HTMLElement>("[data-paragraph]"),
+      ).forEach((p, i) => {
+        if (p.offsetTop - article.offsetTop <= target) index = i;
+      });
+      lastPreviewPosition.current = {
+        paragraph: index,
+        offset: previewOffsets[index]?.offset || 0,
+      };
+      sender.current?.position(
+        {
+          playing: engine.playing,
+          speed: engine.speed,
+          position: engine.position,
+        },
+        index,
+        previewOffsets[index]?.offset || 0,
+      );
+    };
+    update();
+    const timer = setInterval(update, 250);
+    return () => clearInterval(timer);
+  }, [reading, remoteStatus, route, focusPosition, previewOffsets]);
   useEffect(() => {
     if (route !== "/remote") return;
     const acceptInvitation = () => {
@@ -491,26 +639,49 @@ function App() {
     window.addEventListener("hashchange", acceptInvitation);
     return () => {
       window.removeEventListener("hashchange", acceptInvitation);
-      remote.current.close();
+      endRemote();
     };
   }, [route]);
+  function endRemote() {
+    remote.current.close();
+    sender.current?.disconnect();
+    receiver.current.allowed = false;
+    receiver.current.clear();
+    setPreviewAllowed(false);
+    setPreviewPending(false);
+    refreshPreview((x) => x + 1);
+  }
   function navigate(path: string) {
     void flush();
     engine.suspend();
     setReading(false);
-    remote.current.close();
+    endRemote();
     setRemoteStatus(null);
     history.pushState({}, "", path);
     setSettingsOpen(false);
     setRoute(path === "/" ? "/studio" : path);
   }
   async function add(s = createScript(t("untitled"))) {
-    await flush();
+    const completed = flush();
     setScripts((list) => [s, ...list]);
     setSelected(s.scriptId);
     setPanel("editor");
     if (innerWidth <= 900) setLibraryOpen(false);
     persist(s);
+    await completed;
+  }
+  function editMode() {
+    engine.suspend();
+    setReading(false);
+    setImmersive(false);
+    setLibraryOpen(libraryBeforeReading.current);
+    localSet("teleo.position." + selected, String(engine.position));
+    remote.current.state({
+      playing: false,
+      speed: engine.speed,
+      position: engine.position,
+    });
+    if (document.fullscreenElement) void document.exitFullscreen();
   }
   function exitReader() {
     setLibraryOpen(libraryBeforeReading.current);
@@ -518,7 +689,7 @@ function App() {
     setReading(false);
     setImmersive(false);
     engine.suspend();
-    remote.current.close();
+    endRemote();
     setInvite("");
     setRemoteStatus(null);
     if (document.fullscreenElement) void document.exitFullscreen();
@@ -529,7 +700,16 @@ function App() {
     setLibraryOpen(false);
     setReading(true);
   }
+  async function showConnection() {
+    if (remoteStatus === "connected") {
+      if (!reading) await startReader();
+      requestAnimationFrame(() =>
+        document.querySelector<HTMLElement>(".pair-panel input")?.focus(),
+      );
+    } else await connect();
+  }
   async function connect() {
+    endRemote();
     setSettingsOpen(false);
     setApproval(false);
     setInvite("");
@@ -594,113 +774,153 @@ function App() {
     </label>
   );
   const lang = (
-    <select
-      aria-label={t("language")}
+    <TeleoSelect
+      label={t("language")}
       value={locale}
-      onChange={(e) => {
-        const l = e.target.value as Locale;
+      onChange={(value) => {
+        const l = value as Locale;
         setLocale(l);
         localSet("teleo.locale", l);
         const url = new URL(location.href);
         url.searchParams.set("lang", l);
         history.replaceState({}, "", url);
       }}
-    >
-      <option value="en">English</option>
-      <option value="uk">Українська</option>
-      <option value="ru">Русский</option>
-    </select>
+      options={[
+        { value: "en", label: "English" },
+        { value: "uk", label: "Українська" },
+        { value: "ru", label: "Русский" },
+      ]}
+      className="language-picker"
+    />
+  );
+  const previewConsent = (
+    <label className="check preview-consent">
+      <input
+        type="checkbox"
+        checked={previewAllowed}
+        disabled={previewPending}
+        aria-busy={previewPending}
+        onChange={(e) => {
+          setPreviewAllowed(e.target.checked);
+          setPreviewPending(true);
+          if (!e.target.checked) sender.current?.disconnect();
+          remote.current.previewPermission(e.target.checked);
+        }}
+      />
+      {t("allowPreview")}
+    </label>
   );
   const settingsContent = current ? (
     <aside className="settings">
-      <h3>{t("playbackSettings")}</h3>
-      {range("speed", 0.5, 3, 0.25)}
-      <h3>{t("textSettings")}</h3>
-      {range("fontSize", 16, 100, 1)}
-      <div className="advanced-settings">
-        {range("lineHeight", 1, 3, 0.1)}
-        {range("textWidth", 280, 1600, 20)}
-        <div className="setting-group">
-          <span>{t("alignment")}</span>
-          <Segmented
-            label={t("alignment")}
-            value={current.preferences.alignment}
-            onChange={(alignment) => pref({ alignment })}
-            options={(["left", "center", "right"] as const).map((value) => ({
-              value,
-              label: t(value),
-            }))}
-          />
-        </div>
-        {(["mirrorHorizontal", "mirrorVertical", "focusLine"] as const).map(
-          (k) => (
-            <label className="check" key={k}>
-              <input
-                type="checkbox"
-                checked={current.preferences[k]}
-                onChange={(e) => pref({ [k]: e.target.checked })}
-              />
-              {t(k)}
-            </label>
-          ),
-        )}
-        <label>
-          {t("countdown")}
-          <select
-            value={current.preferences.countdownSeconds}
-            onChange={(e) => pref({ countdownSeconds: Number(e.target.value) })}
-          >
-            {[0, 3, 5, 10].map((n) => (
-              <option value={n} key={n}>
-                {n ? `${n} ${t("seconds")}` : t("off")}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div className="setting-group">
-          <span>{t("appearance")}</span>
-          <Segmented
-            label={t("appearance")}
-            value={current.preferences.appearance}
-            onChange={(appearance) => pref({ appearance })}
-            options={[
-              { value: "dark", label: t("dark") },
-              { value: "light", label: t("light") },
-            ]}
-          />
-        </div>
-      </div>
-      <h3>{t("focusLine")}</h3>
-      <label>
-        {t("focusPosition")} <output>{focusPosition}%</output>
-        <input
-          type="range"
-          min="20"
-          max="70"
-          value={focusPosition}
-          aria-label={t("focusPosition")}
-          onChange={(e) => setFocusPosition(Number(e.target.value))}
-        />
-      </label>
-      <label className="check">
-        <input
-          type="checkbox"
-          checked={focusDimming}
-          onChange={(e) => setFocusDimming(e.target.checked)}
-        />
-        {t("focusDimming")}
-      </label>
-      <h3>{t("interfaceTheme")}</h3>
+      <h2>{t("settings")}</h2>
       <Segmented
-        label={t("interfaceTheme")}
-        value={theme}
-        onChange={setTheme}
+        label={t("settings")}
+        value={settingsTab}
+        onChange={setSettingsTab}
         options={[
-          { value: "light", label: t("light") },
-          { value: "dark", label: t("dark") },
-          { value: "system", label: t("system") },
+          { value: "playback", label: t("playbackTab") },
+          { value: "text", label: t("textSettings") },
+          { value: "appearance", label: t("appearance") },
         ]}
       />
+      <div className="settings-tab-content">
+        {settingsTab === "playback" && (
+          <>
+            {range("speed", 0.5, 3, 0.25)}
+            <label>
+              {t("countdown")}
+              <TeleoSelect
+                label={t("countdown")}
+                value={String(current.preferences.countdownSeconds)}
+                onChange={(v) => pref({ countdownSeconds: Number(v) })}
+                options={[0, 3, 5, 10].map((n) => ({
+                  value: String(n),
+                  label: n ? `${n} ${t("seconds")}` : t("off"),
+                }))}
+              />
+            </label>
+          </>
+        )}
+        {settingsTab === "text" && (
+          <>
+            {range("fontSize", 16, 100, 1)}
+            {range("lineHeight", 1, 3, 0.1)}
+            {range("textWidth", 280, 1600, 20)}
+            <div className="setting-group">
+              <span>{t("alignment")}</span>
+              <Segmented
+                label={t("alignment")}
+                value={current.preferences.alignment}
+                onChange={(alignment) => pref({ alignment })}
+                options={(["left", "center", "right"] as const).map(
+                  (value) => ({ value, label: t(value) }),
+                )}
+              />
+            </div>
+          </>
+        )}
+        {settingsTab === "appearance" && (
+          <>
+            {(["mirrorHorizontal", "mirrorVertical", "focusLine"] as const).map(
+              (k) => (
+                <label className="check" key={k}>
+                  <input
+                    type="checkbox"
+                    checked={current.preferences[k]}
+                    onChange={(e) => pref({ [k]: e.target.checked })}
+                  />
+                  {t(k)}
+                </label>
+              ),
+            )}
+            <label>
+              {t("focusPosition")}
+              <output>{focusPosition}%</output>
+              <input
+                aria-label={t("focusPosition")}
+                type="range"
+                min="20"
+                max="70"
+                value={focusPosition}
+                onChange={(e) => setFocusPosition(Number(e.target.value))}
+              />
+            </label>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={focusDimming}
+                onChange={(e) => setFocusDimming(e.target.checked)}
+              />
+              {t("focusDimming")}
+            </label>
+            <div className="setting-group">
+              <span>{t("appearance")}</span>
+              <Segmented
+                label={t("appearance")}
+                value={current.preferences.appearance}
+                onChange={(appearance) => pref({ appearance })}
+                options={[
+                  { value: "dark", label: t("dark") },
+                  { value: "light", label: t("light") },
+                ]}
+              />
+            </div>
+            <div className="setting-group">
+              <span>{t("interfaceTheme")}</span>
+              <Segmented
+                label={t("interfaceTheme")}
+                value={theme}
+                onChange={setTheme}
+                options={[
+                  { value: "light", label: t("light") },
+                  { value: "dark", label: t("dark") },
+                  { value: "system", label: t("system") },
+                ]}
+              />
+            </div>
+          </>
+        )}
+      </div>
       <details>
         <summary>{t("physical")}</summary>
         <p>{t("keyHelp")}</p>
@@ -714,11 +934,14 @@ function App() {
         </label>
         <label>
           {t("profile")}
-          <select value={profile} onChange={(e) => setProfile(e.target.value)}>
-            <option value="standard">{t("standard")}</option>
-            <option value="twoButton">{t("twoButton")}</option>
-            <option value="custom">{t("custom")}</option>
-          </select>
+          <TeleoSelect
+            label={t("profile")}
+            value={profile}
+            onChange={setProfile}
+            options={(["standard", "twoButton", "custom"] as const).map(
+              (value) => ({ value, label: t(value) }),
+            )}
+          />
         </label>
         {profile === "twoButton" && (
           <>
@@ -735,19 +958,14 @@ function App() {
         )}
         {profile === "custom" && (
           <>
-            <select
-              aria-label={t("custom")}
+            <TeleoSelect
+              label={t("custom")}
               value={learnAction}
-              onChange={(e) => setLearnAction(e.target.value as Action)}
-            >
-              {actions
+              onChange={(v) => setLearnAction(v as Action)}
+              options={actions
                 .filter((a) => a !== "setSpeed")
-                .map((a) => (
-                  <option key={a} value={a}>
-                    {t(a as Key)}
-                  </option>
-                ))}
-            </select>
+                .map((value) => ({ value, label: t(value as Key) }))}
+            />
             {button("learn", () => setLearn(learnAction))}
           </>
         )}
@@ -766,9 +984,22 @@ function App() {
         )}
         {button("reset", () => setMapping({}))}
       </details>
-      {button("connect", () => void connect())}
+      {remoteStatus === "connected" ? (
+        <>
+          {previewConsent}
+          {button("revoke", () => {
+            endRemote();
+            setRemoteStatus("disconnected");
+            setApproval(false);
+            setInvite("");
+          })}
+        </>
+      ) : (
+        button("connect", () => void connect())
+      )}
     </aside>
   ) : null;
+
   useEffect(() => {
     const fullscreenChanged = () => {
       if (!document.fullscreenElement) setImmersive(false);
@@ -879,99 +1110,95 @@ function App() {
         inert={intro}
         aria-hidden={intro || undefined}
       >
-        <header>
-          <a
-            className="brand"
-            href="/"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/");
-            }}
-          >
-            teleo.
-          </a>
-          {route === "/studio" && (
-            <>
-              <IconButton
-                name="library"
-                label={t("library")}
-                active={libraryOpen}
-                onClick={() => {
-                  if (reading) {
-                    exitReader();
-                    setLibraryOpen(true);
-                  } else setLibraryOpen(!libraryOpen);
-                  setPanel("library");
-                }}
-              />
-              <select
-                className="script-selector"
-                aria-label={t("currentScript")}
-                value={selected}
-                onChange={(e) => {
-                  void flush();
-                  setSelected(e.target.value);
-                  setRevisions(null);
-                }}
-              >
-                {!current && <option value="">{t("chooseScript")}</option>}
-                {scripts.map((script) => (
-                  <option key={script.scriptId} value={script.scriptId}>
-                    {script.title || t("untitled")}
-                  </option>
-                ))}
-              </select>
-              <Segmented
-                label={t("workspaceMode")}
-                value={reading ? "prompt" : "script"}
-                onChange={(mode) =>
-                  mode === "prompt" ? void startReader() : exitReader()
-                }
-                options={[
-                  { value: "script", label: t("editor"), disabled: !current },
-                  { value: "prompt", label: t("read"), disabled: !current },
-                ]}
-              />
-              <div className="toolbar-spacer" />
-              <IconButton
-                className={remoteStatus === "connected" ? "has-connection" : ""}
-                name="remote"
-                label={t("remoteConnection")}
-                disabled={!current}
-                onClick={() => void connect()}
-              />
-              <IconButton
-                name="settings"
-                label={t("settings")}
-                disabled={!current}
-                active={settingsOpen}
-                onClick={() => setSettingsOpen(true)}
-              />
-            </>
-          )}
-          <details className="app-menu">
-            <summary aria-label={t("menu")}>
-              <Icon name="more" />
-            </summary>
-            <nav>
-              {(["studio", "remote", "help", "privacy"] as const).map((k) => (
-                <a
-                  key={k}
-                  href={"/" + k}
-                  aria-current={route === "/" + k ? "page" : undefined}
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.currentTarget.closest("details")?.removeAttribute("open");
-                    navigate("/" + k);
+        {route !== "/remote" && (
+          <header>
+            <a
+              className="brand"
+              href="/"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/");
+              }}
+            >
+              teleo.
+            </a>
+            {route === "/studio" && (
+              <>
+                <IconButton
+                  name="library"
+                  label={t("library")}
+                  active={libraryOpen}
+                  onClick={() => {
+                    if (reading) {
+                      exitReader();
+                      setLibraryOpen(true);
+                    } else setLibraryOpen(!libraryOpen);
+                    setPanel("library");
                   }}
-                >
-                  {t(k)}
-                </a>
-              ))}
-            </nav>
-          </details>
-          {lang}
-        </header>
+                />
+                <TeleoSelect
+                  className="script-selector"
+                  label={t("currentScript")}
+                  value={selected}
+                  onChange={(id) => {
+                    void flush();
+                    setSelected(id);
+                    setRevisions(null);
+                  }}
+                  options={
+                    current
+                      ? scripts.map((script) => ({
+                          value: script.scriptId,
+                          label: script.title || t("untitled"),
+                        }))
+                      : [{ value: "", label: t("chooseScript") }]
+                  }
+                />
+                <Segmented
+                  label={t("workspaceMode")}
+                  value={reading ? "prompt" : "script"}
+                  onChange={(mode) =>
+                    mode === "prompt" ? void startReader() : editMode()
+                  }
+                  options={[
+                    { value: "script", label: t("editor"), disabled: !current },
+                    { value: "prompt", label: t("read"), disabled: !current },
+                  ]}
+                />
+                <div className="toolbar-spacer" />
+                <IconButton
+                  className={
+                    remoteStatus === "connected" ? "has-connection" : ""
+                  }
+                  name="remote"
+                  label={t("remoteConnection")}
+                  disabled={!current}
+                  onClick={() => void showConnection()}
+                />
+                <IconButton
+                  name="settings"
+                  label={t("settings")}
+                  disabled={!current}
+                  active={wide && !reading ? !settingsCollapsed : settingsOpen}
+                  onClick={() =>
+                    wide && !reading
+                      ? setSettingsCollapsed((v) => !v)
+                      : setSettingsOpen(true)
+                  }
+                />
+              </>
+            )}
+            <TeleoMenu
+              closeLabel={t("close")}
+              className="app-menu"
+              label={t("menu")}
+              items={(["studio", "remote", "help", "privacy"] as const).map(
+                (k) => ({ label: t(k), action: () => navigate("/" + k) }),
+              )}
+            />
+            {lang}
+          </header>
+        )}
         {!online && (
           <p role="status" className="banner">
             {t("offline")}
@@ -991,69 +1218,24 @@ function App() {
             {button("launch", () => navigate("/studio"), true)}
           </main>
         ) : route === "/remote" ? (
-          <main className="controller">
-            <h1>{t("remote")}</h1>
-            <p role="status">{t(remoteStatus || "pairHelp")}</p>
-            {remoteStatus === "connected" && (
-              <>
-                <div className="remote-buttons">
-                  {(
-                    [
-                      "play",
-                      "pause",
-                      "speedDown",
-                      "speedUp",
-                      "previousParagraph",
-                      "nextParagraph",
-                      "restart",
-                    ] as Action[]
-                  ).map((a) => (
-                    <button
-                      key={a}
-                      className={
-                        "remote-key remote-" +
-                        a +
-                        (a === "play" || a === "pause" ? " primary" : "")
-                      }
-                      onClick={() => {
-                        try {
-                          navigator.vibrate?.(12);
-                        } catch {
-                          /* Feedback must never block a command. */
-                        }
-                        lastAck.current = remote.current.command({ action: a });
-                      }}
-                    >
-                      <span className="key-symbol" aria-hidden="true">
-                        {
-                          (
-                            {
-                              play: "▶",
-                              pause: "Ⅱ",
-                              speedDown: "−",
-                              speedUp: "+",
-                              previousParagraph: "↑",
-                              nextParagraph: "↓",
-                              restart: "↺",
-                            } as Record<string, string>
-                          )[a]
-                        }
-                      </span>
-                      <span>{t(a as Key)}</span>
-                    </button>
-                  ))}
-                </div>
-                <output>
-                  {t(remoteState.playing ? "play" : "pause")} ·{" "}
-                  {remoteState.speed.toFixed(2)}×
-                </output>
-                {button("revoke", () => {
-                  remote.current.close();
-                  setRemoteStatus("disconnected");
-                })}
-              </>
-            )}
-          </main>
+          <RemoteController
+            t={t}
+            status={remoteStatus}
+            state={remoteState}
+            preview={receiver.current}
+            language={lang}
+            onStudio={() => navigate("/studio")}
+            onRequest={() => remote.current.requestPreview()}
+            onCommand={(action) => {
+              lastAck.current = remote.current.command({ action });
+            }}
+            onDisconnect={() => {
+              endRemote();
+              receiver.current.allowed = false;
+              receiver.current.clear();
+              setRemoteStatus("disconnected");
+            }}
+          />
         ) : route === "/studio" ? (
           <main
             inert={reading}
@@ -1080,18 +1262,18 @@ function App() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <select
-                aria-label={t("folder")}
+              <TeleoSelect
+                label={t("folder")}
                 value={folder}
-                onChange={(e) => setFolder(e.target.value)}
-              >
-                <option value="">{t("allFolders")}</option>
-                {folders.map((f) => (
-                  <option key={f.folderId} value={f.folderId}>
-                    {f.title}
-                  </option>
-                ))}
-              </select>
+                onChange={setFolder}
+                options={[
+                  { value: "", label: t("allFolders") },
+                  ...folders.map((f) => ({
+                    value: f.folderId,
+                    label: f.title,
+                  })),
+                ]}
+              />
               <div className="script-list">
                 {scripts
                   .filter(
@@ -1205,73 +1387,92 @@ function App() {
                     onChange={(e) => edit({ body: e.target.value })}
                     onBlur={() => void flush()}
                   />
-                  <details
+                  <TeleoMenu
+                    closeLabel={t("close")}
                     className="document-actions"
-                    open={innerWidth > 600 || undefined}
-                  >
-                    <summary>
-                      {t("documentActions")}
-                      <Icon name="more" />
-                    </summary>
-                    <div className="tools">
-                      {button(
-                        "duplicate",
-                        () =>
+                    label={t("documentActions")}
+                    trigger={
+                      <>
+                        <span>{t("documentActions")}</span>
+                        <Icon name="more" />
+                      </>
+                    }
+                    items={[
+                      {
+                        label: t("duplicate"),
+                        action: () =>
                           void add(createScript(current.title, current.body)),
-                      )}
-                      {button("export", () =>
-                        download(
-                          (current.title || "teleo") + ".txt",
-                          current.body,
-                        ),
-                      )}
-                      {button("exportJSON", () =>
-                        download(
-                          "teleo.json",
-                          exportBundle([current]),
-                          "application/json",
-                        ),
-                      )}
-                      {button("versions", () => {
-                        void flush()
-                          .then(() => storage.revisions(current.scriptId))
-                          .then(setRevisions)
-                          .catch(() => setStatus("saveError"));
-                      })}
-                      {button("delete", () => {
-                        if (confirm(t("confirmDelete"))) {
-                          const tombstone = {
-                            ...current,
-                            deletedAt: new Date().toISOString(),
-                          };
-                          persist(tombstone);
-                          void flush();
-                          setScripts(
-                            scripts.filter((s) => s.scriptId !== selected),
-                          );
-                          setSelected(
-                            scripts.find((s) => s.scriptId !== selected)
-                              ?.scriptId || "",
-                          );
-                        }
-                      })}
-                    </div>
-                  </details>
+                      },
+                      {
+                        label: t("export"),
+                        action: () =>
+                          download(
+                            (current.title || "teleo") + ".txt",
+                            current.body,
+                          ),
+                      },
+                      {
+                        label: t("exportJSON"),
+                        action: () =>
+                          download(
+                            "teleo.json",
+                            exportBundle([current]),
+                            "application/json",
+                          ),
+                      },
+                      {
+                        label: t("versions"),
+                        action: () => {
+                          void flush()
+                            .then(() => storage.revisions(current.scriptId))
+                            .then(setRevisions)
+                            .catch(() => setStatus("saveError"));
+                        },
+                      },
+                      {
+                        label: t("delete"),
+                        action: () => {
+                          if (confirm(t("confirmDelete"))) {
+                            persist({
+                              ...current,
+                              deletedAt: new Date().toISOString(),
+                            });
+                            void flush();
+                            setScripts(
+                              scripts.filter(
+                                (script) => script.scriptId !== selected,
+                              ),
+                            );
+                            const next = scripts.find(
+                              (script) => script.scriptId !== selected,
+                            )?.scriptId;
+                            setSelected(next || "");
+                            if (!next) {
+                              endRemote();
+                              setRemoteStatus(null);
+                              setInvite("");
+                            }
+                          }
+                        },
+                      },
+                    ]}
+                  />
                   <label>
                     {t("folder")}
-                    <select
+                    <TeleoSelect
+                      label={t("scriptFolder")}
                       value={current.folderId || ""}
-                      onChange={(e) =>
-                        edit({ folderId: e.target.value || undefined })
+                      onChange={(value) =>
+                        edit({ folderId: value || undefined })
                       }
-                    >
-                      <option value="">{t("noFolder")}</option>
-                      {folders.map((f) => (
-                        <option key={f.folderId} value={f.folderId}>
-                          {f.title}
-                        </option>
-                      ))}
-                    </select>
+                      options={[
+                        { value: "", label: t("noFolder") },
+                        ...folders.map((f) => ({
+                          value: f.folderId,
+                          label: f.title,
+                        })),
+                      ]}
+                    />
                   </label>
                   {revisions && (
                     <section className="revision-panel">
@@ -1297,30 +1498,14 @@ function App() {
                     </section>
                   )}
                 </section>
-                <aside className="prompt-preview" aria-label={t("preview")}>
-                  <div className="preview-caption">
-                    <span className="eyebrow">{t("preview")}</span>
-                    <Icon name="focus" />
-                  </div>
-                  <div
-                    className={"preview-copy " + current.preferences.appearance}
+                {wide && !reading && !settingsCollapsed && (
+                  <aside
+                    className="integrated-settings"
+                    aria-label={t("settings")}
                   >
-                    <div
-                      style={{
-                        fontSize: Math.min(40, current.preferences.fontSize),
-                        lineHeight: current.preferences.lineHeight,
-                        textAlign: current.preferences.alignment,
-                        transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
-                      }}
-                    >
-                      {current.body || t("body")}
-                    </div>
-                  </div>
-                  <div className="preview-foot">
-                    <span>{t("ready")}</span>
-                    <span>{current.preferences.speed.toFixed(2)}×</span>
-                  </div>
-                </aside>
+                    {settingsContent}
+                  </aside>
+                )}
               </>
             ) : (
               <section className="empty">
@@ -1361,7 +1546,10 @@ function App() {
                 active={immersive}
                 onClick={toggleFullscreen}
               />
-              {button("connect", () => void connect())}
+              {button(
+                remoteStatus === "connected" ? "connection" : "connect",
+                () => void showConnection(),
+              )}
               {lang}
             </div>
             <div className="reader-stage">
@@ -1426,6 +1614,7 @@ function App() {
             {remoteStatus && (
               <div className="pair-panel">
                 <p role="status">{t(remoteStatus)}</p>
+                {remoteStatus === "connected" && previewConsent}
                 {invite && remoteStatus === "waiting" && (
                   <>
                     <img src={qr} alt={t("invite")} />
@@ -1444,7 +1633,7 @@ function App() {
                     })}
                     {button("deny", () => {
                       remote.current.send({ type: "deny" });
-                      remote.current.close();
+                      endRemote();
                       setRemoteStatus("disconnected");
                       setApproval(false);
                       setInvite("");
@@ -1455,7 +1644,7 @@ function App() {
                 remoteStatus === "unavailable"
                   ? button("reconnect", () => void connect())
                   : button("revoke", () => {
-                      remote.current.close();
+                      endRemote();
                       setRemoteStatus("disconnected");
                       setInvite("");
                       setApproval(false);
@@ -1465,7 +1654,7 @@ function App() {
           </section>
         )}
         <Sheet
-          open={settingsOpen && !intro}
+          open={settingsOpen && !intro && (!wide || reading)}
           title={t("settings")}
           closeLabel={t("close")}
           onClose={() => {
@@ -1474,7 +1663,7 @@ function App() {
             setTesting(false);
           }}
         >
-          {settingsContent}
+          {(!wide || reading) && settingsContent}
         </Sheet>
       </div>
       {intro && <Intro skipLabel={t("skip")} onDone={finishIntro} />}

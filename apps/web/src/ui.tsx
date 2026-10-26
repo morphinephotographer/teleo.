@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
   | "library"
@@ -164,13 +164,16 @@ export function Sheet({
   closeLabel,
   onClose,
   children,
+  className = "",
 }: {
   open: boolean;
   title: string;
   closeLabel: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
 }) {
+  const headingId = useId();
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = dialog.current;
@@ -180,8 +183,8 @@ export function Sheet({
   return (
     <dialog
       ref={dialog}
-      className="settings-sheet"
-      aria-labelledby="settings-sheet-title"
+      className={"settings-sheet " + className}
+      aria-labelledby={headingId}
       onCancel={onClose}
       onClose={onClose}
       onClick={(e) => {
@@ -200,7 +203,7 @@ export function Sheet({
       <div className="sheet-heading">
         <div>
           <span className="eyebrow">teleo.</span>
-          <h2 id="settings-sheet-title">{title}</h2>
+          <h2 id={headingId}>{title}</h2>
         </div>
         <IconButton name="close" label={closeLabel} onClick={onClose} />
       </div>

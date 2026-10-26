@@ -1,3 +1,4 @@
+import { chooseSelect } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -41,7 +42,10 @@ test("production assets: all locales and scripts work offline", async ({
     ["en", "Язык"],
     ["uk", "Language"],
   ]) {
-    await page.getByRole("combobox", { name, exact: true }).selectOption(value);
+    await chooseSelect(
+      page.getByRole("combobox", { name, exact: true }),
+      value,
+    );
     await expect(page.locator("html")).toHaveAttribute("lang", value);
   }
   await expect(

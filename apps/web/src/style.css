@@ -1839,3 +1839,879 @@ output {
   background: var(--canvas);
   color: var(--ink);
 }
+/* v0.3.1 — one top-layer picker surface across every application context. */
+.teleo-picker {
+  position: relative;
+  max-width: 100%;
+}
+.picker-trigger {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  font-size: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 10px 14px;
+  text-align: left;
+}
+.picker-trigger > span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.picker-chevron {
+  font-size: 18px;
+  line-height: 1;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.picker-trigger[aria-expanded="true"] {
+  background: var(--subtle);
+  box-shadow: 0 0 0 2px #1111;
+}
+.teleo-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 50px #0002;
+  overflow: auto;
+  overscroll-behavior: contain;
+  max-width: calc(100vw - 24px);
+  animation: menu-reveal 0.16s ease;
+}
+.teleo-popover > button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  font-size: 12px;
+  padding: 12px 14px;
+  font-weight: 450;
+  overflow-wrap: anywhere;
+}
+.teleo-popover > button:hover,
+.teleo-popover > button:focus-visible {
+  background: var(--subtle);
+  outline-offset: -3px;
+}
+.teleo-popover > button[aria-selected="true"] {
+  background: var(--ink);
+  color: var(--surface);
+}
+.teleo-popover > button[aria-selected="true"]:focus-visible {
+  outline-color: #6b96ff;
+}
+.teleo-select-native {
+  appearance: auto;
+  min-height: 44px;
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  width: 100%;
+}
+.app-menu .picker-trigger {
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  justify-content: center;
+}
+.app-shell header > .script-selector {
+  width: 180px;
+  flex-shrink: 1;
+}
+.app-shell header > .script-selector .picker-trigger {
+  border: 0;
+  background: transparent;
+  font-weight: 550;
+}
+.app-shell header > .language-picker {
+  width: 110px;
+  flex-shrink: 0;
+}
+.language-picker .picker-trigger {
+  font-size: 11px;
+  border-radius: 999px;
+}
+.document-actions {
+  padding-top: 0;
+  border: 0;
+  align-self: flex-start;
+}
+.document-actions .picker-trigger {
+  font-size: 11px;
+  background: var(--subtle);
+  border: 0;
+  min-height: 44px;
+  border-radius: 999px;
+}
+.editor > label .teleo-picker {
+  width: 160px;
+}
+.settings label .teleo-picker {
+  margin-left: auto;
+  width: 100%;
+}
+.preview-consent {
+  font-size: 12px;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+}
+.preview-consent input {
+  flex-shrink: 0;
+}
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+@keyframes menu-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+/* Integrated Studio replaces the old static preview. */
+.workspace {
+  grid-template-columns: 230px minmax(280px, 1fr) 330px;
+}
+.library-collapsed .workspace {
+  grid-template-columns: minmax(280px, 1fr) 330px;
+}
+.workspace:not(:has(.integrated-settings)) {
+  grid-template-columns: 230px minmax(280px, 1fr);
+}
+.library-collapsed .workspace:not(:has(.integrated-settings)) {
+  grid-template-columns: 1fr;
+}
+.integrated-settings {
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+}
+.integrated-settings > .settings {
+  height: 100%;
+  gap: 18px;
+  padding: 20px;
+}
+.settings > h2 {
+  margin: 0;
+}
+.settings > .segmented {
+  flex-shrink: 0;
+}
+.settings > .segmented button {
+  font-size: 10px;
+  padding: 8px 9px;
+}
+.settings-tab-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex: 1;
+  min-height: 160px;
+}
+.settings-tab-content > * {
+  flex-shrink: 0;
+}
+.settings-sheet .settings > h2 {
+  display: none;
+}
+.settings-tab-content .setting-group .segmented {
+  width: 100%;
+}
+.settings details .teleo-picker {
+  width: 100%;
+  margin: 8px 0;
+}
+.settings details > .picker-trigger {
+  width: 100%;
+}
+@media (max-width: 1179px) {
+  .workspace:not(:has(.integrated-settings)) {
+    grid-template-columns: 210px minmax(240px, 1fr);
+  }
+  .library-collapsed .workspace:not(:has(.integrated-settings)) {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 900px) {
+  .workspace:not(:has(.integrated-settings)) {
+    display: flex;
+  }
+  .app-shell header > .script-selector {
+    width: 145px;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell header > .script-selector {
+    flex: 1;
+    width: 0;
+  }
+  .app-shell header > .language-picker {
+    position: absolute;
+    bottom: 0;
+    right: 6px;
+    width: 100px;
+  }
+  .app-shell header > .language-picker .picker-trigger {
+    height: 44px;
+  }
+  .app-shell header > .script-selector .picker-trigger {
+    padding: 8px 0;
+    font-size: 12px;
+  }
+  .editor > .document-actions {
+    display: block;
+  }
+  .editor > label .teleo-picker {
+    width: 150px;
+  }
+  .settings-sheet .settings {
+    padding: 20px;
+  }
+  .teleo-popover {
+    border-radius: 22px;
+  }
+  .teleo-popover > button {
+    font-size: 13px;
+    min-height: 46px;
+  }
+}
+/* Remote: a central circle, two curved flanks, and rectangular paragraph keys. */
+.app-shell.route-remote {
+  padding: 10px;
+  gap: 0;
+}
+.remote-v03.controller {
+  max-width: 520px;
+  width: 100%;
+  margin: 0;
+  align-self: center;
+  border-radius: 28px;
+  padding: 16px 20px;
+  gap: 12px;
+  overflow: hidden;
+  background: var(--surface);
+  color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  --surface: #fff;
+  --subtle: #f3f4f7;
+  --line: #e5e5e7;
+  --ink: #111;
+  --muted: #73737a;
+}
+.remote-v03 .remote-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: nowrap;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  gap: 12px;
+  position: static;
+}
+.remote-header .brand {
+  font-size: 28px;
+  letter-spacing: -1.7px;
+  margin: 0;
+}
+.remote-header .brand span {
+  color: #4c7dff;
+}
+.remote-header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.remote-header .language-picker {
+  width: 105px;
+}
+.remote-v03 > .segmented {
+  flex-shrink: 0;
+}
+.remote-v03 > .segmented button {
+  font-size: 12px;
+  min-height: 36px;
+  padding: 8px 14px;
+}
+.remote-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-height: 42px;
+  flex-shrink: 0;
+}
+.remote-v03 .remote-status p[role="status"] {
+  font-size: 12px;
+  font-weight: 550;
+  line-height: 1.3;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  align-self: center;
+  color: var(--ink);
+  max-width: 100%;
+  text-align: center;
+}
+.remote-status.online p:before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  background: #18b96a;
+  border-radius: 50%;
+  margin-right: 7px;
+}
+.remote-script {
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.remote-layout {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 18px;
+}
+.remote-stage {
+  height: clamp(245px, 39dvh, 330px);
+  width: 100%;
+  max-width: 365px;
+  align-self: center;
+  position: relative;
+  flex-shrink: 0;
+}
+.remote-main-play {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  width: 124px;
+  height: 124px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #080809;
+  color: #fff;
+  border: 0;
+  box-shadow:
+    0 0 0 18px var(--subtle),
+    0 8px 24px #0002;
+  padding: 0;
+}
+.remote-main-play:hover {
+  background: #222;
+}
+.remote-main-play:active {
+  transform: translateX(-50%) scale(0.96);
+}
+.remote-main-play svg {
+  width: 46px;
+  height: 46px;
+}
+.speed-wing {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 38%;
+  height: 74%;
+  border: 0;
+  border-radius: 0;
+  background: var(--subtle);
+  padding: 0;
+  display: block;
+  min-height: 130px;
+  touch-action: manipulation;
+}
+.speed-wing svg {
+  position: absolute;
+  left: 35%;
+  top: 70%;
+  width: 32px;
+  height: 32px;
+  stroke-width: 2.3;
+}
+.speed-wing-right {
+  left: auto;
+  right: 0;
+  transform: scaleX(-1);
+}
+.speed-wing-right:active {
+  transform: scaleX(-1) scale(0.97);
+}
+.speed-wing:hover {
+  background: #e7e9ef;
+}
+.speed-wing:focus-visible {
+  outline: 0;
+  background: #dbe7ff;
+  filter: drop-shadow(0 0 3px #4c7dff);
+}
+.speed-display {
+  position: absolute;
+  bottom: 13px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+.speed-display output {
+  font-size: 27px !important;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.1;
+}
+.speed-display > span {
+  font-size: 12px;
+  color: var(--muted);
+}
+.remote-paragraphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  flex-shrink: 0;
+}
+.remote-paragraphs button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.remote-paragraphs button > span {
+  height: 54px;
+  border-radius: 20px;
+  background: var(--subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.remote-paragraphs button:hover > span {
+  background: #e7e9ef;
+}
+.remote-paragraphs svg {
+  width: 28px;
+  height: 28px;
+  transform: rotate(-90deg);
+}
+.remote-paragraphs small {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 400;
+  line-height: 1.35;
+}
+.remote-text,
+.remote-settings {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.remote-text {
+  padding: 8px 0;
+}
+.remote-text > p {
+  font-size: 16px;
+  line-height: 1.7;
+  padding: 14px;
+  border-radius: 18px;
+  white-space: pre-wrap;
+  margin-bottom: 8px;
+  overflow-wrap: anywhere;
+}
+.remote-text p[aria-current="true"] {
+  background: #edf4ff;
+  box-shadow: inset 3px 0 #4c7dff;
+}
+.preview-private {
+  padding: 36px 16px;
+  text-align: center;
+}
+.preview-private svg {
+  margin: 0 auto 18px;
+  color: var(--muted);
+  width: 30px;
+  height: 30px;
+}
+.preview-private h2 {
+  font-size: 20px;
+}
+.preview-private p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.remote-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 10px 0;
+}
+.remote-settings > section {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.remote-settings h2 {
+  font-size: 13px;
+  margin: 0;
+}
+.remote-settings p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.setting-row strong {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink);
+  text-align: right;
+}
+.remote-settings > button {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  align-items: center;
+  min-height: 44px;
+  flex-shrink: 0;
+}
+.remote-placeholder {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  text-align: center;
+  padding: 30px 20px;
+}
+.remote-placeholder > svg {
+  width: 48px;
+  height: 48px;
+  color: var(--muted);
+}
+.remote-placeholder p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.remote-v03.remote-appearance-dark {
+  --surface: #19191c;
+  --subtle: #27272c;
+  --line: #393940;
+  --ink: #f8f8fa;
+  --muted: #aaaab4;
+}
+.remote-appearance-dark .remote-text p[aria-current="true"] {
+  background: #24334b;
+}
+.remote-appearance-dark .speed-wing:hover {
+  background: #33333c;
+}
+.remote-appearance-dark .remote-paragraphs button:hover > span {
+  background: #33333c;
+}
+@media (prefers-color-scheme: dark) {
+  .remote-v03.remote-appearance-system {
+    --surface: #19191c;
+    --subtle: #27272c;
+    --line: #393940;
+    --ink: #f8f8fa;
+    --muted: #aaaab4;
+  }
+  .remote-appearance-system .remote-text p[aria-current="true"] {
+    background: #24334b;
+  }
+}
+@media (max-width: 600px) {
+  .app-shell.route-remote {
+    padding: max(8px, env(safe-area-inset-top)) 8px
+      max(8px, env(safe-area-inset-bottom));
+  }
+  .remote-v03.controller {
+    padding: 12px 16px;
+    gap: 12px;
+    max-width: 100%;
+  }
+  .app-shell.route-remote .remote-header {
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    position: static;
+  }
+  .remote-header .language-picker {
+    position: static;
+    width: 94px;
+  }
+  .remote-header .picker-trigger {
+    font-size: 10px;
+    padding: 8px 10px;
+  }
+  .remote-v03 .remote-stage {
+    max-width: 350px;
+  }
+  .remote-main-play {
+    width: 116px;
+    height: 116px;
+  }
+  .remote-main-play svg {
+    width: 43px;
+    height: 43px;
+  }
+  .remote-v03 > .segmented button {
+    font-size: 11px;
+  }
+  .remote-layout {
+    gap: 14px;
+  }
+  .remote-paragraphs {
+    gap: 14px;
+  }
+  .remote-paragraphs small {
+    font-size: 10px;
+  }
+}
+@media (max-height: 500px) and (min-width: 601px) {
+  .remote-v03.controller {
+    width: min(100%, 820px);
+    padding: 8px 20px;
+    gap: 6px;
+    max-width: 820px;
+  }
+  .remote-v03 .remote-header {
+    min-height: 36px;
+    height: 36px;
+  }
+  .remote-v03 > .segmented {
+    align-self: center;
+    width: 330px;
+  }
+  .remote-status {
+    min-height: 30px;
+    gap: 2px;
+  }
+  .remote-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, 1fr) 190px;
+    gap: 24px;
+    align-items: center;
+  }
+  .remote-stage {
+    height: 200px;
+    max-width: 300px;
+  }
+  .remote-main-play {
+    width: 94px;
+    height: 94px;
+    top: 2px;
+    box-shadow: 0 0 0 12px var(--subtle);
+  }
+  .remote-main-play svg {
+    width: 35px;
+    height: 35px;
+  }
+  .speed-wing {
+    min-height: 0;
+    height: 73%;
+  }
+  .speed-display {
+    bottom: 8px;
+  }
+  .speed-display output {
+    font-size: 24px !important;
+  }
+  .remote-paragraphs {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .remote-paragraphs button {
+    min-height: 65px;
+    gap: 4px;
+  }
+  .remote-paragraphs button > span {
+    height: 44px;
+    border-radius: 16px;
+  }
+  .remote-v03 > .segmented button {
+    min-height: 28px;
+    padding: 6px 12px;
+  }
+  .remote-v03 > .segmented {
+    padding: 3px;
+  }
+  .remote-v03 .remote-script {
+    font-size: 10px;
+  }
+}
+@media (max-height: 640px) and (max-width: 600px) {
+  .remote-v03.controller {
+    overflow: auto;
+    gap: 8px;
+  }
+  .remote-stage {
+    height: 230px;
+  }
+  .remote-layout {
+    min-height: 320px;
+    flex-shrink: 0;
+  }
+  .remote-v03 .remote-header {
+    min-height: 40px;
+    height: 40px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .teleo-popover {
+    animation: none;
+  }
+  .remote-v03 button {
+    transition: none;
+  }
+}
+.remote-text > p {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 100px;
+}
+.reader-top > .language-picker {
+  display: none;
+  width: 110px;
+}
+.immersive .reader-top > .language-picker {
+  display: block;
+}
+.settings .check,
+.remote-settings .check {
+  min-height: 44px;
+}
+.section-title > .icon-button {
+  width: 44px;
+  height: 44px;
+}
+.section-title {
+  grid-template-columns: 1fr 44px;
+}
+@media (max-width: 600px) {
+  .app-shell header > .icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .remote-v03 > .segmented button {
+    min-height: 40px;
+  }
+}
+.settings > .segmented button {
+  font-size: 11px;
+}
+.remote-stage {
+  justify-self: center;
+}
+.editor {
+  overflow: auto;
+}
+.settings-sheet {
+  top: calc(var(--visual-top, 0px) + 16px);
+  bottom: auto;
+  height: calc(var(--visual-height, 100dvh) - 32px);
+  max-height: calc(var(--visual-height, 100dvh) - 32px);
+}
+@media (max-width: 600px) {
+  .settings-sheet {
+    top: auto;
+    bottom: var(--visual-bottom, 0px);
+    height: min(82dvh, calc(var(--visual-height, 100dvh) - 12px));
+    max-height: calc(var(--visual-height, 100dvh) - 12px);
+  }
+}
+/* Picker triggers own their surface/ink, including a dark immersive reader. */
+.picker-trigger {
+  color: var(--ink);
+}
+.menu-fallback-sheet {
+  height: auto;
+  max-height: min(70dvh, 500px);
+  top: auto;
+  bottom: calc(var(--visual-bottom, 0px) + 16px);
+  width: 330px;
+}
+.fallback-menu-items {
+  padding: 8px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.fallback-menu-items > button {
+  border: 0;
+  background: transparent;
+  text-align: left;
+  min-height: 44px;
+  border-radius: 14px;
+}
+.fallback-menu-items > button:hover {
+  background: var(--subtle);
+}

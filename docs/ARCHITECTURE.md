@@ -8,7 +8,7 @@ The browser is a complete React/TypeScript client, not the native app's website 
 | `apps/web/src/storage.ts` | IndexedDB v1, revisions, folders, retained tombstones |
 | `apps/web/src/main.tsx` | Host UI, requestAnimationFrame, scoped keyboard adapter, screen wake lifecycle |
 | `apps/web/src/i18n.ts` | Typed en/uk/ru dictionaries and browser preference detection |
-| `services/remote-relay/worker.ts` | Content-free browser pairing, role/command validation, hibernating Durable Objects |
+| `services/remote-relay/worker.ts` | Browser pairing/commands and permissioned ephemeral preview, hibernating Durable Objects |
 | `apps/apple/Shared` | SwiftUI editor, native text layout/scroll views, keyboard adapter, Network.framework transport |
 | `apps/apple/Sources/TeleoCore/Storage.swift` | Versioned SwiftData schema and CloudKit opt-in configuration |
 
@@ -71,3 +71,7 @@ The relay is authoritative for resume authorization and the 30-second detached-r
 ## Current web presentation
 
 The complete website redesign adds `ui.tsx` (icons, segmented buttons, native dialog sheet) and `Intro.tsx` (session-only entry overlay). `/` and `/studio` now resolve to the same workspace. The animation never covers `/remote` invitations. Storage/domain/relay modules remain unchanged; local visual preferences are separate from portable script fields. See docs/design/TELEO_UI_ARCHITECTURE.md and docs/audits/TELEO_UI_REDESIGN_REPORT.md for the current layout and verification.
+
+## v0.3.1 Studio / phone preview
+
+menus.tsx centralizes native top-layer selects/action menus; RemoteController.tsx composes the phone UI and clipped speed geometry; feedback.ts feature-detects optional vibration. Shared packages/protocol/preview.ts defines validated ephemeral snapshots/positions and memory-only receiver assembly; host-preview.ts debounces/chunks allowed revisions. Durable Objects persist only consent bits/epochs and existing auth/counters, never content. The host remains the sole script/playback source. See docs/design/TELEO_REMOTE_V03.md and docs/audits/TELEO_V03_UI_AUDIT.md.

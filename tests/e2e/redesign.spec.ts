@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 const en = dictionaries.en;
@@ -45,8 +46,8 @@ test("intro resolves, dismisses automatically and never replays during navigatio
   });
   await expect(intro).toHaveCount(0, { timeout: 2500 });
   await expect(page.locator(".workspace")).toBeVisible();
-  await page.getByLabel(en.menu, { exact: true }).click();
-  await page.getByRole("link", { name: en.help, exact: true }).click();
+  await page.getByRole("button", { name: en.menu, exact: true }).click();
+  await page.getByRole("menuitem", { name: en.help, exact: true }).click();
   await page.getByRole("button", { name: en.launch, exact: true }).click();
   await expect(page.locator(".brand-intro")).toHaveCount(0);
   await page.reload();
@@ -90,7 +91,7 @@ test("reduced motion bypasses intro; remote deep links are never covered", async
     await page
       .locator(".controller")
       .evaluate((el) => getComputedStyle(el).color),
-  ).toBe("rgb(25, 25, 25)");
+  ).toBe("rgb(17, 17, 17)");
   await expect(page.locator(".brand-intro")).toHaveCount(0);
 });
 test("session storage denial still permits skipping and internal navigation", async ({
@@ -105,8 +106,8 @@ test("session storage denial still permits skipping and internal navigation", as
   );
   await page.goto("/?lang=en");
   await page.getByRole("button", { name: en.skip, exact: true }).click();
-  await page.getByLabel(en.menu, { exact: true }).click();
-  await page.getByRole("link", { name: en.help, exact: true }).click();
+  await page.getByRole("button", { name: en.menu, exact: true }).click();
+  await page.getByRole("menuitem", { name: en.help, exact: true }).click();
   await page.getByRole("button", { name: en.launch, exact: true }).click();
   await expect(page.locator(".brand-intro")).toHaveCount(0);
 });
@@ -195,16 +196,16 @@ for (const locale of ["en", "uk", "ru"] as const) {
         });
       await page.getByRole("button", { name: t.exit, exact: true }).click();
       // Set portable preferences back before the next viewport iteration.
-      await page
-        .locator("header")
-        .getByRole("button", { name: t.settings, exact: true })
-        .click();
-      const sheet = page.getByRole("dialog");
+      const sheet = await openSettings(page, t, "appearance");
       await sheet
         .getByRole("checkbox", { name: t.mirrorHorizontal, exact: true })
         .uncheck();
+      await sheet
+        .getByRole("group", { name: t.settings, exact: true })
+        .getByRole("button", { name: t.playbackTab, exact: true })
+        .click();
       await sheet.getByRole("slider", { name: t.speed, exact: true }).fill("1");
-      await sheet.getByRole("button", { name: t.close, exact: true }).click();
+      await closeSettings(page, t);
       await expect(
         page.getByRole("status").filter({ hasText: t.saved }),
       ).toBeVisible();
@@ -224,8 +225,16 @@ test("settings sheet traps focus, persists preferences and Escape preserves read
   const sheet = page.getByRole("dialog");
   await expect(sheet).toBeVisible();
   await sheet
+    .getByRole("group", { name: en.settings, exact: true })
+    .getByRole("button", { name: en.textSettings, exact: true })
+    .click();
+  await sheet
     .getByRole("slider", { name: en.fontSize, exact: true })
     .fill("52");
+  await sheet
+    .getByRole("group", { name: en.settings, exact: true })
+    .getByRole("button", { name: en.appearance, exact: true })
+    .click();
   await sheet
     .getByRole("slider", { name: en.focusPosition, exact: true })
     .fill("45");
@@ -257,12 +266,9 @@ test("settings sheet traps focus, persists preferences and Escape preserves read
   await page.getByRole("button", { name: en.exit, exact: true }).click();
   await page.reload();
   await expect(page.locator(".app-shell")).toHaveClass(/theme-dark/);
-  await page
-    .locator("header")
-    .getByRole("button", { name: en.settings, exact: true })
-    .click();
+  const reopened = await openSettings(page, en, "text");
   await expect(
-    sheet.getByRole("slider", { name: en.fontSize, exact: true }),
+    reopened.getByRole("slider", { name: en.fontSize, exact: true }),
   ).toHaveValue("52");
 });
 test("viewport fullscreen fallback, collapsible library and simulated keyboard resize", async ({

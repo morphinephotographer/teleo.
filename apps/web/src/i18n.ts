@@ -1,4 +1,23 @@
 export const en = {
+  playbackTab: "Playback",
+  remoteTabs: "Remote views",
+  remoteSettings: "Settings",
+  previewPrivate: "Text is private",
+  previewConsentHelp:
+    "On the host, allow script preview for this paired session to share text here.",
+  previewLoading: "Waiting for the current text…",
+  connection: "Connection",
+  remotePeer: "Paired screen",
+  previewAllowed: "Allowed for this session",
+  remoteAppearance: "Remote appearance",
+  feedback: "Touch feedback",
+  haptics: "Vibration where supported",
+  hapticsUnavailable:
+    "This browser has no supported vibration API. Buttons still respond visually.",
+  scriptFolder: "Script folder",
+  allowPreview: "Allow script preview on this remote",
+  previewTooLarge:
+    "This script is too large for remote preview. Reading and control remain available.",
   skip: "Skip intro",
   currentScript: "Current script",
   chooseScript: "Choose a script",
@@ -132,12 +151,12 @@ export const en = {
   helpBody:
     "Create a script in Studio, adjust the reading settings, then choose Read. Space plays or pauses; arrows change speed or paragraph. Manual scrolling pauses playback. Escape exits. Your browser saves scripts locally; export backups before clearing site data.",
   helpRemote:
-    "Physical remotes work when they send keyboard events to the focused reader. Pair them in system settings. iPhone Safari and OS-reserved buttons may not deliver events. Phone control uses a separate relay and host approval; no text is transmitted.",
+    "Physical remotes work when their keyboard events reach the focused reader. Pair them in system settings. Phone control requires pairing and host approval. Text stays private unless the host separately allows live preview for that paired session.",
   privacyTitle: "Your words are yours.",
   privacyBody:
     "Web scripts and revisions are stored in this browser using IndexedDB. Exported files are yours to manage. Native Apple apps use a separate local library and, when configured, your private Apple iCloud database. Web and native libraries do not sync automatically.",
   privacyRemote:
-    "The remote relay handles temporary pairing capabilities and playback commands, never script text or titles. No accounts, analytics, advertising, AI or recording. Clearing browser data removes local scripts. Network providers may process connection metadata.",
+    "The relay carries pairing and playback commands. Only after separate host permission does it temporarily forward script text and title to the paired phone, without storing them. The phone keeps preview in memory and clears it on disconnection or permission revocation. HTTPS/WSS protects transport; this is not end-to-end encryption. No accounts, analytics, advertising, AI or recording. Clearing browser data removes local scripts.",
   notFound: "Page not found",
   fullscreen: "Fullscreen",
   offline: "Offline — local editing is available",
@@ -155,6 +174,25 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  playbackTab: "Прокрутка",
+  remoteTabs: "Режими пульта",
+  remoteSettings: "Налаштування",
+  previewPrivate: "Текст приватний",
+  previewConsentHelp:
+    "На головному екрані дозвольте перегляд тексту для цього сеансу, щоб показати його тут.",
+  previewLoading: "Очікуємо поточний текст…",
+  connection: "З’єднання",
+  remotePeer: "Підключений екран",
+  previewAllowed: "Дозволено для цього сеансу",
+  remoteAppearance: "Оформлення пульта",
+  feedback: "Відгук на дотик",
+  haptics: "Вібрація, якщо підтримується",
+  hapticsUnavailable:
+    "Цей браузер не підтримує стандартну вібрацію. Кнопки реагують візуально.",
+  scriptFolder: "Папка тексту",
+  allowPreview: "Дозволити перегляд тексту на цьому пульті",
+  previewTooLarge:
+    "Цей текст завеликий для перегляду на пульті. Читання й керування доступні.",
   skip: "Пропустити",
   currentScript: "Поточний текст",
   chooseScript: "Оберіть текст",
@@ -288,12 +326,12 @@ export const uk: Record<Key, string> = {
   helpBody:
     "Створіть текст у Студії, налаштуйте читання та натисніть «Читати». Пробіл запускає або зупиняє прокрутку; стрілки змінюють швидкість або абзац. Ручна прокрутка ставить на паузу. Escape закриває читання. Браузер зберігає тексти локально; експортуйте копії перед очищенням даних сайту.",
   helpRemote:
-    "Фізичні пульти працюють, якщо надсилають події клавіатури активному суфлеру. Підключіть їх у системних налаштуваннях. Safari на iPhone та системні кнопки можуть не передавати події. Керування телефоном використовує окремий ретранслятор і дозвіл власника; тексти не передаються.",
+    "Фізичні пульти працюють, якщо події клавіатури надходять до активного суфлера. Підключіть їх у системних налаштуваннях. Для керування телефоном потрібні сполучення й дозвіл власника. Текст приватний, доки власник окремо не дозволить перегляд для цього сеансу.",
   privacyTitle: "Ваші слова належать вам.",
   privacyBody:
     "Вебтексти та версії зберігаються в цьому браузері в IndexedDB. Експортованими файлами керуєте ви. Нативні застосунки Apple мають окрему локальну бібліотеку і, після налаштування, вашу приватну базу Apple iCloud. Автоматичної синхронізації між браузером і застосунками немає.",
   privacyRemote:
-    "Ретранслятор обробляє тимчасові запрошення та команди читання, а не тексти чи назви. Немає облікових записів, аналітики, реклами, ШІ чи запису відео. Очищення даних браузера видаляє локальні тексти. Провайдери мережі можуть обробляти метадані з’єднання.",
+    "Ретранслятор передає запрошення та команди читання. Лише після окремого дозволу власника він тимчасово передає текст і назву підключеному телефону, без збереження. Телефон тримає перегляд у пам’яті й очищує його при відключенні або відкликанні дозволу. HTTPS/WSS захищає передавання; це не наскрізне шифрування. Немає облікових записів, аналітики, реклами, ШІ чи запису. Очищення даних браузера видаляє локальні тексти.",
   notFound: "Сторінку не знайдено",
   fullscreen: "На весь екран",
   offline: "Немає мережі — локальне редагування доступне",
@@ -310,6 +348,25 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  playbackTab: "Прокрутка",
+  remoteTabs: "Режимы пульта",
+  remoteSettings: "Настройки",
+  previewPrivate: "Текст приватный",
+  previewConsentHelp:
+    "На основном экране разрешите просмотр текста для этого сеанса, чтобы показать его здесь.",
+  previewLoading: "Ожидаем текущий текст…",
+  connection: "Соединение",
+  remotePeer: "Подключённый экран",
+  previewAllowed: "Разрешено для этого сеанса",
+  remoteAppearance: "Оформление пульта",
+  feedback: "Отклик на нажатие",
+  haptics: "Вибрация, если поддерживается",
+  hapticsUnavailable:
+    "Этот браузер не поддерживает стандартную вибрацию. Кнопки реагируют визуально.",
+  scriptFolder: "Папка текста",
+  allowPreview: "Разрешить просмотр текста на этом пульте",
+  previewTooLarge:
+    "Этот текст слишком большой для просмотра на пульте. Чтение и управление доступны.",
   skip: "Пропустить",
   currentScript: "Текущий текст",
   chooseScript: "Выберите текст",
@@ -445,12 +502,12 @@ export const ru: Record<Key, string> = {
   helpBody:
     "Создайте текст в Студии, настройте чтение и нажмите «Читать». Пробел запускает или останавливает прокрутку; стрелки меняют скорость или абзац. Ручная прокрутка ставит на паузу. Escape закрывает чтение. Браузер сохраняет тексты локально; экспортируйте копии перед очисткой данных сайта.",
   helpRemote:
-    "Физические пульты работают, если передают события клавиатуры активному суфлёру. Подключите их в системных настройках. Safari на iPhone и системные кнопки могут не передавать события. Управление телефоном использует отдельный ретранслятор и разрешение владельца; тексты не передаются.",
+    "Физические пульты работают, если события клавиатуры поступают в активный суфлёр. Подключите их в системных настройках. Для управления телефоном нужны сопряжение и разрешение владельца. Текст приватный, пока владелец отдельно не разрешит просмотр для этого сеанса.",
   privacyTitle: "Ваши слова принадлежат вам.",
   privacyBody:
     "Веб-тексты и версии хранятся в этом браузере в IndexedDB. Экспортированными файлами управляете вы. Нативные приложения Apple имеют отдельную локальную библиотеку и, после настройки, вашу приватную базу Apple iCloud. Автоматической синхронизации между браузером и приложениями нет.",
   privacyRemote:
-    "Ретранслятор обрабатывает временные приглашения и команды чтения, а не тексты или названия. Нет аккаунтов, аналитики, рекламы, ИИ или записи видео. Очистка данных браузера удаляет локальные тексты. Сетевые провайдеры могут обрабатывать метаданные соединения.",
+    "Ретранслятор передаёт приглашения и команды чтения. Только после отдельного разрешения владельца он временно передаёт текст и название подключённому телефону, без сохранения. Телефон хранит просмотр в памяти и очищает его при отключении или отзыве разрешения. HTTPS/WSS защищает передачу; это не сквозное шифрование. Нет аккаунтов, аналитики, рекламы, ИИ или записи. Очистка данных браузера удаляет локальные тексты.",
   notFound: "Страница не найдена",
   fullscreen: "На весь экран",
   offline: "Нет сети — локальное редактирование доступно",

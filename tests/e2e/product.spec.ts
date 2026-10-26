@@ -1,3 +1,5 @@
+import { openSettings, closeSettings } from "./helpers";
+import { chooseSelect } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -50,9 +52,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await expect(
       page.getByRole("textbox", { name: t.body, exact: true }),
     ).toHaveValue(body + " ");
-    await page
-      .getByRole("combobox", { name: t.language, exact: true })
-      .selectOption("en");
+    await chooseSelect(
+      page.getByRole("combobox", { name: t.language, exact: true }),
+      "en",
+    );
     await expect(
       page.getByRole("textbox", { name: "Your words", exact: true }),
     ).toHaveValue(body + " ");
@@ -74,10 +77,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("slider", { name: "Reading position" })
       .inputValue();
     expect(Number(before)).toBeGreaterThan(0);
-    await page
-      .locator("header")
-      .getByRole("combobox", { name: "Language" })
-      .selectOption("ru");
+    await chooseSelect(
+      page.locator("header").getByRole("combobox", { name: "Language" }),
+      "ru",
+    );
     await expect(
       page
         .locator(".reader")
@@ -93,7 +96,7 @@ test("first visit regional detection and manual override", async ({
   const page = await context.newPage();
   await page.goto("/");
   await expect(page.locator("html")).toHaveAttribute("lang", "uk");
-  await page.getByRole("combobox", { name: "Мова" }).selectOption("ru");
+  await chooseSelect(page.getByRole("combobox", { name: "Мова" }), "ru");
   await page.goto("/help");
   await expect(page.locator("html")).toHaveAttribute("lang", "ru");
   await context.close();
@@ -107,7 +110,7 @@ test("storage-disabled language remains usable", async ({ page }) => {
     });
   });
   await page.goto("/");
-  await page.getByRole("combobox", { name: "Language" }).selectOption("uk");
+  await chooseSelect(page.getByRole("combobox", { name: "Language" }), "uk");
   await expect(page.locator("html")).toHaveAttribute("lang", "uk");
 });
 for (const locale of ["en", "uk", "ru"] as const) {
@@ -173,9 +176,10 @@ test("library CRUD, import/export and version restore", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Changed");
-  const actionsMenu = page.locator(".document-actions > summary");
-  if (await actionsMenu.isVisible()) await actionsMenu.click();
-  await page.getByRole("button", { name: "Version history" }).click();
+  await page
+    .getByRole("button", { name: "Script actions", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "Version history" }).click();
   await expect(page.locator(".revision")).not.toHaveCount(0);
   await page
     .locator(".revision")
@@ -185,13 +189,24 @@ test("library CRUD, import/export and version restore", async ({ page }) => {
   await expect(
     page.getByRole("textbox", { name: "Your words", exact: true }),
   ).toHaveValue("Original\n\n🌍");
+  await page
+    .getByRole("button", { name: "Script actions", exact: true })
+    .click();
   const download = page.waitForEvent("download");
-  await page.getByRole("button", { name: "Export .txt", exact: true }).click();
+  await page
+    .getByRole("menuitem", { name: "Export .txt", exact: true })
+    .click();
   expect((await download).suggestedFilename()).toBe("First.txt");
-  await page.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Script actions", exact: true })
+    .click();
+  await page.getByRole("menuitem", { name: "Duplicate", exact: true }).click();
   await expect(page.locator(".script-list button")).toHaveCount(2);
+  await page
+    .getByRole("button", { name: "Script actions", exact: true })
+    .click();
   page.once("dialog", (d) => d.accept());
-  await page.getByRole("button", { name: "Move to trash" }).click();
+  await page.getByRole("menuitem", { name: "Move to trash" }).click();
   await expect(page.locator(".script-list button")).toHaveCount(1);
   await page.locator("input[type=file]").setInputFiles({
     name: "Unicode.txt",
@@ -215,14 +230,12 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Text\n\n".repeat(100));
-  await page
-    .locator("header")
-    .getByRole("button", { name: "Reading settings", exact: true })
-    .click();
+  await openSettings(page, dictionaries.en);
   await page.getByText("Physical remote", { exact: true }).click();
-  await page
-    .getByRole("combobox", { name: "Profile", exact: true })
-    .selectOption("twoButton");
+  await chooseSelect(
+    page.getByRole("combobox", { name: "Profile", exact: true }),
+    "twoButton",
+  );
   await page.getByRole("button", { name: "Learn button A" }).click();
   await page.keyboard.press("a");
   await expect(page.getByText("KeyA → Play / Pause")).toBeVisible();
@@ -232,10 +245,7 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
     "This key already has an action",
   );
   await page.keyboard.press("b");
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: "Close", exact: true })
-    .click();
+  await closeSettings(page, dictionaries.en);
   await page.getByRole("button", { name: "Read", exact: true }).click();
   await page.keyboard.press("a");
   await expect(

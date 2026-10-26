@@ -67,3 +67,13 @@ TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npx playwrigh
 ```
 
 These exercise intro, responsiveness, persistence and modal/reader interactions in independent generated test libraries. They do not certify physical iOS keyboard/VoiceOver or hardware remotes.
+
+## v0.3.1 Studio and phone Text preview
+
+Wide Studio integrates Playback / Text / Appearance settings beside the editor. All dropdowns use one accessible top-layer system, with a styled native fallback for older browsers. The phone now has a central Play/Pause, curved clipped speed wings, rectangular paragraph controls and Remote / Text / Settings tabs. Text stays private until separate host permission; allowed previews are temporary relay forwards and phone memory, not a cloud library. Edit mode keeps a paired session for live revisions; explicit Exit/Revoke ends it. No iPhone Taptic support is invented. [UI audit](docs/audits/TELEO_V03_UI_AUDIT.md), [protocol/privacy](docs/design/TELEO_REMOTE_V03.md).
+
+```sh
+TELEO_V031_URL=https://teleo-staging.your-subdomain.workers.dev npx playwright test --config playwright.v031-staging.config.ts
+```
+
+Public room creation is limited to 10/minute/IP. The v0.3.1 UI cohort creates six rooms; the separate API-only security cohort creates two. Do not run additional room-creating public suites inside the same quota window. Local tests use isolated synthetic development clients only.

@@ -232,3 +232,14 @@ Save-fix source c440ba6 passed public relay **10/10** (15.4 seconds) and redesig
 ### Final published redesign checkpoint
 
 Application source **531a3ca**; Worker version **6d2438f8-99ea-4676-8b3c-0a181150b471**. Final public relay/security suite **10/10 passed** (13.5 seconds); final public redesign suite **18/18 passed** (35.6 seconds), including dark-system controller contrast and saved-speed regression. Final local full browser suite **72/72 passed**, focused unit suites **35/35 passed**, build/typecheck/dry-run/lint passed. All checks use generated isolated test content. Physical acceptance of this new UI is still not tested. See docs/audits/TELEO_UI_REDESIGN_REPORT.md and docs/design. Production DNS/routes unchanged; branch codex/teleo-premium-workspace.
+
+
+## v0.3.1 integrated Studio and permissioned phone preview — 2026-10-26
+
+The reviewed v0.3.1 brief is implemented in the existing workspace: integrated Playback/Text/Appearance settings, shared top-layer pickers/action menus, tested compatibility fallback, and Remote/Text/Settings phone UI with clipped semantic speed wings. Paragraph controls remain rectangles. The existing multiplier, storage format, command engine, intro, HID mapping and explicit pairing/revoke model are retained. Editing keeps an approved phone connected for live revisions and script switches; explicit Exit still revokes.
+
+Preview is off by default and requires separate host consent for the paired session. Versioned bounded snapshots and compact position updates use the existing authenticated transport. Revocation/loss/expiry clear phone memory; bounded resume requests a fresh authoritative snapshot. Relay integration tests inspect actual test SQLite stores for absence of private title/body markers. WSS is transport encryption, not E2EE; authorized plaintext is processed transiently by the relay. Native Apple apps are unchanged.
+
+Local verification: build/typecheck/staging dry-run/lint passed; full Vitest **64/64 passed** (six files, 153.22 seconds); final full Playwright **86/86 passed** (1.9 minutes), including six visual golden comparisons and existing regressions. Focused final visual verification and public deployment results follow. The initial sandboxed Miniflare listener failure and intermediate test-harness adaptations are documented in the audit, not counted as passes.
+
+Reviewed generated screenshots and complete dropdown inventory are in docs/audits/TELEO_V03_UI_AUDIT.md; design/limits/schema in docs/design/TELEO_V03_DESIGN_SYSTEM.md and TELEO_REMOTE_V03.md. Chromium desktop/iPhone emulation only; physical iPhone/Safari/WebKit/Firefox/VoiceOver/Bluetooth and actual vibration are not certified by this iteration. Optional standard vibration is capability-gated; unsupported phone browsers show an explanation. No production domain/DNS changes.

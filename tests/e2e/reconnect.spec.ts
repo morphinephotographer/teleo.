@@ -1,3 +1,4 @@
+import { disconnectPhone } from "./helpers";
 import { test, expect, type Page, type WebSocketRoute } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 // Each test is an independent local client. Cloudflare replaces this header in production.
@@ -71,7 +72,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await phone.screenshot({
       path: `docs/screenshots/${info.project.name}-${locale}-reconnected-controller.png`,
     });
-    await phone.getByRole("button", { name: t.revoke, exact: true }).click();
+    await disconnectPhone(phone, t);
     await expect(page.locator(".pair-panel p[role=status]")).toHaveText(
       t.disconnected,
     );

@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 
@@ -40,10 +41,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
             document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      await page
-        .locator("header")
-        .getByRole("button", { name: t.settings, exact: true })
-        .click();
+      await openSettings(page, t, "playback");
       await expect(
         page.getByRole("slider", { name: t.speed, exact: true }),
       ).toBeVisible();
@@ -55,10 +53,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
           () => document.documentElement.scrollHeight <= innerHeight,
         ),
       ).toBe(true);
-      await page
-        .getByRole("dialog")
-        .getByRole("button", { name: t.close, exact: true })
-        .click();
+      await closeSettings(page, t);
       if (size.width === 390 || size.width === 1440) {
         await page.screenshot({
           path: `docs/screenshots/compact-${info.project.name}-${locale}-${size.width}.png`,

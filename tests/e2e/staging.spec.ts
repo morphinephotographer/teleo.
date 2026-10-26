@@ -1,3 +1,4 @@
+import { disconnectPhone } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -103,6 +104,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(phone.locator("output")).toContainText(t.play);
     await expect(phone.locator("html")).toHaveAttribute("data-haptic", "12");
+    await phone
+      .getByRole("group", { name: t.remoteTabs, exact: true })
+      .getByRole("button", { name: t.remoteSettings, exact: true })
+      .click();
     for (const size of [
       { width: 320, height: 568 },
       { width: 390, height: 664 },
@@ -116,11 +121,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
             document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      expect(
-        await phone
-          .locator(".controller")
-          .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
-      ).toBe(true);
+
+      await phone
+        .getByRole("button", { name: t.revoke, exact: true })
+        .scrollIntoViewIfNeeded();
       await expect(
         phone.getByRole("button", { name: t.revoke, exact: true }),
       ).toBeInViewport();
@@ -128,6 +132,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await phone.setViewportSize(
       info.project.use.viewport || { width: 1280, height: 720 },
     );
+    await phone
+      .getByRole("group", { name: t.remoteTabs, exact: true })
+      .getByRole("button", { name: t.remote, exact: true })
+      .click();
     await phone.getByRole("button", { name: t.pause, exact: true }).click();
     await expect(
       page
@@ -138,7 +146,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       path: `docs/screenshots/${info.project.name}-${locale}-staging-controller.png`,
       fullPage: true,
     });
-    await phone.getByRole("button", { name: t.revoke, exact: true }).click();
+    await disconnectPhone(phone, t);
     await expect(page.locator(".pair-panel p[role=status]")).toHaveText(
       t.disconnected,
     );
@@ -171,6 +179,14 @@ for (const locale of ["en", "uk", "ru"] as const) {
       ).toHaveCount(0);
       await panel.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+      await phone
+        .getByRole("group", { name: t.remoteTabs, exact: true })
+        .getByRole("button", { name: t.remote, exact: true })
+        .click();
+      await phone.getByRole("button", { name: t.play, exact: true }).click();
+      await expect(
+        phone.getByRole("button", { name: t.pause, exact: true }),
+      ).toBeVisible();
       await phone.getByRole("button", { name: t.pause, exact: true }).click();
       await expect(phone.locator("output")).toContainText(t.pause);
       await panel.getByRole("button", { name: t.revoke, exact: true }).click();

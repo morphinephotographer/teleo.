@@ -208,6 +208,11 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Text\n\n".repeat(100));
+  const settingsTab = page.getByRole("tab", {
+    name: "Reading settings",
+    exact: true,
+  });
+  if (await settingsTab.isVisible()) await settingsTab.click();
   await page.getByText("Physical remote", { exact: true }).click();
   await page
     .getByRole("combobox", { name: "Profile", exact: true })
@@ -221,6 +226,8 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
     "This key already has an action",
   );
   await page.keyboard.press("b");
+  if (await settingsTab.isVisible())
+    await page.getByRole("tab", { name: "Editor", exact: true }).click();
   await page.getByRole("button", { name: "Read", exact: true }).click();
   await page.keyboard.press("a");
   await expect(

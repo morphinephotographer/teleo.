@@ -91,6 +91,9 @@ function App() {
     ),
   );
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
+  const [panel, setPanel] = useState<"library" | "editor" | "settings">(
+    "library",
+  );
   const [route, setRoute] = useState(location.pathname),
     [scripts, setScripts] = useState<Script[]>([]),
     [selected, setSelected] = useState(""),
@@ -238,7 +241,10 @@ function App() {
         }
         setScripts(list.filter((s) => !s.deletedAt));
         setFolders(fs);
-        if (list[0]) setSelected(list[0].scriptId);
+        if (list[0]) {
+          setSelected(list[0].scriptId);
+          setPanel("editor");
+        }
       })
       .catch(() => setStatus("saveError"));
     const timer = setInterval(flush, 600);
@@ -480,6 +486,7 @@ function App() {
     await flush();
     setScripts((list) => [s, ...list]);
     setSelected(s.scriptId);
+    setPanel("editor");
     persist(s);
   }
   function exitReader() {
@@ -597,7 +604,7 @@ function App() {
     </div>
   );
   return (
-    <>
+    <div className={"app-shell route-" + (route.slice(1) || "home")}>
       <header>
         <a
           className="brand"
@@ -680,11 +687,36 @@ function App() {
                 ).map((a) => (
                   <button
                     key={a}
+                    className={
+                      "remote-key remote-" +
+                      a +
+                      (a === "play" || a === "pause" ? " primary" : "")
+                    }
                     onClick={() => {
+                      try {
+                        navigator.vibrate?.(12);
+                      } catch {
+                        /* Feedback must never block a command. */
+                      }
                       lastAck.current = remote.current.command({ action: a });
                     }}
                   >
-                    {t(a as Key)}
+                    <span className="key-symbol" aria-hidden="true">
+                      {
+                        (
+                          {
+                            play: "▶",
+                            pause: "Ⅱ",
+                            speedDown: "−",
+                            speedUp: "+",
+                            previousParagraph: "↑",
+                            nextParagraph: "↓",
+                            restart: "↺",
+                          } as Record<string, string>
+                        )[a]
+                      }
+                    </span>
+                    <span>{t(a as Key)}</span>
                   </button>
                 ))}
               </div>
@@ -700,7 +732,27 @@ function App() {
           )}
         </main>
       ) : route === "/studio" ? (
-        <main className="workspace">
+        <main className={"workspace panel-" + (current ? panel : "library")}>
+          <div
+            className="workspace-tabs"
+            role="tablist"
+            aria-label={t("studio")}
+          >
+            {(["library", "editor", "settings"] as const).map((tab) => (
+              <button
+                key={tab}
+                role="tab"
+                aria-selected={(current ? panel : "library") === tab}
+                disabled={tab !== "library" && !current}
+                onClick={() => {
+                  void flush();
+                  setPanel(tab);
+                }}
+              >
+                {t(tab)}
+              </button>
+            ))}
+          </div>
           <aside className="library">
             <div className="section-title">
               <h2>{t("library")}</h2>
@@ -740,6 +792,7 @@ function App() {
                     onClick={() => {
                       void flush();
                       setSelected(s.scriptId);
+                      setPanel("editor");
                       setRevisions(null);
                     }}
                   >
@@ -886,7 +939,8 @@ function App() {
                   </select>
                 </label>
                 {revisions && (
-                  <section>
+                  <section className="revision-panel">
+                    {button("close", () => setRevisions(null))}
                     <h3>{t("versions")}</h3>
                     {!revisions.length && <p>{t("noVersions")}</p>}
                     {revisions.map((r) => (
@@ -924,64 +978,67 @@ function App() {
                 </div>
                 {range("speed", 0.5, 3, 0.25)}
                 {range("fontSize", 16, 100, 1)}
-                {range("lineHeight", 1, 3, 0.1)}
-                {range("textWidth", 280, 1600, 20)}
-                <label>
-                  {t("alignment")}
-                  <select
-                    value={current.preferences.alignment}
-                    onChange={(e) =>
-                      pref({
-                        alignment: e.target.value as Preferences["alignment"],
-                      })
-                    }
-                  >
-                    {(["left", "center", "right"] as const).map((a) => (
-                      <option key={a} value={a}>
-                        {t(a)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {(
-                  ["mirrorHorizontal", "mirrorVertical", "focusLine"] as const
-                ).map((k) => (
-                  <label className="check" key={k}>
-                    <input
-                      type="checkbox"
-                      checked={current.preferences[k]}
-                      onChange={(e) => pref({ [k]: e.target.checked })}
-                    />
-                    {t(k)}
+                <details className="advanced-settings">
+                  <summary>{t("moreSettings")}</summary>
+                  {range("lineHeight", 1, 3, 0.1)}
+                  {range("textWidth", 280, 1600, 20)}
+                  <label>
+                    {t("alignment")}
+                    <select
+                      value={current.preferences.alignment}
+                      onChange={(e) =>
+                        pref({
+                          alignment: e.target.value as Preferences["alignment"],
+                        })
+                      }
+                    >
+                      {(["left", "center", "right"] as const).map((a) => (
+                        <option key={a} value={a}>
+                          {t(a)}
+                        </option>
+                      ))}
+                    </select>
                   </label>
-                ))}
-                <label>
-                  {t("countdown")}
-                  <select
-                    value={current.preferences.countdownSeconds}
-                    onChange={(e) =>
-                      pref({ countdownSeconds: Number(e.target.value) })
-                    }
-                  >
-                    {[0, 3, 5, 10].map((n) => (
-                      <option value={n} key={n}>
-                        {n ? `${n} ${t("seconds")}` : t("off")}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  {t("appearance")}
-                  <select
-                    value={current.preferences.appearance}
-                    onChange={(e) =>
-                      pref({ appearance: e.target.value as "dark" | "light" })
-                    }
-                  >
-                    <option value="dark">{t("dark")}</option>
-                    <option value="light">{t("light")}</option>
-                  </select>
-                </label>
+                  {(
+                    ["mirrorHorizontal", "mirrorVertical", "focusLine"] as const
+                  ).map((k) => (
+                    <label className="check" key={k}>
+                      <input
+                        type="checkbox"
+                        checked={current.preferences[k]}
+                        onChange={(e) => pref({ [k]: e.target.checked })}
+                      />
+                      {t(k)}
+                    </label>
+                  ))}
+                  <label>
+                    {t("countdown")}
+                    <select
+                      value={current.preferences.countdownSeconds}
+                      onChange={(e) =>
+                        pref({ countdownSeconds: Number(e.target.value) })
+                      }
+                    >
+                      {[0, 3, 5, 10].map((n) => (
+                        <option value={n} key={n}>
+                          {n ? `${n} ${t("seconds")}` : t("off")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    {t("appearance")}
+                    <select
+                      value={current.preferences.appearance}
+                      onChange={(e) =>
+                        pref({ appearance: e.target.value as "dark" | "light" })
+                      }
+                    >
+                      <option value="dark">{t("dark")}</option>
+                      <option value="light">{t("light")}</option>
+                    </select>
+                  </label>
+                </details>
                 <details>
                   <summary>{t("physical")}</summary>
                   <p>{t("keyHelp")}</p>
@@ -1176,7 +1233,7 @@ function App() {
           )}
         </section>
       )}
-    </>
+    </div>
   );
 }
 // Keep the root across Vite module replacement; never attach React twice.

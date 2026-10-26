@@ -202,3 +202,11 @@ Published UI source **f13b572** to the existing staging URL, Cloudflare version 
 ### Owner acceptance of the reconnect button — 2026-10-26
 
 After the staging update, the owner reported that the change works. This records owner acceptance of the requested Reconnect action after access revocation; exact device/browser versions and individual re-pairing steps were not supplied. Automated fresh-invitation and mandatory-approval evidence remains recorded above.
+
+## Compact monochrome web redesign — 2026-10-26
+
+Implemented the owner's new visual references across the web routes: monochrome palette, rounded surfaces/pill actions, segmented navigation, viewport-sized studio, mobile panel navigation and a simplified phone controller with symbol/label buttons. Native UI is unchanged. Long content and expanded advanced settings remain reachable through internal scrolling; the connected controller is checked for no internal or document overflow. See WEB_UI.md for layout and haptic limitations.
+
+Final verification: `npm run staging:check` passed typecheck, staging production build and Worker dry-run; `npm run lint` passed; `npx vitest run tests/domain.test.ts tests/remote-client.test.ts` passed **31/31**; `npm run test:e2e` passed **54/54** in **50.7 seconds**. New checks cover EN/UK/RU studio at 1440×800, 1024×700, 390×664, 320×568 and 844×390, plus real connected controllers at 320×568, 390×664 and 844×390. Existing HID automation now explicitly changes mobile panels before reading. Public deployment verification follows separately.
+
+The controller requests optional 12 ms vibration only when the API exists; an instrumented browser check proves the call and subsequent command ACK, not physical vibration. iPhone Safari does not expose the standard vibration API; visual press feedback works without it. Physical acceptance of the redesigned UI and VoiceOver remain not tested. Screenshots contain generated QA text, not the owner's attached photos.

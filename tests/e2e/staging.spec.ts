@@ -79,13 +79,50 @@ for (const locale of ["en", "uk", "ru"] as const) {
     const invite = (await link.getAttribute("href"))!;
     expect(new URL(invite).origin).toBe(staging);
     expect(new URL(invite).search).not.toContain("pair");
-    const context = await browser.newContext({ locale });
+    const context = await browser.newContext({
+      locale,
+      viewport: info.project.use.viewport,
+    });
     const phone = await context.newPage();
+    await phone.addInitScript(() => {
+      Object.defineProperty(navigator, "vibrate", {
+        value: (duration: number) => {
+          document.documentElement.dataset.haptic = String(duration);
+          return true;
+        },
+      });
+    });
     await phone.goto(invite);
     await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(phone.locator("output")).toContainText(t.play);
+    await expect(phone.locator("html")).toHaveAttribute("data-haptic", "12");
+    for (const size of [
+      { width: 320, height: 568 },
+      { width: 390, height: 664 },
+      { width: 844, height: 390 },
+    ]) {
+      await phone.setViewportSize(size);
+      expect(
+        await phone.evaluate(
+          () =>
+            document.documentElement.scrollHeight <= innerHeight &&
+            document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      expect(
+        await phone
+          .locator(".controller")
+          .evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
+      ).toBe(true);
+      await expect(
+        phone.getByRole("button", { name: t.revoke, exact: true }),
+      ).toBeInViewport();
+    }
+    await phone.setViewportSize(
+      info.project.use.viewport || { width: 1280, height: 720 },
+    );
     await phone.getByRole("button", { name: t.pause, exact: true }).click();
     await expect(
       page

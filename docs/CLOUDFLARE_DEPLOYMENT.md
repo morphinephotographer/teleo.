@@ -63,3 +63,7 @@ The medium-width empty-library fix was redeployed to the same URL. Current Cloud
 ### Physical iPhone report — 2026-10-26
 
 The owner tested the public staging on a real iPhone and confirmed successful browser-remote connection and correct operation of all controller buttons. This is owner-reported acceptance; model, iOS/browser versions and network details were not supplied. In a subsequent test, the owner also confirmed disconnection followed by automatic reconnection on the iPhone. Exact interruption duration, network transition and host playback continuity were not reported. Background/sleep, native LAN, HID and CloudKit are not covered by those reports. See QA_REPORT for the recorded evidence and remaining manual checks.
+
+### Reconnect-button update — 2026-10-26
+
+Current staging version: **20596440-d736-4994-8609-bd5300c7fa5f**, application source **f13b572**. The terminal host panel replaces Revoke with Reconnect and starts a new invitation/approval flow. New QR links work in a reused phone tab. Public staging verification: **10/10 passed**, 20.0 seconds; local full regression **48/48 passed**. The owner also confirmed that explicit revoke disconnects the physical iPhone without automatic return. Production DNS/routes are unchanged.

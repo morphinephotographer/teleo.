@@ -55,3 +55,7 @@ To suspend the test service, stop using/close both tabs and request removal of t
 - Local full Playwright suite: **46 passed**, 42.8 seconds. Dry-run/typecheck/lint passed.
 - Public tests never forge CF-Connecting-IP; synthetic per-client addresses are only for local emulator isolation. An initial public harness attempt was rejected by Cloudflare because it forwarded local test headers; the harness was corrected, with no security setting changes.
 - teleo.cc and api.teleo.cc custom DNS/routes were not changed. No production site was published. No plan upgrade or purchase was made. Physical iPhone/Safari is **not tested**; use the checklist above.
+
+### Current staging revision
+
+The medium-width empty-library fix was redeployed to the same URL. Current Cloudflare version: **50366211-227f-4a80-879a-af4607c22dae**. Published application source: **31f4a8d**. Final public verification: **10/10 passed**, 17.1 seconds, including the new medium-width layout checks. Final local suite: **48/48 passed**, 42.6 seconds. Production domains/DNS remain unchanged.

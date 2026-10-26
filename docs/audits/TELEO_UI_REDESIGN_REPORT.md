@@ -39,3 +39,13 @@ The first concurrent public runs shared Playwright output artifacts; one process
 After the autosave fix, focused Vitest is **35/35 passed** (domain/client + four draft-writer regressions); typecheck/lint/staging build/dry-run passed and the full browser suite is again **72/72 passed**, reported 1.3 minutes. All three Playwright configs now isolate their output subdirectories. Final public verification follows after redeploying the save fix.
 
 Public save-fix source c440ba6 (Worker c4677973-fd39-4147-8d95-bb241a33c4dd) passed **10/10** relay/security checks (15.4 seconds) and **18/18** redesign checks (34.1 seconds), with no speed-restoration failure. A final theme review found that automatic dark mode could leak light foreground tokens into the retained white controller. Its existing light palette is now explicitly scoped, and the reduced-motion/remote scenario also checks controller text color under a dark-system preference. Full local regression after this last CSS fix: **72/72 passed**, reported 1.3 minutes; build/typecheck/dry-run/lint passed. Final deployment version and public rerun follow.
+
+## Final published verification
+
+Final application source **531a3ca**, staging Worker **6d2438f8-99ea-4676-8b3c-0a181150b471**, URL https://teleo-staging.your-subdomain.workers.dev/studio.
+
+- `TELEO_STAGING_URL=... npm run test:staging`: **10/10 passed**, **13.5 seconds**.
+- `TELEO_STAGING_URL=... npx playwright test --config playwright.redesign-staging.config.ts`: **18/18 passed**, **35.6 seconds**.
+- Final public checks include real WSS approval/ACK/revoke/re-pair, intro lifecycle, dark-system controller contrast, required viewport matrix, reader commands/mirror, modal focus, persisted settings and simulated visible-viewport resize. Both commands ran sequentially against the deployed final source.
+
+Code, documentation and generated review screenshots are committed/pushed on **codex/teleo-premium-workspace**. Production teleo.cc/api.teleo.cc DNS/routes, account plans, native clients and the remote authorization protocol were not modified. Physical Safari/keyboard/VoiceOver and frame-rate measurements remain unverified. This is an implemented and automatically verified web redesign, not a claim of native/hardware release acceptance.

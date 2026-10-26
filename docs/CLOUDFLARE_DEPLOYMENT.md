@@ -71,3 +71,7 @@ Current staging version: **20596440-d736-4994-8609-bd5300c7fa5f**, application s
 ### Compact monochrome redesign — 2026-10-26
 
 Current staging version: **e3e950a2-e15b-48c2-a701-d17218c4f183**; application source **7b5bf21**. Web studio and phone controller use the new viewport-sized monochrome layout. Local browser regression **54/54**, public staging **10/10** (18.7 seconds), typecheck/lint/build/dry-run passed. Mobile layout checks include compact portrait and landscape. See WEB_UI.md for internal-scroll regions and Safari vibration limitations. No production domain, DNS or account-plan changes.
+
+### Complete application-first redesign — 2026-10-26
+
+Latest staging source **531a3ca**; Worker **6d2438f8-99ea-4676-8b3c-0a181150b471**. `/` opens the workspace after a skippable session intro. The redesigned application retains real QR control and has safe autosave completion/recovery ownership. Final public checks: relay **10/10**, 13.5 seconds; redesign **18/18**, 35.6 seconds. Final local browser checks **72/72**, focused unit tests **35/35**, typecheck/lint/staging build/dry-run passed. No production DNS/routes or plan changes. Detailed evidence and physical-device limits: docs/audits/TELEO_UI_REDESIGN_REPORT.md.

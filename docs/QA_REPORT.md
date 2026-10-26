@@ -60,6 +60,8 @@ No macOS XCTest UI pass is claimed. The built application itself launched succes
 
 ## P0 / phase status
 
+This table records the initial implementation checkpoint. Later dated follow-ups below supersede its deployment, reconnect and UI verification status; consult the final published redesign checkpoint for current web results.
+
 | Area | Implementation | Automated | Physical / external |
 |---|---|---|---|
 | A: dedicated repo, rules, architecture | Implemented | Inspected | N/A |
@@ -226,3 +228,7 @@ Initial parallel public runs failed because they shared Playwright trace/report 
 After the fix: **35/35** focused Vitest tests passed, including four controlled asynchronous save regressions; typecheck/lint/staging build/dry-run passed; focused redesign suite **18/18** passed (40.8 seconds); full local browser regression **72/72** passed again (reported 1.3 minutes). Initial failed public runs are not accepted as passes. Updated public results follow after redeployment.
 
 Save-fix source c440ba6 passed public relay **10/10** (15.4 seconds) and redesign **18/18** (34.1 seconds). A final dark-system check then isolated the retained phone controller's white palette from the new automatic interface theme. Its black-on-white text is now explicitly asserted with dark media emulation. After this final CSS correction the full local **72/72** browser suite passed again (reported 1.3 minutes), with build/typecheck/dry-run/lint passed. Final staging version/public rerun follows.
+
+### Final published redesign checkpoint
+
+Application source **531a3ca**; Worker version **6d2438f8-99ea-4676-8b3c-0a181150b471**. Final public relay/security suite **10/10 passed** (13.5 seconds); final public redesign suite **18/18 passed** (35.6 seconds), including dark-system controller contrast and saved-speed regression. Final local full browser suite **72/72 passed**, focused unit suites **35/35 passed**, build/typecheck/dry-run/lint passed. All checks use generated isolated test content. Physical acceptance of this new UI is still not tested. See docs/audits/TELEO_UI_REDESIGN_REPORT.md and docs/design. Production DNS/routes unchanged; branch codex/teleo-premium-workspace.

@@ -198,3 +198,7 @@ The regression test exposed an existing same-document navigation issue: opening 
 For this change, `npm run staging:check` passed (typecheck, production staging build, Wrangler dry-run), `npm run lint` passed and `npm run test:e2e` passed **48/48** in 41.6 seconds. This includes the new fresh-invitation/same-tab re-pairing checks on desktop and mobile.
 
 Published UI source **f13b572** to the existing staging URL, Cloudflare version **20596440-d736-4994-8609-bd5300c7fa5f**. `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging` passed **10/10** checks in 20.0 seconds. Public tests confirm the localized replacement button, fresh invitation, mandatory approval and successful control after reopening the new QR in the same phone tab. Screenshots of the terminal panel: docs/screenshots/desktop-reconnect-after-revoke.png and mobile-reconnect-after-revoke.png. Production domains/DNS were unchanged.
+
+### Owner acceptance of the reconnect button — 2026-10-26
+
+After the staging update, the owner reported that the change works. This records owner acceptance of the requested Reconnect action after access revocation; exact device/browser versions and individual re-pairing steps were not supplied. Automated fresh-invitation and mandatory-approval evidence remains recorded above.

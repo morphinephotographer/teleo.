@@ -31,6 +31,7 @@ import {
   type Key,
 } from "./i18n";
 import { storage } from "./storage";
+import { DraftWriter } from "./drafts";
 import { RemoteLink } from "./remote";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet } from "./ui";
@@ -131,8 +132,6 @@ function App() {
     viewport = useRef<HTMLDivElement>(null),
     content = useRef<HTMLDivElement>(null),
     currentRef = useRef<Script | null>(null),
-    pending = useRef(new Map<string, Script>()),
-    saving = useRef(Promise.resolve()),
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
@@ -173,29 +172,16 @@ function App() {
     localSet("teleo.theme", theme);
   }, [focusPosition, focusDimming, theme]);
   currentRef.current = current;
-  const persist = (s: Script) => {
-    pending.current.set(s.scriptId, s);
-    localSet("teleo.recovery." + s.scriptId, JSON.stringify(s));
-    setStatus("saving");
-  };
-  const flush = () => {
-    const batch = [...pending.current.values()];
-    pending.current.clear();
-    if (!batch.length) return saving.current;
-    saving.current = saving.current.then(async () => {
-      for (const s of batch) {
-        try {
-          await storage.save(s, true);
-          localSet("teleo.recovery." + s.scriptId, "");
-          setStatus("saved");
-        } catch {
-          pending.current.set(s.scriptId, s);
-          setStatus("saveError");
-        }
-      }
-    });
-    return saving.current;
-  };
+  const writer = useRef<DraftWriter | null>(null);
+  if (!writer.current)
+    writer.current = new DraftWriter(
+      (script) => storage.save(script, true),
+      (id, script) =>
+        localSet("teleo.recovery." + id, script ? JSON.stringify(script) : ""),
+      setStatus,
+    );
+  const persist = (script: Script) => writer.current!.enqueue(script);
+  const flush = () => writer.current!.flush();
   const edit = (patch: Partial<Script>) => {
     if (!currentRef.current) return;
     const next = {
@@ -249,7 +235,7 @@ function App() {
                   );
                   if (index >= 0) list[index] = recovered;
                   else list.push(recovered);
-                  pending.current.set(recovered.scriptId, recovered);
+                  writer.current!.enqueue(recovered);
                 }
               }
             }

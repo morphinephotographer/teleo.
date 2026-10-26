@@ -153,6 +153,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
         ),
       ).toBeGreaterThan(0);
       await dock.getByRole("button", { name: t.pause, exact: true }).click();
+      await expect(dock.locator("output")).toHaveText("1.00×");
       await dock.getByRole("button", { name: t.speedUp, exact: true }).click();
       await expect(dock.locator("output")).toContainText("1.25");
       await dock

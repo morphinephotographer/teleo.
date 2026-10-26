@@ -10,6 +10,7 @@ Source owners:
 | --- | --- |
 | apps/web/src/main.tsx | application composition, scripts/preferences, host playback, input adapter, routes |
 | apps/web/src/ui.tsx | icon buttons, segmented groups, native modal sheet |
+| apps/web/src/drafts.ts | serial autosave, latest-draft recovery and truthful save status |
 | apps/web/src/Intro.tsx | session entry animation and accessible dismissal |
 | apps/web/src/style.css | tokens, components, responsive layout, reduced motion |
 | apps/web/src/storage.ts | unchanged IndexedDB/revision/tombstone logic |
@@ -29,3 +30,7 @@ Settings reuse existing preference/mapping handlers inside a native modal dialog
 The requestAnimationFrame engine continues applying time-based scroll each frame. React playback displays update at most every 100 ms; local position checkpoints at most every 250 ms. Script paragraph strings and word counts are memoized by body. This separates scrolling from rebuilding all UI each display frame. No FPS guarantee or performance benchmark is claimed. Existing elapsed-delta clamp, pause/background handling, HID scope, command validation, storage flushing and relay security remain in place.
 
 VisualViewport listeners resize the mobile editor shell when a keyboard changes the visible viewport; listeners, timers and animation frames are removed on cleanup. Modal settings prevent ordinary reader shortcuts; explicit hardware learning/test remains functional. Closing settings cancels learning/testing. The separate phone controller is retained from the preceding phase, including its existing optional vibration behavior.
+
+## Autosave race found during public verification
+
+An older asynchronous save could clear recovery for a newer edit and briefly show Saved before the latest queued snapshot completed. `DraftWriter` now tracks latest dirty snapshots independently of pending/in-flight batches. Only completion of the exact latest snapshot clears its recovery key; a failed stale write cannot replace a newer pending edit. Four controlled-promise regression tests cover older completion, already queued later saves, stale failures and retry. The IndexedDB schema and storage serialization format are unchanged.

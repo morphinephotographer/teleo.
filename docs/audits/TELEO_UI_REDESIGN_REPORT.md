@@ -10,7 +10,7 @@ Baseline: `npm run build` passed; focused Vitest domain/client suites **31/31**;
 
 ## Delivered decisions
 
-See the four docs/design documents for tokens/components, ownership, intro timeline and responsive behavior. Business/storage/protocol code remains unchanged. The old homepage is removed from entry; a new session intro yields the real workspace. Settings use native focus management. New visual preferences stay local rather than silently changing the portable script schema. Browser fullscreen has a real CSS immersive fallback. No fake formatting, color-picker or custom restart-behavior control is added where the existing model has no such feature. Existing restart resets/pauses; reader appearance supports the existing light/dark modes, and the interface adds light/dark/system.
+See the four docs/design documents for tokens/components, ownership, intro timeline and responsive behavior. Portable domain, storage schema and remote protocol remain unchanged. The save coordinator was subsequently hardened as described below. The old homepage is removed from entry; a new session intro yields the real workspace. Settings use native focus management. New visual preferences stay local rather than silently changing the portable script schema. Browser fullscreen has a real CSS immersive fallback. No fake formatting, color-picker or custom restart-behavior control is added where the existing model has no such feature. Existing restart resets/pauses; reader appearance supports the existing light/dark modes, and the interface adds light/dark/system.
 
 ## Verification
 
@@ -31,3 +31,9 @@ Physical iPhone keyboard/chrome/orientation, VoiceOver, actual Bluetooth HID, fu
 - Native sources, portable domain, IndexedDB schema and relay/client protocol sources are unchanged; native builds and the longer relay-expiry suite were not rerun for this presentation change.
 
 Screenshots: docs/screenshots/premium-{en,uk,ru}-{1440,834,390}-{editor,reader}.png; premium-{desktop,mobile}-intro.png; premium-{desktop,mobile}-settings.png. Public staging results and deployed source follow after publication.
+
+## Public verification findings and corrective work
+
+The first concurrent public runs shared Playwright output artifacts; one process cleaned files still used by the other, causing ENOENT report/trace failures. Public suite configs now use separate output directories; no server/security setting was changed. Separately, the viewport loop exposed restoration of an older speed value during rapid saves/navigation. Inspection confirmed an autosave race: an older write could clear newer recovery and report Saved while the newer draft remained outstanding. `DraftWriter` fixes ownership of dirty/pending/in-flight snapshots without a storage migration. Four controlled asynchronous tests pass, and the focused 18 redesign scenarios pass locally (40.8 seconds). Full local and public verification after the fix follow. Initial failed public runs are not counted as passed acceptance.
+
+After the autosave fix, focused Vitest is **35/35 passed** (domain/client + four draft-writer regressions); typecheck/lint/staging build/dry-run passed and the full browser suite is again **72/72 passed**, reported 1.3 minutes. All three Playwright configs now isolate their output subdirectories. Final public verification follows after redeploying the save fix.

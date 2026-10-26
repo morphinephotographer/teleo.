@@ -10,9 +10,9 @@ Native SwiftUI onKeyPress is scoped to reader focus or explicit learning/test fo
 
 ## Browser phone remote
 
-Run `npm run relay` and `npm run dev`. Open Studio, create a script, enter Read, Connect phone. Scan QR or open the invitation link in an independent browser context. Host allows or denies. Capability has 256-bit entropy, is one-use for 120 seconds, and lives in the fragment, not query/path. The public Durable Object ID is not the capability. Controller removes the fragment after reading. The socket authenticates in its first frame; Origin is allowlisted. No body/title goes to the relay.
+Run `npm run relay` and `npm run dev`. Open Studio, create a script, enter Read, Connect phone. Scan QR or open the invitation link in an independent browser context. Host allows or denies. Capability has 256-bit entropy, is one-use for 120 seconds, and lives in the fragment, not query/path. The public Durable Object ID is not the capability. Controller removes the fragment after reading. The socket authenticates in its first frame; Origin is allowlisted. Ordinary commands contain no body/title. Optional v0.3.1 Text preview forwards content only after a separate host-side session grant.
 
-Host emits ACK after applying commands. Controller accepts numeric state only with an increasing relay sequence. Host sends a fresh snapshot on pairing/resume and while connected once per second; local host changes reach the phone without a remote request. No script text/title enters these snapshots.
+Host emits ACK after applying commands. Controller accepts numeric state only with an increasing relay sequence. Host sends a fresh snapshot on pairing/resume and while connected once per second; local host changes reach the phone without a remote request. No script text/title enters these numeric snapshots; consented preview uses separately validated messages on the same connection.
 
 One controller/host, one-hour absolute session TTL, 20 messages/sec, 1024-character messages, 1000 request IDs and 50 outstanding requests. Browser heartbeats run every 15 seconds and reconnect after 35 seconds without pong. After an approved peer's transport loss, the relay retains authorization for **30 seconds**; the browser retries with bounded exponential backoff (250ms–4s, at most eight attempts) for at most **25 seconds**. Both UI languages and all pairing state survive a reconnect because locale is independent from transport state.
 
@@ -31,3 +31,7 @@ A real same-Mac TLS loopback test covers successful enrollment, approval, comman
 References reviewed: [Apple TN3213](https://developer.apple.com/documentation/technotes/tn3213-moving-from-multipeer-connectivity-to-network-framework), [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(_:action:)), [Cloudflare WebSockets](https://developers.cloudflare.com/durable-objects/best-practices/websockets/).
 
 After explicit revoke, the host panel offers Reconnect instead of a redundant Revoke button. This starts a fresh invitation/approval flow and never resumes the revoked authorization. Opening that new invitation in the same phone tab is supported through fragment-change handling; a page refresh is not required.
+
+## Browser Text preview v0.3.1
+
+After pairing approval, the host may enable Allow script preview. The phone Text tab remains private until this separate grant. Text and title are forwarded without relay persistence/logging; preview is held only in phone memory. Edit mode pauses without revoking the paired session, so script edits/selection update the phone. Explicit Exit/Disconnect/Revoke still ends authorization. Consent off or a connection interruption clears live phone text; approved bounded recovery requests a fresh snapshot. The relay sees content while forwarding over TLS; no end-to-end encryption is claimed. See docs/design/TELEO_REMOTE_V03.md for schema, throttling, limits and feedback truthfulness.

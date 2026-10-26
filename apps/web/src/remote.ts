@@ -1,3 +1,8 @@
+import {
+  validPreviewPayload,
+  type PreviewEnvelope,
+  type PreviewPermission,
+} from "../../../packages/protocol/preview";
 import type { Command } from "../../../packages/protocol/domain";
 export type PlaybackState = {
   playing: boolean;
@@ -10,6 +15,7 @@ export type RemoteEvent = {
   command?: Command;
   state?: PlaybackState;
   sequence?: number;
+  preview?: PreviewEnvelope | PreviewPermission;
 };
 const secret = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
@@ -102,6 +108,34 @@ export class RemoteLink {
         this.finish("unavailable");
         return;
       }
+      if (event.type === "previewPermission") {
+        const m = event as unknown as PreviewPermission;
+        if (
+          m.version === 1 &&
+          m.sessionId === this.session?.id &&
+          typeof m.allowed === "boolean" &&
+          Number.isSafeInteger(m.epoch) &&
+          m.epoch >= 0
+        )
+          this.onEvent({ type: "previewPermission", preview: m });
+        return;
+      }
+      if (
+        event.type === "previewContent" ||
+        event.type === "previewPosition" ||
+        event.type === "previewUnavailable"
+      ) {
+        const m = event as unknown as PreviewEnvelope;
+        const { sessionId, sequence, ...payload } = m;
+        if (
+          sessionId === this.session?.id &&
+          Number.isSafeInteger(sequence) &&
+          sequence >= 0 &&
+          validPreviewPayload(payload)
+        )
+          this.onEvent({ type: m.type, preview: m });
+        return;
+      }
       if (event.type === "authenticated") {
         this.authenticated = true;
         clearTimeout(this.timeout);
@@ -189,6 +223,13 @@ export class RemoteLink {
   send(message: unknown) {
     if (this.authenticated && this.socket?.readyState === WebSocket.OPEN)
       this.socket.send(JSON.stringify(message));
+  }
+  previewPermission(allowed: boolean) {
+    if (this.ready)
+      this.send({ type: "previewPermission", version: 1, allowed });
+  }
+  requestPreview() {
+    if (this.ready) this.send({ type: "previewRequest", version: 1 });
   }
   state(state: PlaybackState) {
     if (this.ready) this.send({ type: "state", state });

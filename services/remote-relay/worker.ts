@@ -1,4 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
+import { validPreviewPayload } from "../../packages/protocol/preview";
 import { validCommand } from "../../packages/protocol/domain";
 interface Env {
   ROOMS: DurableObjectNamespace<Room>;
@@ -20,6 +21,8 @@ type RoomData = {
   detached: Partial<Record<Role, number>>;
   sequence: number;
   lastSeen: Partial<Record<Role, number>>;
+  previewAllowed?: boolean;
+  previewEpoch?: number;
 };
 type Attachment = {
   role: "new" | Role;
@@ -216,12 +219,24 @@ export class Room extends DurableObject<Env> {
     if (!this.ready(d)) return;
     this.send(d, "host", { type: "connected" });
     this.send(d, "controller", { type: "connected" });
+    this.send(d, "host", this.previewPermission(d));
+    this.send(d, "controller", this.previewPermission(d));
     this.send(d, "host", { type: "stateRequest" });
+  }
+  private previewPermission(d: RoomData) {
+    return {
+      type: "previewPermission",
+      version: 1,
+      allowed: !!d.previewAllowed,
+      epoch: d.previewEpoch || 0,
+      sessionId: this.ctx.id.toString(),
+    };
   }
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     await this.ctx.blockConcurrencyWhile(async () => {
       try {
-        if (typeof message !== "string" || message.length > 1024) throw Error();
+        if (typeof message !== "string" || message.length > 52_000)
+          throw Error();
         const a = ws.deserializeAttachment() as Attachment;
         const now = Date.now();
         if (now - a.window > 1000) {
@@ -233,6 +248,11 @@ export class Room extends DurableObject<Env> {
         const d = await this.ctx.storage.get<RoomData>("room");
         if (!d || this.expired(d, now)) throw Error();
         const m = JSON.parse(message);
+        if (
+          message.length > 1024 &&
+          !(a.role === "host" && m.type === "previewContent")
+        )
+          throw Error();
         if (a.role === "new") {
           if (typeof m.token !== "string" || !/^[a-f0-9]{64}$/.test(m.token))
             throw Error();
@@ -308,6 +328,44 @@ export class Room extends DurableObject<Env> {
         }
         if (!d.approved) throw Error();
         if (
+          m.type === "previewPermission" &&
+          a.role === "host" &&
+          Object.keys(m).sort().join(",") === "allowed,type,version" &&
+          m.version === 1 &&
+          typeof m.allowed === "boolean"
+        ) {
+          d.previewAllowed = m.allowed;
+          d.previewEpoch = (d.previewEpoch || 0) + 1;
+          await this.ctx.storage.put("room", d);
+          this.send(d, "host", this.previewPermission(d));
+          this.send(d, "controller", this.previewPermission(d));
+          return;
+        }
+        if (
+          m.type === "previewRequest" &&
+          a.role === "controller" &&
+          m.version === 1 &&
+          Object.keys(m).sort().join(",") === "type,version"
+        ) {
+          this.send(d, "controller", this.previewPermission(d));
+          if (d.previewAllowed && this.ready(d))
+            this.send(d, "host", { type: "previewRequest" });
+          return;
+        }
+        if (a.role === "host" && validPreviewPayload(m)) {
+          // Content is forwarded only. Never assign it to room storage or socket attachments.
+          if (!d.previewAllowed || m.epoch !== d.previewEpoch || !this.ready(d))
+            return;
+          d.sequence++;
+          await this.ctx.storage.put("room", d);
+          this.send(d, "controller", {
+            ...m,
+            sessionId: this.ctx.id.toString(),
+            sequence: d.sequence,
+          });
+          return;
+        }
+        if (
           a.role === "controller" &&
           m.type === "command" &&
           Object.keys(m).every((k) => ["type", "id", "command"].includes(k)) &&
@@ -377,6 +435,8 @@ export class Room extends DurableObject<Env> {
     const d = await this.ctx.storage.get<RoomData>("room");
     if (d) {
       d.revoked = true;
+      d.previewAllowed = false;
+      d.previewEpoch = (d.previewEpoch || 0) + 1;
       d.resume = {};
       d.pending = [];
       await this.ctx.storage.put("room", d);

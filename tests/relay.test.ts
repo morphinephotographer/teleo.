@@ -1,9 +1,10 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { build } from "esbuild";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { DatabaseSync } from "node:sqlite";
 let mf: Miniflare;
 let persistence: string;
 let runtimeOptions: ConstructorParameters<typeof Miniflare>[0];
@@ -113,6 +114,7 @@ beforeAll(async () => {
       ],
     }),
     resourcePersistencePath: persistence,
+    unsafeInspectDurableObjects: true,
   };
   mf = new Miniflare(runtimeOptions);
   await mf.ready;
@@ -433,3 +435,146 @@ it("resumes both peers after a real runtime restart using durable hashes and dea
   });
   resumedHost.send({ type: "revoke" });
 }, 20000);
+
+describe("permission-scoped ephemeral text preview", () => {
+  const content = (
+    epoch: number,
+    text = "PRIVATE_BODY_ONLY_FOR_THE_AUTHORIZED_PHONE",
+  ) => ({
+    type: "previewContent",
+    version: 1,
+    epoch,
+    script: {
+      id: crypto.randomUUID(),
+      revision: "b".repeat(64),
+      title: "PRIVATE_TITLE_DO_NOT_STORE",
+    },
+    index: 0,
+    total: 1,
+    text,
+  });
+  async function approved() {
+    const s = await session();
+    s.host.send({ type: "allow" });
+    await s.host.next("connected");
+    await s.phone.next("connected");
+    await s.host.next("stateRequest");
+    await s.host.next("previewPermission");
+    await s.phone.next("previewPermission");
+    return s;
+  }
+  async function grant(host: Peer, phone: Peer, allowed = true) {
+    host.send({ type: "previewPermission", version: 1, allowed });
+    await host.next("previewPermission");
+    return (await phone.next("previewPermission")) as unknown as {
+      epoch: number;
+      allowed: boolean;
+    };
+  }
+  it("defaults off, requires host consent, forwards bounded content and never stores body/title", async () => {
+    const { host, phone } = await approved();
+    phone.send({ type: "previewRequest", version: 1 });
+    expect(
+      (
+        (await phone.next("previewPermission")) as unknown as {
+          allowed: boolean;
+        }
+      ).allowed,
+    ).toBe(false);
+    host.send(content(0));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(phone.messages.some((m) => m.type === "previewContent")).toBe(false);
+    const permission = await grant(host, phone);
+    const packet = content(
+      permission.epoch,
+      "PRIVATE_TEXT_MARKER_".repeat(100),
+    );
+    host.send(packet);
+    expect(
+      ((await phone.next("previewContent")) as unknown as { text: string })
+        .text,
+    ).toBe(packet.text);
+    const values: string[] = [];
+    for (const file of await readdir(persistence, { recursive: true })) {
+      if (!file.endsWith(".sqlite")) continue;
+      const db = new DatabaseSync(join(persistence, file), { readOnly: true });
+      try {
+        const tables = db
+          .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+          .all();
+        for (const table of tables) {
+          const query = db.prepare(
+            'SELECT * FROM "' + String(table.name).replaceAll('"', '""') + '"',
+          );
+          query.setReadBigInts(true);
+          const rows = query.all();
+          for (const row of rows)
+            for (const value of Object.values(row)) {
+              if (
+                value &&
+                typeof value === "object" &&
+                ArrayBuffer.isView(value)
+              ) {
+                const bytes = Buffer.from(
+                  value.buffer,
+                  value.byteOffset,
+                  value.byteLength,
+                );
+                values.push(bytes.toString("utf8"), bytes.toString("utf16le"));
+              } else values.push(String(value));
+            }
+        }
+      } finally {
+        db.close();
+      }
+    }
+    expect(values.join(" ")).not.toContain(packet.text);
+    expect(values.join(" ")).not.toContain(packet.script.title);
+    host.send({ type: "revoke" });
+    await phone.waitClosed();
+  });
+  it("rejects controller permission escalation and controller-authored text", async () => {
+    for (const payload of [
+      { type: "previewPermission", version: 1, allowed: true },
+      content(1),
+    ]) {
+      const { host, phone } = await approved();
+      phone.send(payload);
+      await phone.waitClosed();
+      host.ws.close();
+    }
+  });
+  it("revokes delivery immediately and rejects stale consent epochs after re-grant", async () => {
+    const { host, phone } = await approved();
+    const first = await grant(host, phone);
+    await grant(host, phone, false);
+    host.send(content(first.epoch));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(phone.messages.some((m) => m.type === "previewContent")).toBe(false);
+    const second = await grant(host, phone);
+    expect(second.epoch).toBeGreaterThan(first.epoch);
+    host.send(content(first.epoch));
+    host.send(content(second.epoch));
+    const received = (await phone.next("previewContent")) as unknown as {
+      epoch: number;
+    };
+    expect(received.epoch).toBe(second.epoch);
+    host.send({ type: "revoke" });
+  });
+  it("rejects oversized chunks and requests fresh host content after hibernation", async () => {
+    const { room, host, phone } = await approved();
+    await grant(host, phone);
+    await mf.unsafeEvictDurableObject("relay", "Room", {
+      id: room.id,
+      webSockets: "hibernate",
+    });
+    phone.send({ type: "previewRequest", version: 1 });
+    await host.next("previewRequest");
+    expect(phone.messages.some((m) => m.type === "previewContent")).toBe(false);
+    const current = (await phone.next("previewPermission")) as unknown as {
+      epoch: number;
+    };
+    host.send(content(current.epoch, "x".repeat(8193)));
+    await host.waitClosed();
+  });
+});

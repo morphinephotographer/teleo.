@@ -1144,6 +1144,11 @@ function App() {
     </>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+// Keep the root across Vite module replacement; never attach React twice.
+const reactRoot =
+  import.meta.hot?.data.reactRoot ??
+  createRoot(document.getElementById("root")!);
+if (import.meta.hot) import.meta.hot.data.reactRoot = reactRoot;
+reactRoot.render(<App />);
 if (import.meta.env.PROD && "serviceWorker" in navigator)
   navigator.serviceWorker.register("/sw.js").catch(() => {});

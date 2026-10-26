@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createRoot } from "react-dom/client";
 import QRCode from "qrcode";
 import {
@@ -26,6 +32,8 @@ import {
 } from "./i18n";
 import { storage } from "./storage";
 import { RemoteLink } from "./remote";
+import { Intro, introNeeded } from "./Intro";
+import { Icon, IconButton, Segmented, Sheet } from "./ui";
 import "./style.css";
 const engine = new Playback();
 function download(name: string, text: string, type = "text/plain") {
@@ -36,52 +44,6 @@ function download(name: string, text: string, type = "text/plain") {
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-function HomePreview({ text, t }: { text: string; t: (key: Key) => string }) {
-  const engine = useRef(new Playback()),
-    view = useRef<HTMLDivElement>(null);
-  const [playing, setPlaying] = useState(false);
-  useEffect(() => {
-    let frame = 0;
-    const tick = (now: number) => {
-      if (view.current) {
-        engine.current.maximum = Math.max(
-          0,
-          view.current.scrollHeight - view.current.clientHeight,
-        );
-        view.current.scrollTop = engine.current.tick(now);
-        if (!engine.current.playing) setPlaying(false);
-      }
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, []);
-  return (
-    <>
-      <div className="demo-text" ref={view}>
-        <p>
-          {Array.from({ length: 4 }, (_, i) => (
-            <React.Fragment key={i}>
-              {text}
-              <br />
-              <br />
-            </React.Fragment>
-          ))}
-        </p>
-      </div>
-      <button
-        onClick={() => {
-          if (!playing && engine.current.position >= engine.current.maximum)
-            engine.current.position = 0;
-          engine.current.command({ action: playing ? "pause" : "play" });
-          setPlaying(!playing);
-        }}
-      >
-        {t(playing ? "pause" : "play")}
-      </button>
-    </>
-  );
-}
 function App() {
   const [locale, setLocale] = useState<Locale>(() =>
     detectLocale(
@@ -91,10 +53,30 @@ function App() {
     ),
   );
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
+  const [intro, setIntro] = useState(introNeeded);
+  const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
+  const libraryBeforeReading = useRef(libraryOpen);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [immersive, setImmersive] = useState(false);
+  const [focusPosition, setFocusPosition] = useState(
+    () => Number(localGet("teleo.focusPosition")) || 35,
+  );
+  const [focusDimming, setFocusDimming] = useState(
+    () => localGet("teleo.focusDimming") === "true",
+  );
+  const [theme, setTheme] = useState(() => localGet("teleo.theme") || "system");
+  const finishIntro = useCallback(() => {
+    setIntro(false);
+    requestAnimationFrame(() =>
+      document.querySelector<HTMLElement>("header .brand")?.focus(),
+    );
+  }, []);
   const [panel, setPanel] = useState<"library" | "editor" | "settings">(
     "library",
   );
-  const [route, setRoute] = useState(location.pathname),
+  const [route, setRoute] = useState(
+      location.pathname === "/" ? "/studio" : location.pathname,
+    ),
     [scripts, setScripts] = useState<Script[]>([]),
     [selected, setSelected] = useState(""),
     [search, setSearch] = useState(""),
@@ -154,6 +136,42 @@ function App() {
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
+  const wordCount = useMemo(
+    () => current?.body.trim().split(/\s+/u).filter(Boolean).length || 0,
+    [current?.body],
+  );
+  const bodyParagraphs = useMemo(
+    () => current?.body.split(/\n\s*\n/) || [],
+    [current?.body],
+  );
+  const duration = Math.ceil(
+    wordCount / (150 * (current?.preferences.speed || 1)),
+  );
+  useEffect(() => {
+    const visual = window.visualViewport;
+    const resize = () => {
+      const root = document.documentElement;
+      root.style.setProperty(
+        "--visual-height",
+        `${visual?.height || innerHeight}px`,
+      );
+      root.style.setProperty("--visual-top", `${visual?.offsetTop || 0}px`);
+    };
+    visual?.addEventListener("resize", resize);
+    visual?.addEventListener("scroll", resize);
+    resize();
+    return () => {
+      visual?.removeEventListener("resize", resize);
+      visual?.removeEventListener("scroll", resize);
+      document.documentElement.style.removeProperty("--visual-height");
+      document.documentElement.style.removeProperty("--visual-top");
+    };
+  }, []);
+  useEffect(() => {
+    localSet("teleo.focusPosition", String(focusPosition));
+    localSet("teleo.focusDimming", String(focusDimming));
+    localSet("teleo.theme", theme);
+  }, [focusPosition, focusDimming, theme]);
   currentRef.current = current;
   const persist = (s: Script) => {
     pending.current.set(s.scriptId, s);
@@ -292,7 +310,13 @@ function App() {
     canonical.href = `https://teleo.cc${route}?lang=${locale}`;
   }, [locale, route]);
   useEffect(() => {
-    const pop = () => setRoute(location.pathname);
+    const pop = () => {
+      engine.suspend();
+      setReading(false);
+      remote.current.close();
+      setRemoteStatus(null);
+      setRoute(location.pathname === "/" ? "/studio" : location.pathname);
+    };
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
   }, []);
@@ -303,14 +327,22 @@ function App() {
   }, [selected]);
   useEffect(() => {
     if (!reading) return;
-    let raf = 0;
+    let raf = 0,
+      lastUI = 0,
+      lastSave = 0;
     const tick = (now: number) => {
       const view = viewport.current;
       if (view) {
         engine.maximum = Math.max(0, view.scrollHeight - view.clientHeight);
         view.scrollTop = engine.tick(now);
-        localSet("teleo.position." + selected, String(engine.position));
-        setFrame((x) => x + 1);
+        if (now - lastSave >= 250) {
+          localSet("teleo.position." + selected, String(engine.position));
+          lastSave = now;
+        }
+        if (now - lastUI >= 100) {
+          setFrame((x) => x + 1);
+          lastUI = now;
+        }
       }
       raf = requestAnimationFrame(tick);
     };
@@ -359,11 +391,14 @@ function App() {
   }, [learn, testing]);
   useEffect(() => {
     const key = (e: KeyboardEvent) => {
+      if (intro || settingsOpen) {
+        if (!learn && !testing) return;
+      }
       const target = e.target as HTMLElement;
       const editable = !!target.closest(
         "input,textarea,select,[contenteditable=true],[role=dialog]",
       );
-      if (e.key === "Escape" && reading) {
+      if (e.key === "Escape" && reading && !settingsOpen) {
         exitReader();
         return;
       }
@@ -480,17 +515,22 @@ function App() {
     remote.current.close();
     setRemoteStatus(null);
     history.pushState({}, "", path);
-    setRoute(path);
+    setSettingsOpen(false);
+    setRoute(path === "/" ? "/studio" : path);
   }
   async function add(s = createScript(t("untitled"))) {
     await flush();
     setScripts((list) => [s, ...list]);
     setSelected(s.scriptId);
     setPanel("editor");
+    if (innerWidth <= 900) setLibraryOpen(false);
     persist(s);
   }
   function exitReader() {
+    setLibraryOpen(libraryBeforeReading.current);
+    localSet("teleo.position." + selected, String(engine.position));
     setReading(false);
+    setImmersive(false);
     engine.suspend();
     remote.current.close();
     setInvite("");
@@ -499,9 +539,12 @@ function App() {
   }
   async function startReader() {
     await flush();
+    if (!reading) libraryBeforeReading.current = libraryOpen;
+    setLibraryOpen(false);
     setReading(true);
   }
   async function connect() {
+    setSettingsOpen(false);
     setApproval(false);
     setInvite("");
     setQR("");
@@ -582,658 +625,874 @@ function App() {
       <option value="ru">Русский</option>
     </select>
   );
+  const settingsContent = current ? (
+    <aside className="settings">
+      <h3>{t("playbackSettings")}</h3>
+      {range("speed", 0.5, 3, 0.25)}
+      <h3>{t("textSettings")}</h3>
+      {range("fontSize", 16, 100, 1)}
+      <div className="advanced-settings">
+        {range("lineHeight", 1, 3, 0.1)}
+        {range("textWidth", 280, 1600, 20)}
+        <div className="setting-group">
+          <span>{t("alignment")}</span>
+          <Segmented
+            label={t("alignment")}
+            value={current.preferences.alignment}
+            onChange={(alignment) => pref({ alignment })}
+            options={(["left", "center", "right"] as const).map((value) => ({
+              value,
+              label: t(value),
+            }))}
+          />
+        </div>
+        {(["mirrorHorizontal", "mirrorVertical", "focusLine"] as const).map(
+          (k) => (
+            <label className="check" key={k}>
+              <input
+                type="checkbox"
+                checked={current.preferences[k]}
+                onChange={(e) => pref({ [k]: e.target.checked })}
+              />
+              {t(k)}
+            </label>
+          ),
+        )}
+        <label>
+          {t("countdown")}
+          <select
+            value={current.preferences.countdownSeconds}
+            onChange={(e) => pref({ countdownSeconds: Number(e.target.value) })}
+          >
+            {[0, 3, 5, 10].map((n) => (
+              <option value={n} key={n}>
+                {n ? `${n} ${t("seconds")}` : t("off")}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="setting-group">
+          <span>{t("appearance")}</span>
+          <Segmented
+            label={t("appearance")}
+            value={current.preferences.appearance}
+            onChange={(appearance) => pref({ appearance })}
+            options={[
+              { value: "dark", label: t("dark") },
+              { value: "light", label: t("light") },
+            ]}
+          />
+        </div>
+      </div>
+      <h3>{t("focusLine")}</h3>
+      <label>
+        {t("focusPosition")} <output>{focusPosition}%</output>
+        <input
+          type="range"
+          min="20"
+          max="70"
+          value={focusPosition}
+          aria-label={t("focusPosition")}
+          onChange={(e) => setFocusPosition(Number(e.target.value))}
+        />
+      </label>
+      <label className="check">
+        <input
+          type="checkbox"
+          checked={focusDimming}
+          onChange={(e) => setFocusDimming(e.target.checked)}
+        />
+        {t("focusDimming")}
+      </label>
+      <h3>{t("interfaceTheme")}</h3>
+      <Segmented
+        label={t("interfaceTheme")}
+        value={theme}
+        onChange={setTheme}
+        options={[
+          { value: "light", label: t("light") },
+          { value: "dark", label: t("dark") },
+          { value: "system", label: t("system") },
+        ]}
+      />
+      <details>
+        <summary>{t("physical")}</summary>
+        <p>{t("keyHelp")}</p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          {t("enabled")}
+        </label>
+        <label>
+          {t("profile")}
+          <select value={profile} onChange={(e) => setProfile(e.target.value)}>
+            <option value="standard">{t("standard")}</option>
+            <option value="twoButton">{t("twoButton")}</option>
+            <option value="custom">{t("custom")}</option>
+          </select>
+        </label>
+        {profile === "twoButton" && (
+          <>
+            {button("learnA", () => setLearn("togglePlay"))}
+            {button("learnB", () => setLearn("preset"))}
+            <label>
+              {t("presets")}
+              <input
+                value={presets}
+                onChange={(e) => setPresets(e.target.value)}
+              />
+            </label>
+          </>
+        )}
+        {profile === "custom" && (
+          <>
+            <select
+              aria-label={t("custom")}
+              value={learnAction}
+              onChange={(e) => setLearnAction(e.target.value as Action)}
+            >
+              {actions
+                .filter((a) => a !== "setSpeed")
+                .map((a) => (
+                  <option key={a} value={a}>
+                    {t(a as Key)}
+                  </option>
+                ))}
+            </select>
+            {button("learn", () => setLearn(learnAction))}
+          </>
+        )}
+        {learn && <p role="status">{t("learning")}</p>}
+        {button("test", () => {
+          setTesting(true);
+          setKeyEvent("");
+        })}
+        <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
+        {Object.entries(profile === "standard" ? standardKeys : mapping).map(
+          ([key, a]) => (
+            <p key={key}>
+              <kbd>{key}</kbd> → {t(a as Key)}
+            </p>
+          ),
+        )}
+        {button("reset", () => setMapping({}))}
+      </details>
+      {button("connect", () => void connect())}
+    </aside>
+  ) : null;
+  useEffect(() => {
+    const fullscreenChanged = () => {
+      if (!document.fullscreenElement) setImmersive(false);
+    };
+    document.addEventListener("fullscreenchange", fullscreenChanged);
+    return () =>
+      document.removeEventListener("fullscreenchange", fullscreenChanged);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) {
+      void document.exitFullscreen();
+      setImmersive(false);
+      return;
+    }
+    if (immersive) {
+      setImmersive(false);
+      return;
+    }
+    setImmersive(true);
+    if (document.fullscreenEnabled)
+      void document.documentElement.requestFullscreen().catch(() => {});
+  };
   const controls = (
     <div
       className="reader-controls"
       aria-hidden={!controlsVisible}
       inert={!controlsVisible}
     >
-      {button(
-        engine.playing ? "pause" : "play",
-        () => command({ action: engine.playing ? "pause" : "play" }),
-        true,
-      )}
-      {button("restart", () => command({ action: "restart" }))}
-      {button("speedDown", () => command({ action: "speedDown" }))}
-      <output>{engine.speed.toFixed(2)}×</output>
-      {button("speedUp", () => command({ action: "speedUp" }))}
-      {button("previousParagraph", () =>
-        command({ action: "previousParagraph" }),
-      )}
-      {button("nextParagraph", () => command({ action: "nextParagraph" }))}
+      <div className="dock-group">
+        <IconButton
+          name="restart"
+          label={t("restart")}
+          onClick={() => command({ action: "restart" })}
+        />
+      </div>
+      <div className="dock-group speed-group">
+        <IconButton
+          name="minus"
+          label={t("speedDown")}
+          onClick={() => command({ action: "speedDown" })}
+        />
+        <output>{engine.speed.toFixed(2)}×</output>
+        <IconButton
+          name="plus"
+          label={t("speedUp")}
+          onClick={() => command({ action: "speedUp" })}
+        />
+      </div>
+      <IconButton
+        className="dock-play primary"
+        name={engine.playing ? "pause" : "play"}
+        label={t(engine.playing ? "pause" : "play")}
+        onClick={() => command({ action: engine.playing ? "pause" : "play" })}
+      />
+      <div className="dock-group paragraph-group">
+        <IconButton
+          name="previous"
+          label={t("previousParagraph")}
+          onClick={() => command({ action: "previousParagraph" })}
+        />
+        <IconButton
+          name="next"
+          label={t("nextParagraph")}
+          onClick={() => command({ action: "nextParagraph" })}
+        />
+      </div>
+      <div className="dock-group text-group">
+        <IconButton
+          name="text"
+          label={t("settings")}
+          onClick={() => setSettingsOpen(true)}
+        />
+        <IconButton
+          name="mirror"
+          label={t("mirrorHorizontal")}
+          active={current?.preferences.mirrorHorizontal}
+          onClick={() =>
+            pref({ mirrorHorizontal: !current?.preferences.mirrorHorizontal })
+          }
+        />
+        <IconButton
+          name="focus"
+          label={t("focusLine")}
+          active={current?.preferences.focusLine}
+          onClick={() => pref({ focusLine: !current?.preferences.focusLine })}
+        />
+        <IconButton
+          name="fullscreen"
+          label={t("fullscreen")}
+          active={immersive}
+          onClick={toggleFullscreen}
+        />
+      </div>
     </div>
   );
   return (
-    <div className={"app-shell route-" + (route.slice(1) || "home")}>
-      <header>
-        <a
-          className="brand"
-          href="/"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
-        >
-          teleo.
-        </a>
-        <nav>
-          {(["home", "studio", "remote", "help", "privacy"] as const).map(
-            (k) => (
-              <a
-                key={k}
-                aria-current={
-                  route === (k === "home" ? "/" : "/" + k) ? "page" : undefined
-                }
-                href={k === "home" ? "/" : "/" + k}
-                onClick={(e) => {
-                  e.preventDefault();
-                  navigate(k === "home" ? "/" : "/" + k);
-                }}
-              >
-                {t(k)}
-              </a>
-            ),
-          )}
-        </nav>
-        {lang}
-      </header>
-      {!online && (
-        <p role="status" className="banner">
-          {t("offline")}
-        </p>
-      )}
-      {notice && (
-        <div role="alert" className="banner">
-          {t(notice)} {button("close", () => setNotice(null))}
-        </div>
-      )}
-      {route === "/" ? (
-        <main className="home">
-          <div className="eyebrow">teleo. / {t("tagline")}</div>
-          <h1>{t("intro")}</h1>
-          <p className="lead">{t("description")}</p>
-          {button("launch", () => navigate("/studio"), true)}
-          <p className="muted">{t("local")}</p>
-          <div className="demo">
-            <span className="live-dot" /> <small>{t("tagline")}</small>
-            <HomePreview text={t("intro") + " " + t("description")} t={t} />
-          </div>
-        </main>
-      ) : route === "/help" || route === "/privacy" ? (
-        <main className="prose">
-          <div className="eyebrow">teleo. / {t(route.slice(1) as Key)}</div>
-          <h1>{t(route === "/help" ? "helpTitle" : "privacyTitle")}</h1>
-          <p>{t(route === "/help" ? "helpBody" : "privacyBody")}</p>
-          <p>{t(route === "/help" ? "helpRemote" : "privacyRemote")}</p>
-          {button("launch", () => navigate("/studio"), true)}
-        </main>
-      ) : route === "/remote" ? (
-        <main className="controller">
-          <h1>{t("remote")}</h1>
-          <p role="status">{t(remoteStatus || "pairHelp")}</p>
-          {remoteStatus === "connected" && (
-            <>
-              <div className="remote-buttons">
-                {(
-                  [
-                    "play",
-                    "pause",
-                    "speedDown",
-                    "speedUp",
-                    "previousParagraph",
-                    "nextParagraph",
-                    "restart",
-                  ] as Action[]
-                ).map((a) => (
-                  <button
-                    key={a}
-                    className={
-                      "remote-key remote-" +
-                      a +
-                      (a === "play" || a === "pause" ? " primary" : "")
-                    }
-                    onClick={() => {
-                      try {
-                        navigator.vibrate?.(12);
-                      } catch {
-                        /* Feedback must never block a command. */
-                      }
-                      lastAck.current = remote.current.command({ action: a });
-                    }}
-                  >
-                    <span className="key-symbol" aria-hidden="true">
-                      {
-                        (
-                          {
-                            play: "▶",
-                            pause: "Ⅱ",
-                            speedDown: "−",
-                            speedUp: "+",
-                            previousParagraph: "↑",
-                            nextParagraph: "↓",
-                            restart: "↺",
-                          } as Record<string, string>
-                        )[a]
-                      }
-                    </span>
-                    <span>{t(a as Key)}</span>
-                  </button>
-                ))}
-              </div>
-              <output>
-                {t(remoteState.playing ? "play" : "pause")} ·{" "}
-                {remoteState.speed.toFixed(2)}×
-              </output>
-              {button("revoke", () => {
-                remote.current.close();
-                setRemoteStatus("disconnected");
-              })}
-            </>
-          )}
-        </main>
-      ) : route === "/studio" ? (
-        <main className={"workspace panel-" + (current ? panel : "library")}>
-          <div
-            className="workspace-tabs"
-            role="tablist"
-            aria-label={t("studio")}
+    <>
+      <div
+        className={
+          "app-shell route-" +
+          route.slice(1) +
+          (libraryOpen ? " library-open" : " library-collapsed") +
+          (reading ? " prompting" : "") +
+          (immersive ? " immersive" : "") +
+          " theme-" +
+          theme
+        }
+        inert={intro}
+        aria-hidden={intro || undefined}
+      >
+        <header>
+          <a
+            className="brand"
+            href="/"
+            onClick={(e) => {
+              e.preventDefault();
+              navigate("/");
+            }}
           >
-            {(["library", "editor", "settings"] as const).map((tab) => (
-              <button
-                key={tab}
-                role="tab"
-                aria-selected={(current ? panel : "library") === tab}
-                disabled={tab !== "library" && !current}
+            teleo.
+          </a>
+          {route === "/studio" && (
+            <>
+              <IconButton
+                name="library"
+                label={t("library")}
+                active={libraryOpen}
                 onClick={() => {
-                  void flush();
-                  setPanel(tab);
-                }}
-              >
-                {t(tab)}
-              </button>
-            ))}
-          </div>
-          <aside className="library">
-            <div className="section-title">
-              <h2>{t("library")}</h2>
-              {button("newScript", () => void add(), true)}
-            </div>
-            <input
-              aria-label={t("search")}
-              placeholder={t("search")}
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-            <select
-              aria-label={t("folder")}
-              value={folder}
-              onChange={(e) => setFolder(e.target.value)}
-            >
-              <option value="">{t("allFolders")}</option>
-              {folders.map((f) => (
-                <option key={f.folderId} value={f.folderId}>
-                  {f.title}
-                </option>
-              ))}
-            </select>
-            <div className="script-list">
-              {scripts
-                .filter(
-                  (s) =>
-                    (!folder || s.folderId === folder) &&
-                    `${s.title} ${s.body}`
-                      .toLocaleLowerCase()
-                      .includes(search.toLocaleLowerCase()),
-                )
-                .map((s) => (
-                  <button
-                    className={s.scriptId === selected ? "selected" : ""}
-                    key={s.scriptId}
-                    onClick={() => {
-                      void flush();
-                      setSelected(s.scriptId);
-                      setPanel("editor");
-                      setRevisions(null);
-                    }}
-                  >
-                    <strong>{s.title || t("untitled")}</strong>
-                    <small>
-                      {new Intl.DateTimeFormat(locale, {
-                        dateStyle: "medium",
-                      }).format(new Date(s.updatedAt))}
-                    </small>
-                  </button>
-                ))}
-            </div>
-            <label className="file-button">
-              {t("import")}
-              <input
-                type="file"
-                accept=".txt,.json,text/plain,application/json"
-                onChange={(e) => {
-                  if (e.target.files?.[0]) void importFile(e.target.files[0]);
-                  e.target.value = "";
+                  if (reading) {
+                    exitReader();
+                    setLibraryOpen(true);
+                  } else setLibraryOpen(!libraryOpen);
+                  setPanel("library");
                 }}
               />
-            </label>
-            {button("newFolder", () => {
-              const title = prompt(t("folderName"));
-              if (title?.trim()) {
-                const f = { folderId: crypto.randomUUID(), title };
-                storage
-                  .folder(f)
-                  .then(() => setFolders([...folders, f]))
-                  .catch(() => setStatus("saveError"));
-              }
-            })}
-            {folder && (
+              <select
+                className="script-selector"
+                aria-label={t("currentScript")}
+                value={selected}
+                onChange={(e) => {
+                  void flush();
+                  setSelected(e.target.value);
+                  setRevisions(null);
+                }}
+              >
+                {!current && <option value="">{t("chooseScript")}</option>}
+                {scripts.map((script) => (
+                  <option key={script.scriptId} value={script.scriptId}>
+                    {script.title || t("untitled")}
+                  </option>
+                ))}
+              </select>
+              <Segmented
+                label={t("workspaceMode")}
+                value={reading ? "prompt" : "script"}
+                onChange={(mode) =>
+                  mode === "prompt" ? void startReader() : exitReader()
+                }
+                options={[
+                  { value: "script", label: t("editor"), disabled: !current },
+                  { value: "prompt", label: t("read"), disabled: !current },
+                ]}
+              />
+              <div className="toolbar-spacer" />
+              <IconButton
+                className={remoteStatus === "connected" ? "has-connection" : ""}
+                name="remote"
+                label={t("remoteConnection")}
+                disabled={!current}
+                onClick={() => void connect()}
+              />
+              <IconButton
+                name="settings"
+                label={t("settings")}
+                disabled={!current}
+                active={settingsOpen}
+                onClick={() => setSettingsOpen(true)}
+              />
+            </>
+          )}
+          <details className="app-menu">
+            <summary aria-label={t("menu")}>
+              <Icon name="more" />
+            </summary>
+            <nav>
+              {(["studio", "remote", "help", "privacy"] as const).map((k) => (
+                <a
+                  key={k}
+                  href={"/" + k}
+                  aria-current={route === "/" + k ? "page" : undefined}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.closest("details")?.removeAttribute("open");
+                    navigate("/" + k);
+                  }}
+                >
+                  {t(k)}
+                </a>
+              ))}
+            </nav>
+          </details>
+          {lang}
+        </header>
+        {!online && (
+          <p role="status" className="banner">
+            {t("offline")}
+          </p>
+        )}
+        {notice && (
+          <div role="alert" className="banner">
+            {t(notice)} {button("close", () => setNotice(null))}
+          </div>
+        )}
+        {route === "/help" || route === "/privacy" ? (
+          <main className="prose">
+            <div className="eyebrow">teleo. / {t(route.slice(1) as Key)}</div>
+            <h1>{t(route === "/help" ? "helpTitle" : "privacyTitle")}</h1>
+            <p>{t(route === "/help" ? "helpBody" : "privacyBody")}</p>
+            <p>{t(route === "/help" ? "helpRemote" : "privacyRemote")}</p>
+            {button("launch", () => navigate("/studio"), true)}
+          </main>
+        ) : route === "/remote" ? (
+          <main className="controller">
+            <h1>{t("remote")}</h1>
+            <p role="status">{t(remoteStatus || "pairHelp")}</p>
+            {remoteStatus === "connected" && (
               <>
-                {button("renameFolder", () => {
-                  const title = prompt(
-                    t("folderName"),
-                    folders.find((f) => f.folderId === folder)?.title,
-                  );
-                  if (title?.trim()) {
-                    const f = { folderId: folder, title };
-                    storage
-                      .folder(f)
-                      .then(() =>
-                        setFolders(
-                          folders.map((x) => (x.folderId === folder ? f : x)),
-                        ),
-                      )
-                      .catch(() => setStatus("saveError"));
-                  }
-                })}
-                {button("deleteFolder", () => {
-                  storage
-                    .removeFolder(folder)
-                    .then(async () => {
-                      setFolders(await storage.folders());
-                      setScripts(await storage.list());
-                      setFolder("");
-                    })
-                    .catch(() => setStatus("saveError"));
+                <div className="remote-buttons">
+                  {(
+                    [
+                      "play",
+                      "pause",
+                      "speedDown",
+                      "speedUp",
+                      "previousParagraph",
+                      "nextParagraph",
+                      "restart",
+                    ] as Action[]
+                  ).map((a) => (
+                    <button
+                      key={a}
+                      className={
+                        "remote-key remote-" +
+                        a +
+                        (a === "play" || a === "pause" ? " primary" : "")
+                      }
+                      onClick={() => {
+                        try {
+                          navigator.vibrate?.(12);
+                        } catch {
+                          /* Feedback must never block a command. */
+                        }
+                        lastAck.current = remote.current.command({ action: a });
+                      }}
+                    >
+                      <span className="key-symbol" aria-hidden="true">
+                        {
+                          (
+                            {
+                              play: "▶",
+                              pause: "Ⅱ",
+                              speedDown: "−",
+                              speedUp: "+",
+                              previousParagraph: "↑",
+                              nextParagraph: "↓",
+                              restart: "↺",
+                            } as Record<string, string>
+                          )[a]
+                        }
+                      </span>
+                      <span>{t(a as Key)}</span>
+                    </button>
+                  ))}
+                </div>
+                <output>
+                  {t(remoteState.playing ? "play" : "pause")} ·{" "}
+                  {remoteState.speed.toFixed(2)}×
+                </output>
+                {button("revoke", () => {
+                  remote.current.close();
+                  setRemoteStatus("disconnected");
                 })}
               </>
             )}
-          </aside>
-          {current ? (
-            <>
-              <section className="editor">
-                <div className="editor-top">
-                  <span
-                    role="status"
-                    className={status === "saveError" ? "error" : "muted"}
-                  >
-                    {t(status)}
-                  </span>
-                  {button("read", () => void startReader(), true)}
-                </div>
+          </main>
+        ) : route === "/studio" ? (
+          <main
+            inert={reading}
+            aria-hidden={reading || undefined}
+            className={
+              "workspace panel-" +
+              (current ? panel : "library") +
+              (!current ? " no-script" : "")
+            }
+          >
+            <aside className="library">
+              <div className="section-title">
+                <h2>{t("library")}</h2>
+                <IconButton
+                  name="close"
+                  label={t("closeLibrary")}
+                  onClick={() => setLibraryOpen(false)}
+                />
+                {button("newScript", () => void add(), true)}
+              </div>
+              <input
+                aria-label={t("search")}
+                placeholder={t("search")}
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <select
+                aria-label={t("folder")}
+                value={folder}
+                onChange={(e) => setFolder(e.target.value)}
+              >
+                <option value="">{t("allFolders")}</option>
+                {folders.map((f) => (
+                  <option key={f.folderId} value={f.folderId}>
+                    {f.title}
+                  </option>
+                ))}
+              </select>
+              <div className="script-list">
+                {scripts
+                  .filter(
+                    (s) =>
+                      (!folder || s.folderId === folder) &&
+                      `${s.title} ${s.body}`
+                        .toLocaleLowerCase()
+                        .includes(search.toLocaleLowerCase()),
+                  )
+                  .map((s) => (
+                    <button
+                      className={s.scriptId === selected ? "selected" : ""}
+                      key={s.scriptId}
+                      onClick={() => {
+                        void flush();
+                        setSelected(s.scriptId);
+                        setPanel("editor");
+                        if (innerWidth <= 900) setLibraryOpen(false);
+                        setRevisions(null);
+                      }}
+                    >
+                      <strong>{s.title || t("untitled")}</strong>
+                      <small>
+                        {new Intl.DateTimeFormat(locale, {
+                          dateStyle: "medium",
+                        }).format(new Date(s.updatedAt))}
+                      </small>
+                    </button>
+                  ))}
+              </div>
+              <label className="file-button">
+                {t("import")}
                 <input
-                  className="title-input"
-                  aria-label={t("title")}
-                  value={current.title}
-                  onChange={(e) => edit({ title: e.target.value })}
+                  type="file"
+                  accept=".txt,.json,text/plain,application/json"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) void importFile(e.target.files[0]);
+                    e.target.value = "";
+                  }}
                 />
-                <textarea
-                  aria-label={t("body")}
-                  placeholder={t("body")}
-                  value={current.body}
-                  onChange={(e) => edit({ body: e.target.value })}
-                  onBlur={() => void flush()}
-                />
-                <div className="tools">
-                  {button(
-                    "duplicate",
-                    () => void add(createScript(current.title, current.body)),
-                  )}
-                  {button("export", () =>
-                    download((current.title || "teleo") + ".txt", current.body),
-                  )}
-                  {button("exportJSON", () =>
-                    download(
-                      "teleo.json",
-                      exportBundle([current]),
-                      "application/json",
-                    ),
-                  )}
-                  {button("versions", () => {
-                    void flush()
-                      .then(() => storage.revisions(current.scriptId))
-                      .then(setRevisions)
+              </label>
+              {button("newFolder", () => {
+                const title = prompt(t("folderName"));
+                if (title?.trim()) {
+                  const f = { folderId: crypto.randomUUID(), title };
+                  storage
+                    .folder(f)
+                    .then(() => setFolders([...folders, f]))
+                    .catch(() => setStatus("saveError"));
+                }
+              })}
+              {folder && (
+                <>
+                  {button("renameFolder", () => {
+                    const title = prompt(
+                      t("folderName"),
+                      folders.find((f) => f.folderId === folder)?.title,
+                    );
+                    if (title?.trim()) {
+                      const f = { folderId: folder, title };
+                      storage
+                        .folder(f)
+                        .then(() =>
+                          setFolders(
+                            folders.map((x) => (x.folderId === folder ? f : x)),
+                          ),
+                        )
+                        .catch(() => setStatus("saveError"));
+                    }
+                  })}
+                  {button("deleteFolder", () => {
+                    storage
+                      .removeFolder(folder)
+                      .then(async () => {
+                        setFolders(await storage.folders());
+                        setScripts(await storage.list());
+                        setFolder("");
+                      })
                       .catch(() => setStatus("saveError"));
                   })}
-                  {button("delete", () => {
-                    if (confirm(t("confirmDelete"))) {
-                      const tombstone = {
-                        ...current,
-                        deletedAt: new Date().toISOString(),
-                      };
-                      persist(tombstone);
-                      void flush();
-                      setScripts(
-                        scripts.filter((s) => s.scriptId !== selected),
-                      );
-                      setSelected(
-                        scripts.find((s) => s.scriptId !== selected)
-                          ?.scriptId || "",
-                      );
-                    }
-                  })}
-                </div>
-                <label>
-                  {t("folder")}
-                  <select
-                    value={current.folderId || ""}
-                    onChange={(e) =>
-                      edit({ folderId: e.target.value || undefined })
-                    }
-                  >
-                    <option value="">{t("noFolder")}</option>
-                    {folders.map((f) => (
-                      <option key={f.folderId} value={f.folderId}>
-                        {f.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {revisions && (
-                  <section className="revision-panel">
-                    {button("close", () => setRevisions(null))}
-                    <h3>{t("versions")}</h3>
-                    {!revisions.length && <p>{t("noVersions")}</p>}
-                    {revisions.map((r) => (
-                      <div className="revision" key={r.revisionId}>
-                        <time>
-                          {new Intl.DateTimeFormat(locale, {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          }).format(new Date(r.timestamp))}
-                        </time>
-                        <pre>{r.body.slice(0, 160)}</pre>
-                        {button("restore", () => {
-                          edit({ title: r.title, body: r.body });
-                          void flush();
-                          setRevisions(null);
-                        })}
-                      </div>
-                    ))}
-                  </section>
-                )}
-              </section>
-              <aside className="settings">
-                <h2>{t("settings")}</h2>
-                <div
-                  className="mini-preview"
-                  style={{ textAlign: current.preferences.alignment }}
-                >
-                  <div
-                    style={{
-                      transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
-                    }}
-                  >
-                    {current.body || t("body")}
+                </>
+              )}
+            </aside>
+            {current ? (
+              <>
+                <section className="editor">
+                  <div className="editor-top">
+                    <span
+                      role="status"
+                      className={status === "saveError" ? "error" : "muted"}
+                    >
+                      {t(status)}
+                    </span>
+                    <span className="document-metrics">
+                      {new Intl.NumberFormat(locale).format(wordCount)}{" "}
+                      {t("words")}
+                      <span>·</span>
+                      {duration} {t("minutes")}
+                    </span>
                   </div>
-                </div>
-                {range("speed", 0.5, 3, 0.25)}
-                {range("fontSize", 16, 100, 1)}
-                <details className="advanced-settings">
-                  <summary>{t("moreSettings")}</summary>
-                  {range("lineHeight", 1, 3, 0.1)}
-                  {range("textWidth", 280, 1600, 20)}
-                  <label>
-                    {t("alignment")}
-                    <select
-                      value={current.preferences.alignment}
-                      onChange={(e) =>
-                        pref({
-                          alignment: e.target.value as Preferences["alignment"],
-                        })
-                      }
-                    >
-                      {(["left", "center", "right"] as const).map((a) => (
-                        <option key={a} value={a}>
-                          {t(a)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  {(
-                    ["mirrorHorizontal", "mirrorVertical", "focusLine"] as const
-                  ).map((k) => (
-                    <label className="check" key={k}>
-                      <input
-                        type="checkbox"
-                        checked={current.preferences[k]}
-                        onChange={(e) => pref({ [k]: e.target.checked })}
-                      />
-                      {t(k)}
-                    </label>
-                  ))}
-                  <label>
-                    {t("countdown")}
-                    <select
-                      value={current.preferences.countdownSeconds}
-                      onChange={(e) =>
-                        pref({ countdownSeconds: Number(e.target.value) })
-                      }
-                    >
-                      {[0, 3, 5, 10].map((n) => (
-                        <option value={n} key={n}>
-                          {n ? `${n} ${t("seconds")}` : t("off")}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    {t("appearance")}
-                    <select
-                      value={current.preferences.appearance}
-                      onChange={(e) =>
-                        pref({ appearance: e.target.value as "dark" | "light" })
-                      }
-                    >
-                      <option value="dark">{t("dark")}</option>
-                      <option value="light">{t("light")}</option>
-                    </select>
-                  </label>
-                </details>
-                <details>
-                  <summary>{t("physical")}</summary>
-                  <p>{t("keyHelp")}</p>
-                  <label className="check">
-                    <input
-                      type="checkbox"
-                      checked={enabled}
-                      onChange={(e) => setEnabled(e.target.checked)}
-                    />
-                    {t("enabled")}
-                  </label>
-                  <label>
-                    {t("profile")}
-                    <select
-                      value={profile}
-                      onChange={(e) => setProfile(e.target.value)}
-                    >
-                      <option value="standard">{t("standard")}</option>
-                      <option value="twoButton">{t("twoButton")}</option>
-                      <option value="custom">{t("custom")}</option>
-                    </select>
-                  </label>
-                  {profile === "twoButton" && (
-                    <>
-                      {button("learnA", () => setLearn("togglePlay"))}
-                      {button("learnB", () => setLearn("preset"))}
-                      <label>
-                        {t("presets")}
-                        <input
-                          value={presets}
-                          onChange={(e) => setPresets(e.target.value)}
-                        />
-                      </label>
-                    </>
-                  )}
-                  {profile === "custom" && (
-                    <>
-                      <select
-                        aria-label={t("custom")}
-                        value={learnAction}
-                        onChange={(e) =>
-                          setLearnAction(e.target.value as Action)
+                  <input
+                    className="title-input"
+                    aria-label={t("title")}
+                    value={current.title}
+                    onChange={(e) => edit({ title: e.target.value })}
+                  />
+                  <textarea
+                    aria-label={t("body")}
+                    placeholder={t("body")}
+                    value={current.body}
+                    onChange={(e) => edit({ body: e.target.value })}
+                    onBlur={() => void flush()}
+                  />
+                  <details
+                    className="document-actions"
+                    open={innerWidth > 600 || undefined}
+                  >
+                    <summary>
+                      {t("documentActions")}
+                      <Icon name="more" />
+                    </summary>
+                    <div className="tools">
+                      {button(
+                        "duplicate",
+                        () =>
+                          void add(createScript(current.title, current.body)),
+                      )}
+                      {button("export", () =>
+                        download(
+                          (current.title || "teleo") + ".txt",
+                          current.body,
+                        ),
+                      )}
+                      {button("exportJSON", () =>
+                        download(
+                          "teleo.json",
+                          exportBundle([current]),
+                          "application/json",
+                        ),
+                      )}
+                      {button("versions", () => {
+                        void flush()
+                          .then(() => storage.revisions(current.scriptId))
+                          .then(setRevisions)
+                          .catch(() => setStatus("saveError"));
+                      })}
+                      {button("delete", () => {
+                        if (confirm(t("confirmDelete"))) {
+                          const tombstone = {
+                            ...current,
+                            deletedAt: new Date().toISOString(),
+                          };
+                          persist(tombstone);
+                          void flush();
+                          setScripts(
+                            scripts.filter((s) => s.scriptId !== selected),
+                          );
+                          setSelected(
+                            scripts.find((s) => s.scriptId !== selected)
+                              ?.scriptId || "",
+                          );
                         }
-                      >
-                        {actions
-                          .filter((a) => a !== "setSpeed")
-                          .map((a) => (
-                            <option key={a} value={a}>
-                              {t(a as Key)}
-                            </option>
-                          ))}
-                      </select>
-                      {button("learn", () => setLearn(learnAction))}
-                    </>
+                      })}
+                    </div>
+                  </details>
+                  <label>
+                    {t("folder")}
+                    <select
+                      value={current.folderId || ""}
+                      onChange={(e) =>
+                        edit({ folderId: e.target.value || undefined })
+                      }
+                    >
+                      <option value="">{t("noFolder")}</option>
+                      {folders.map((f) => (
+                        <option key={f.folderId} value={f.folderId}>
+                          {f.title}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  {revisions && (
+                    <section className="revision-panel">
+                      {button("close", () => setRevisions(null))}
+                      <h3>{t("versions")}</h3>
+                      {!revisions.length && <p>{t("noVersions")}</p>}
+                      {revisions.map((r) => (
+                        <div className="revision" key={r.revisionId}>
+                          <time>
+                            {new Intl.DateTimeFormat(locale, {
+                              dateStyle: "short",
+                              timeStyle: "short",
+                            }).format(new Date(r.timestamp))}
+                          </time>
+                          <pre>{r.body.slice(0, 160)}</pre>
+                          {button("restore", () => {
+                            edit({ title: r.title, body: r.body });
+                            void flush();
+                            setRevisions(null);
+                          })}
+                        </div>
+                      ))}
+                    </section>
                   )}
-                  {learn && <p role="status">{t("learning")}</p>}
-                  {button("test", () => {
-                    setTesting(true);
-                    setKeyEvent("");
-                  })}
-                  <output>
-                    {keyEvent || t(testing ? "learning" : "noKey")}
-                  </output>
-                  {Object.entries(
-                    profile === "standard" ? standardKeys : mapping,
-                  ).map(([key, a]) => (
-                    <p key={key}>
-                      <kbd>{key}</kbd> → {t(a as Key)}
+                </section>
+                <aside className="prompt-preview" aria-label={t("preview")}>
+                  <div className="preview-caption">
+                    <span className="eyebrow">{t("preview")}</span>
+                    <Icon name="focus" />
+                  </div>
+                  <div
+                    className={"preview-copy " + current.preferences.appearance}
+                  >
+                    <div
+                      style={{
+                        fontSize: Math.min(40, current.preferences.fontSize),
+                        lineHeight: current.preferences.lineHeight,
+                        textAlign: current.preferences.alignment,
+                        transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
+                      }}
+                    >
+                      {current.body || t("body")}
+                    </div>
+                  </div>
+                  <div className="preview-foot">
+                    <span>{t("ready")}</span>
+                    <span>{current.preferences.speed.toFixed(2)}×</span>
+                  </div>
+                </aside>
+              </>
+            ) : (
+              <section className="empty">
+                <span className="empty-mark" aria-hidden="true">
+                  t.
+                </span>
+                <span className="eyebrow">{t("tagline")}</span>
+                <h2>{t("emptyTitle")}</h2>
+                <p>{t("empty")}</p>
+                {button("newScript", () => void add(), true)}
+              </section>
+            )}
+          </main>
+        ) : (
+          <main className="prose">
+            <h1>{t("notFound")}</h1>
+          </main>
+        )}
+        {reading && current && (
+          <section
+            className={
+              "reader " +
+              current.preferences.appearance +
+              (controlsVisible ? "" : " quiet")
+            }
+            aria-label={t("read")}
+            onPointerMove={showControls}
+            onClick={showControls}
+          >
+            <div className="reader-top">
+              {button("exit", exitReader)}
+              <span className="reader-script-title">
+                {current.title || t("untitled")}
+              </span>
+              <IconButton
+                name="fullscreen"
+                label={t("fullscreen")}
+                active={immersive}
+                onClick={toggleFullscreen}
+              />
+              {button("connect", () => void connect())}
+              {lang}
+            </div>
+            <div className="reader-stage">
+              <div
+                className={
+                  "reading-viewport" +
+                  (focusDimming && current.preferences.focusLine
+                    ? " dim-surroundings"
+                    : "")
+                }
+                style={
+                  {
+                    "--focus-position": `${focusPosition}%`,
+                  } as React.CSSProperties
+                }
+                ref={viewport}
+                onWheel={() => command({ action: "pause" })}
+                onTouchStart={() => command({ action: "pause" })}
+                onScroll={(e) => {
+                  if (!engine.playing)
+                    engine.position = e.currentTarget.scrollTop;
+                }}
+              >
+                <article
+                  ref={content}
+                  style={{
+                    fontSize: current.preferences.fontSize,
+                    lineHeight: current.preferences.lineHeight,
+                    maxWidth: current.preferences.textWidth,
+                    textAlign: current.preferences.alignment,
+                    transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
+                  }}
+                >
+                  {bodyParagraphs.map((p, i) => (
+                    <p data-paragraph key={i} dir="auto">
+                      {p || "\u00a0"}
                     </p>
                   ))}
-                  {button("reset", () => setMapping({}))}
-                </details>
-                {button("connect", () => void connect())}
-              </aside>
-            </>
-          ) : (
-            <section className="empty">
-              <h2>{t("empty")}</h2>
-              {button("newScript", () => void add(), true)}
-            </section>
-          )}
-        </main>
-      ) : (
-        <main className="prose">
-          <h1>{t("notFound")}</h1>
-        </main>
-      )}
-      {reading && current && (
-        <section
-          className={
-            "reader " +
-            current.preferences.appearance +
-            (controlsVisible ? "" : " quiet")
-          }
-          onPointerMove={showControls}
-          onClick={showControls}
-          aria-label={t("read")}
-        >
-          <div className="reader-top">
-            {button("exit", exitReader)}
-            {button("fullscreen", () => {
-              if (document.fullscreenEnabled)
-                void document.documentElement
-                  .requestFullscreen()
-                  .catch(() => setNotice("permission"));
-              else setNotice("permission");
-            })}
-            {button("connect", () => void connect())}
-            {lang}
-          </div>
-          <div
-            className="reading-viewport"
-            ref={viewport}
-            onWheel={() => command({ action: "pause" })}
-            onTouchStart={() => command({ action: "pause" })}
-            onScroll={(e) => {
-              if (!engine.playing) engine.position = e.currentTarget.scrollTop;
-            }}
-          >
-            <article
-              ref={content}
-              style={{
-                fontSize: current.preferences.fontSize,
-                lineHeight: current.preferences.lineHeight,
-                maxWidth: current.preferences.textWidth,
-                textAlign: current.preferences.alignment,
-                transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
-              }}
-            >
-              {current.body.split(/\n\s*\n/).map((p, i) => (
-                <p data-paragraph key={i} dir="auto">
-                  {p || "\u00a0"}
-                </p>
-              ))}
-            </article>
-          </div>
-          {current.preferences.focusLine && <div className="guide" />}
-          {engine.countdown > 0 && (
-            <div className="countdown">{Math.ceil(engine.countdown)}</div>
-          )}
-          {controls}
-          <input
-            className="seek"
-            aria-label={t("position")}
-            type="range"
-            min="0"
-            max={engine.maximum || 1}
-            value={engine.position}
-            onChange={(e) => {
-              engine.command({ action: "pause" });
-              engine.position = Number(e.target.value);
-              setFrame(frame + 1);
-            }}
-          />
-          {remoteStatus && (
-            <div className="pair-panel">
-              <p role="status">{t(remoteStatus)}</p>
-              {invite && remoteStatus === "waiting" && (
-                <>
-                  <img src={qr} alt={t("invite")} />
-                  <a href={invite} target="_blank" rel="noreferrer">
-                    {t("invite")}
-                  </a>
-                </>
+                </article>
+              </div>
+              {current.preferences.focusLine && (
+                <div className="guide" style={{ top: `${focusPosition}%` }} />
               )}
-              {approval && (
-                <>
-                  <p>{t("approval")}</p>
-                  {button("allow", () => {
-                    remote.current.send({ type: "allow" });
-                    setApproval(false);
-                    setInvite("");
-                  })}
-                  {button("deny", () => {
-                    remote.current.send({ type: "deny" });
-                    remote.current.close();
-                    setRemoteStatus("disconnected");
-                    setApproval(false);
-                    setInvite("");
-                  })}
-                </>
+              {engine.countdown > 0 && (
+                <div className="countdown">{Math.ceil(engine.countdown)}</div>
               )}
-              {remoteStatus === "disconnected" || remoteStatus === "unavailable"
-                ? button("reconnect", () => void connect())
-                : button("revoke", () => {
-                    remote.current.close();
-                    setRemoteStatus("disconnected");
-                    setInvite("");
-                    setApproval(false);
-                  })}
             </div>
-          )}
-        </section>
-      )}
-    </div>
+            {controls}
+            <input
+              className="seek"
+              aria-label={t("position")}
+              type="range"
+              min="0"
+              max={engine.maximum || 1}
+              value={engine.position}
+              onChange={(e) => {
+                engine.command({ action: "pause" });
+                engine.position = Number(e.target.value);
+                setFrame(frame + 1);
+              }}
+            />
+            {remoteStatus && (
+              <div className="pair-panel">
+                <p role="status">{t(remoteStatus)}</p>
+                {invite && remoteStatus === "waiting" && (
+                  <>
+                    <img src={qr} alt={t("invite")} />
+                    <a href={invite} target="_blank" rel="noreferrer">
+                      {t("invite")}
+                    </a>
+                  </>
+                )}
+                {approval && (
+                  <>
+                    <p>{t("approval")}</p>
+                    {button("allow", () => {
+                      remote.current.send({ type: "allow" });
+                      setApproval(false);
+                      setInvite("");
+                    })}
+                    {button("deny", () => {
+                      remote.current.send({ type: "deny" });
+                      remote.current.close();
+                      setRemoteStatus("disconnected");
+                      setApproval(false);
+                      setInvite("");
+                    })}
+                  </>
+                )}
+                {remoteStatus === "disconnected" ||
+                remoteStatus === "unavailable"
+                  ? button("reconnect", () => void connect())
+                  : button("revoke", () => {
+                      remote.current.close();
+                      setRemoteStatus("disconnected");
+                      setInvite("");
+                      setApproval(false);
+                    })}
+              </div>
+            )}
+          </section>
+        )}
+        <Sheet
+          open={settingsOpen && !intro}
+          title={t("settings")}
+          closeLabel={t("close")}
+          onClose={() => {
+            setSettingsOpen(false);
+            setLearn(null);
+            setTesting(false);
+          }}
+        >
+          {settingsContent}
+        </Sheet>
+      </div>
+      {intro && <Intro skipLabel={t("skip")} onDone={finishIntro} />}
+    </>
   );
 }
 // Keep the root across Vite module replacement; never attach React twice.

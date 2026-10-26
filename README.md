@@ -14,6 +14,8 @@ npm run relay  # terminal 1: Cloudflare Durable Object, port 8787
 npm run dev    # terminal 2: http://127.0.0.1:5173
 ```
 
+Both `/` and `/studio` open the workspace after a skippable, once-per-tab-session brand intro (bypassed with reduced motion). The library collapses; reading has a floating control dock; settings use an accessible modal sheet. TXT/JSON storage and remotes retain their existing contracts. [Design and UI verification](docs/audits/TELEO_UI_REDESIGN_REPORT.md).
+
 Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Local QR URLs use loopback; a physical phone needs an approved reachable HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
 
 ```sh
@@ -57,3 +59,11 @@ The isolated staging Worker combines built assets and the real relay on one orig
 Verified public staging: [Open teleo. Studio](https://teleo-staging.your-subdomain.workers.dev/studio). Published with owner approval on 2026-10-26; 10 public HTTPS/WSS/layout checks passed. The owner confirmed physical iPhone browser pairing and all controller buttons on 2026-10-26. The owner also confirmed automatic reconnection after a physical iPhone connection interruption and confirmed that explicit revoke disconnects without automatic return. Exact browser/version, outage duration and background/sleep behavior remain unverified. teleo.cc is not published by this staging deployment.
 
 Localhost and the public staging hostname have separate browser libraries. Use .txt/JSON import/export for manual transfer, or create a new disposable script for phone testing.
+
+Public redesign checks after an authorized staging update:
+
+```sh
+TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npx playwright test --config playwright.redesign-staging.config.ts
+```
+
+These exercise intro, responsiveness, persistence and modal/reader interactions in independent generated test libraries. They do not certify physical iOS keyboard/VoiceOver or hardware remotes.

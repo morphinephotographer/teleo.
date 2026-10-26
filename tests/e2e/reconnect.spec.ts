@@ -193,3 +193,9 @@ test("prolonged relay outage stops retries and preserves the local reader", asyn
   ).toHaveValue("Private host text 🌍\n\n".repeat(100));
   await context.close();
 });
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});

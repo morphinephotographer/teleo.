@@ -67,3 +67,7 @@ CloudKit is never used as a remote-control transport. Web and Apple libraries ar
 ## Browser recovery ownership
 
 The relay is authoritative for resume authorization and the 30-second detached-role deadlines. `RemoteLink` owns a tab-local 25-second recovery budget and never persists resume secrets or command queues. Only the host owns playback; a lost network ACK is not proof that a command failed to execute. Fresh state is requested after each socket replacement and sequence-checked by the controller. `Room` persists role-specific hashed resume capabilities, active connection IDs, replay ledger and state sequence; WebSocket attachments carry their socket ID and rate window across hibernation. All mutations remain serialized by the Durable Object concurrency gate. Native LAN recovery is unchanged and separate.
+
+## Current web presentation
+
+The complete website redesign adds `ui.tsx` (icons, segmented buttons, native dialog sheet) and `Intro.tsx` (session-only entry overlay). `/` and `/studio` now resolve to the same workspace. The animation never covers `/remote` invitations. Storage/domain/relay modules remain unchanged; local visual preferences are separate from portable script fields. See docs/design/TELEO_UI_ARCHITECTURE.md and docs/audits/TELEO_UI_REDESIGN_REPORT.md for the current layout and verification.

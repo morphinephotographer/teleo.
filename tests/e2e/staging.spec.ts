@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});
 import { dictionaries } from "../../apps/web/src/i18n";
 const staging = process.env.TELEO_STAGING_URL || "http://127.0.0.1:8788";
 const local =

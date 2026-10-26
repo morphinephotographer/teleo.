@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});
 import { dictionaries } from "../../apps/web/src/i18n";
 // Each test is an independent local client. Cloudflare replaces this header in production.
 test.beforeEach(async ({ page }) => {
@@ -70,7 +75,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .inputValue();
     expect(Number(before)).toBeGreaterThan(0);
     await page
-      .locator(".reader")
+      .locator("header")
       .getByRole("combobox", { name: "Language" })
       .selectOption("ru");
     await expect(
@@ -168,6 +173,8 @@ test("library CRUD, import/export and version restore", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Changed");
+  const actionsMenu = page.locator(".document-actions > summary");
+  if (await actionsMenu.isVisible()) await actionsMenu.click();
   await page.getByRole("button", { name: "Version history" }).click();
   await expect(page.locator(".revision")).not.toHaveCount(0);
   await page
@@ -208,11 +215,10 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Text\n\n".repeat(100));
-  const settingsTab = page.getByRole("tab", {
-    name: "Reading settings",
-    exact: true,
-  });
-  if (await settingsTab.isVisible()) await settingsTab.click();
+  await page
+    .locator("header")
+    .getByRole("button", { name: "Reading settings", exact: true })
+    .click();
   await page.getByText("Physical remote", { exact: true }).click();
   await page
     .getByRole("combobox", { name: "Profile", exact: true })
@@ -226,8 +232,10 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
     "This key already has an action",
   );
   await page.keyboard.press("b");
-  if (await settingsTab.isVisible())
-    await page.getByRole("tab", { name: "Editor", exact: true }).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: "Close", exact: true })
+    .click();
   await page.getByRole("button", { name: "Read", exact: true }).click();
   await page.keyboard.press("a");
   await expect(

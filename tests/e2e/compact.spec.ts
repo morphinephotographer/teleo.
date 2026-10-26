@@ -40,8 +40,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
             document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      const settings = page.getByRole("tab", { name: t.settings, exact: true });
-      if (await settings.isVisible()) await settings.click();
+      await page
+        .locator("header")
+        .getByRole("button", { name: t.settings, exact: true })
+        .click();
       await expect(
         page.getByRole("slider", { name: t.speed, exact: true }),
       ).toBeVisible();
@@ -53,9 +55,11 @@ for (const locale of ["en", "uk", "ru"] as const) {
           () => document.documentElement.scrollHeight <= innerHeight,
         ),
       ).toBe(true);
+      await page
+        .getByRole("dialog")
+        .getByRole("button", { name: t.close, exact: true })
+        .click();
       if (size.width === 390 || size.width === 1440) {
-        if (await settings.isVisible())
-          await page.getByRole("tab", { name: t.editor, exact: true }).click();
         await page.screenshot({
           path: `docs/screenshots/compact-${info.project.name}-${locale}-${size.width}.png`,
         });
@@ -63,3 +67,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
     }
   });
 }
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});

@@ -1,4 +1,9 @@
 import { test, expect } from "@playwright/test";
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});
 test("production assets: all locales and scripts work offline", async ({
   page,
   context,

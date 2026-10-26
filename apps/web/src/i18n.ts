@@ -84,6 +84,8 @@ export const en = {
   waiting: "Waiting for phone (invitation expires in 120 seconds)",
   approval: "A phone requests control. Allow this session?",
   connected: "Connected",
+  reconnecting: "Connection interrupted — reconnecting…",
+  unconfirmed: "Command was not confirmed. Check the host before trying again.",
   disconnected: "Disconnected — create a new invitation to reconnect",
   connecting: "Connecting…",
   unavailable: "Remote unavailable. Your local prompter still works.",
@@ -215,6 +217,9 @@ export const uk: Record<Key, string> = {
   waiting: "Очікування телефона (запрошення діє 120 секунд)",
   approval: "Телефон запитує керування. Дозволити цей сеанс?",
   connected: "Підключено",
+  reconnecting: "З’єднання перервано — відновлюємо…",
+  unconfirmed:
+    "Команду не підтверджено. Перевірте стан на головному екрані перед повторною спробою.",
   disconnected: "З’єднання втрачено — створіть нове запрошення",
   connecting: "Підключення…",
   unavailable: "Пульт недоступний. Локальний суфлер працює.",
@@ -347,6 +352,9 @@ export const ru: Record<Key, string> = {
   waiting: "Ожидание телефона (приглашение действует 120 секунд)",
   approval: "Телефон запрашивает управление. Разрешить этот сеанс?",
   connected: "Подключено",
+  reconnecting: "Соединение прервано — восстанавливаем…",
+  unconfirmed:
+    "Команда не подтверждена. Проверьте состояние на главном экране перед повторной попыткой.",
   disconnected: "Соединение потеряно — создайте новое приглашение",
   connecting: "Подключение…",
   unavailable: "Пульт недоступен. Локальный суфлёр работает.",

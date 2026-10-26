@@ -14,7 +14,7 @@ npm run relay  # terminal 1: Cloudflare Durable Object, port 8787
 npm run dev    # terminal 2: http://127.0.0.1:5173
 ```
 
-Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Local QR URLs use loopback; a physical phone needs an approved reachable HTTPS/WSS staging deployment. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
+Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Local QR URLs use loopback; a physical phone needs an approved reachable HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
 
 ```sh
 npm run typecheck

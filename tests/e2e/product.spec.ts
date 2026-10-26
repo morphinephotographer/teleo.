@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
+// Each test is an independent local client. Cloudflare replaces this header in production.
+test.beforeEach(async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
+});
 for (const locale of ["en", "uk", "ru"] as const) {
   const t = dictionaries[locale];
   test(`${locale}: all routes, mobile overflow and metadata`, async ({

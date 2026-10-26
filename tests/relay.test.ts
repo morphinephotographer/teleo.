@@ -1,13 +1,19 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { Miniflare, convertV4MiniflareOptions } from "miniflare";
 import { build } from "esbuild";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 let mf: Miniflare;
+let persistence: string;
+let runtimeOptions: ConstructorParameters<typeof Miniflare>[0];
 const origin = "http://127.0.0.1:5173";
 type Message = {
   type: string;
   id?: string;
   command?: unknown;
   state?: unknown;
+  sequence?: number;
 };
 class Peer {
   ws: WebSocket;
@@ -55,13 +61,24 @@ async function create() {
     invite: string;
   }>;
 }
-async function peer(id: string, token: string) {
+const resumeKey = () =>
+  Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
+    b.toString(16).padStart(2, "0"),
+  ).join("");
+async function peer(
+  id: string,
+  token: string,
+  resume = resumeKey(),
+  resuming = false,
+) {
   const r = await mf.dispatchFetch("http://local/api/rooms/" + id, {
     headers: { Origin: origin, Upgrade: "websocket" },
   });
   expect(r.status).toBe(101);
   const p = new Peer(r.webSocket);
-  p.send({ type: "auth", token });
+  p.send(
+    resuming ? { type: "resume", token } : { type: "auth", token, resume },
+  );
   return p;
 }
 async function session() {
@@ -81,8 +98,9 @@ beforeAll(async () => {
     write: false,
     external: ["cloudflare:workers"],
   });
-  mf = new Miniflare(
-    convertV4MiniflareOptions({
+  persistence = await mkdtemp(join(tmpdir(), "teleo-relay-restart-"));
+  runtimeOptions = {
+    ...convertV4MiniflareOptions({
       workers: [
         {
           name: "relay",
@@ -94,11 +112,14 @@ beforeAll(async () => {
         },
       ],
     }),
-  );
+    resourcePersistencePath: persistence,
+  };
+  mf = new Miniflare(runtimeOptions);
   await mf.ready;
 });
 afterAll(async () => {
   await mf?.dispose();
+  if (persistence) await rm(persistence, { recursive: true, force: true });
 });
 describe("real Durable Object runtime", () => {
   it("rejects missing/foreign Origin and wrong routes", async () => {
@@ -162,7 +183,8 @@ describe("real Durable Object runtime", () => {
       ),
     );
     const peers = responses.map((r) => new Peer(r.webSocket));
-    for (const p of peers) p.send({ type: "auth", token: room.invite });
+    for (const p of peers)
+      p.send({ type: "auth", token: room.invite, resume: resumeKey() });
     await host.next("approval");
     for (let i = 0; i < 100 && !peers.some((p) => p.closed); i++)
       await new Promise((r) => setTimeout(r, 10));
@@ -244,3 +266,170 @@ describe("real Durable Object runtime", () => {
     expect(r.status).toBe(410);
   }, 125000);
 });
+
+describe("bounded authorized reconnect", () => {
+  it("resumes controller after hibernation; preserves replay ledger and asks for fresh state", async () => {
+    const room = await create(),
+      hostKey = resumeKey(),
+      phoneKey = resumeKey();
+    const host = await peer(room.id, room.host, hostKey);
+    await host.next("waiting");
+    const phone = await peer(room.id, room.invite, phoneKey);
+    await host.next("approval");
+    await phone.next("waiting");
+    host.send({ type: "allow" });
+    await host.next("connected");
+    await phone.next("connected");
+    await host.next("stateRequest");
+    const id = crypto.randomUUID();
+    phone.send({ type: "command", id, command: { action: "togglePlay" } });
+    await host.next("command");
+    phone.ws.close(1001, "Test network loss");
+    await host.next("reconnecting");
+    await mf.unsafeEvictDurableObject("relay", "Room", {
+      id: room.id,
+      webSockets: "hibernate",
+    });
+    const resumed = await peer(room.id, phoneKey, resumeKey(), true);
+    await resumed.next("connected");
+    await host.next("stateRequest");
+    // A delayed pre-disconnect ACK is ignored; a new numeric snapshot supersedes it.
+    host.send({
+      type: "ack",
+      id,
+      state: { playing: false, speed: 1, position: 0 },
+    });
+    host.send({
+      type: "state",
+      state: { playing: true, speed: 1.5, position: 42 },
+    });
+    expect((await resumed.next("state")).state).toEqual({
+      playing: true,
+      speed: 1.5,
+      position: 42,
+    });
+    resumed.send({ type: "command", id, command: { action: "togglePlay" } });
+    await new Promise((r) => setTimeout(r, 50));
+    expect(host.messages.some((m) => m.type === "command")).toBe(false);
+    resumed.send({ type: "revoke" });
+    await host.waitClosed();
+  });
+  it("can replace a stale host socket without its late close revoking the new host", async () => {
+    const room = await create(),
+      hostKey = resumeKey();
+    const host = await peer(room.id, room.host, hostKey);
+    await host.next("waiting");
+    const phone = await peer(room.id, room.invite);
+    await host.next("approval");
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const resumed = await peer(room.id, hostKey, resumeKey(), true);
+    await resumed.next("connected");
+    await host.waitClosed();
+    resumed.send({ type: "ping" });
+    await resumed.next("pong");
+    phone.send({
+      type: "command",
+      id: crypto.randomUUID(),
+      command: { action: "pause" },
+    });
+    expect((await resumed.next("command")).command).toEqual({
+      action: "pause",
+    });
+    resumed.send({ type: "revoke" });
+  });
+  it("rejects invite replay, wrong resume key, and resume before approval", async () => {
+    const room = await create(),
+      hostKey = resumeKey();
+    const host = await peer(room.id, room.host, hostKey);
+    await host.next("waiting");
+    const unapproved = await peer(room.id, hostKey, resumeKey(), true);
+    await unapproved.waitClosed();
+    host.send({ type: "ping" });
+    await host.next("pong");
+    const phone = await peer(room.id, room.invite);
+    await host.next("approval");
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const attacker = await peer(room.id, room.invite);
+    await attacker.waitClosed();
+    const wrong = await peer(room.id, resumeKey(), resumeKey(), true);
+    await wrong.waitClosed();
+    host.send({ type: "ping" });
+    await host.next("pong");
+    host.send({ type: "revoke" });
+  });
+  it("revocation while a peer is offline invalidates its resume key", async () => {
+    const room = await create(),
+      key = resumeKey();
+    const host = await peer(room.id, room.host);
+    await host.next("waiting");
+    const phone = await peer(room.id, room.invite, key);
+    await host.next("approval");
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    phone.ws.close(1001, "Network loss");
+    await host.next("reconnecting");
+    host.send({ type: "revoke" });
+    await host.waitClosed();
+    const response = await mf.dispatchFetch(
+      "http://local/api/rooms/" + room.id,
+      { headers: { Origin: origin, Upgrade: "websocket" } },
+    );
+    expect(response.status).toBe(410);
+  });
+  it("expires the real 30-second recovery window and rejects the saved capability", async () => {
+    const room = await create();
+    const host = await peer(room.id, room.host);
+    await host.next("waiting");
+    const phone = await peer(room.id, room.invite);
+    await host.next("approval");
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    phone.ws.close(1001, "Network loss");
+    await host.next("reconnecting");
+    await new Promise((r) => setTimeout(r, 30100));
+    await host.waitClosed();
+    expect(
+      (
+        await mf.dispatchFetch("http://local/api/rooms/" + room.id, {
+          headers: { Origin: origin, Upgrade: "websocket" },
+        })
+      ).status,
+    ).toBe(410);
+  }, 35000);
+});
+
+it("resumes both peers after a real runtime restart using durable hashes and deadlines", async () => {
+  const room = await create(),
+    hostKey = resumeKey(),
+    phoneKey = resumeKey();
+  const host = await peer(room.id, room.host, hostKey);
+  await host.next("waiting");
+  const phone = await peer(room.id, room.invite, phoneKey);
+  await host.next("approval");
+  host.send({ type: "allow" });
+  await phone.next("connected");
+  await mf.dispose();
+  mf = new Miniflare(runtimeOptions);
+  await mf.ready;
+  const resumedHost = await peer(room.id, hostKey, resumeKey(), true);
+  await resumedHost.next("authenticated");
+  const resumedPhone = await peer(room.id, phoneKey, resumeKey(), true);
+  await resumedPhone.next("connected");
+  await resumedHost.next("connected");
+  const id = crypto.randomUUID();
+  resumedPhone.send({ type: "command", id, command: { action: "pause" } });
+  expect((await resumedHost.next("command")).id).toBe(id);
+  resumedHost.send({
+    type: "ack",
+    id,
+    state: { playing: false, speed: 1, position: 17 },
+  });
+  expect((await resumedPhone.next("ack")).state).toEqual({
+    playing: false,
+    speed: 1,
+    position: 17,
+  });
+  resumedHost.send({ type: "revoke" });
+}, 20000);

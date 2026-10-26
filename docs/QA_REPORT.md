@@ -1,5 +1,7 @@
 # QA report — 2026-10-26 (Europe/Kyiv)
 
+**Current browser recovery status:** bounded approved-session reconnect is implemented; see the follow-up section at the end. Initial checkpoint details are retained below as history.
+
 This is a verified development checkpoint, **not acceptance of every v1.0 P0**. Implemented source, automated pass, manual/device pass, blocked and not tested are separate statuses. No production deployment, iCloud account access, hardware Bluetooth test or push occurred.
 
 ## Audit and environment
@@ -67,7 +69,7 @@ No macOS XCTest UI pass is claimed. The built application itself launched succes
 | D: web/native keyboard adapters, profiles | Implemented | Synthetic web + Swift mapping passed | Physical HID **not tested** |
 | E: browser QR + Stateful Durable Object relay | Implemented | Real local sockets/hibernation/expiry passed | Public HTTPS/WSS **not deployed/not tested** |
 | E: native Bonjour + TLS-PSK local remote | Implemented with private invitation paste | Same-Mac TLS tests passed | Bonjour/iPhone permissions/firewall/offline LAN **not tested** |
-| E: bounded seamless reconnect | **Not implemented**; fail-closed revoke + new invitation | Fail-closed path tested | Release gap |
+| E: bounded reconnect | Browser implemented in follow-up; native still requires new pairing | Browser reconnect, outage and restart tested (see follow-up) | Physical/public network not tested |
 | F: complete web UI language dictionaries and offline shell | Implemented | Desktop/mobile Chromium passed | iPhone Safari/VoiceOver not tested |
 | F: docs + Cloudflare config | Implemented | Typecheck/build/local relay passed | Deployment needs explicit approval |
 
@@ -89,7 +91,7 @@ No macOS XCTest UI pass is claimed. The built application itself launched succes
 
 1. Owner configures Apple Team, both App IDs, the same real private CloudKit container, entitlements, remote notifications and schema; run the full physical two-device sync/conflict/deletion/account transition matrix. No claim of cloud delivery before this gate.
 2. Run physical iPhone↔Mac Bonjour/TLS, Bluetooth HID, permission-denial, sleep/wake and iPhone Safari/WakeLock/fullscreen checks. Native invitation handoff is secure manual paste, not QR scanning. Native learning cancel/test timeout and hardware key-repeat/focus deserve device QA.
-3. Implement bounded secure reconnect for both transports with explicit per-session resume authorization; current fresh-invitation policy is safe but below requested reconnect scope. Improve remote observed-state updates when local playback changes without a remote request (current controller shows its latest command ACK, not continuous progress).
+3. Native LAN still needs bounded secure reconnect. Browser reconnect and live numeric host state updates are implemented in the follow-up; physical/public-network validation remains required.
 4. Resolve macOS XCTest UI runner bootstrap kill in this host/Xcode environment; keep the independent local app/manual path evidence separate.
 5. CloudKit quota-specific UX and reliably observed remote-change status, conflict scenarios and actual upgrade migration from a future prior schema need signed integration testing. No destructive migrations are used; only schema v1 exists today.
 6. Owner reviews translations/SEO indexing and approves staging/production Cloudflare deployment. Verify actual CSP/headers/DNS/TLS and public WSS. No download link exists until there is a real signed distribution.
@@ -103,3 +105,32 @@ Final automated web checkpoint: **30/30 Vitest tests passed** (2 files, ~121 sec
 Final lint initially included Wrangler's generated nested `.wrangler/tmp` bundles; ESLint now ignores `**/.wrangler/**`. Re-run typecheck and lint passed. Formatting check passed. Final platform builds passed after all native source changes. Git commit uses an explicit automation author (`Codex <codex@localhost>`) because this empty repository has no configured user identity; no global Git identity was changed.
 
 During preview teardown, Vite HMR logs exposed a duplicate createRoot warning on source replacement. The entry point now reuses its root through Vite hot-data; final typecheck/lint/build passed after this dev-only lifecycle fix. Production feature test counts above predate this root-reuse-only change.
+
+
+## Follow-up: browser reconnect and outage resilience — 2026-10-26
+
+This section supersedes the initial browser reconnect/state-update release gaps; native LAN reconnect remains open. No Apple Developer Team is required for this work. No native app signing, production deployment or DNS changes were attempted.
+
+Implemented browser recovery: independent 256-bit per-role resume capabilities, tab-memory-only secrets / durable hashes, approved-session-only resume, 30-second relay grace, 25-second client budget / eight backoff attempts, per-socket IDs, stale-close suppression, durable replay ledger, monotonic state sequence and fresh numeric host snapshots. No automatic command retry/queue; unknown outcomes produce a localized EN/UK/RU warning. Explicit Revoke/exit/navigation cancels local recovery. Permanent relay failure never deletes text or stops local playback. If revoke cannot reach the relay during an outage, server authorization expires within its grace window; the offline host cannot execute remote commands.
+
+New automated coverage: client fake-clock lifecycle/backoff/terminal closure/stale handlers/unknown ACKs; real workerd controller resume after hibernation, host socket replacement, invite replay/wrong resume/preapproval rejection, offline revoke and real 30-second grace expiry. Browser tests interrupt actual relay WebSocket connections through Playwright's transparent server connection routing (no fabricated success messages). The tests cover all three locales, both desktop/mobile viewports, host and phone recovery, uncertain-command suppression and prolonged outage. Separate local test IP headers avoid treating the whole suite as one rate-limited client; production limits are unchanged.
+
+A first runtime attempt exposed an unsupported Worker constant export; it was corrected before passing tests. Browser tests also found a fast-replacement race in which a host resumes before its close event arrives; outstanding ACKs are now invalidated on the next connection epoch as well as on an explicit reconnecting event. Long-outage visual assertions reveal reader controls using normal pointer movement; controls auto-hide during playback and are not expected to stay visible for 25 seconds.
+
+Final commands/results for this follow-up are recorded below after the final run. Earlier native/device verification statuses remain unchanged. New public HTTPS/WSS and physical phone-browser validation remain not tested.
+
+The follow-up also verifies an actual Miniflare/workerd process restart using the same on-disk Durable Object store. If socket attachments disappear without close events, missing-role deadlines are recovered conservatively from durable last-observed frame timestamps; restart cannot silently extend authorization to the full one-hour session TTL. A delayed room-creation response cannot resurrect a socket after reader exit: creation is cancellable and has an 8-second deadline. Temporary runtime databases are isolated per test run and removed after tests.
+
+Final follow-up results (2026-10-26):
+
+| Command | Result |
+|---|---|
+| `npm run typecheck` | Passed frontend/domain/tests and Worker checks |
+| `npm run lint` | Passed |
+| `npm run build` | Passed production build; cached offline shell regenerated |
+| `npm test` | **46 passed**, 3 files, 151.76 seconds; includes real 120-second invitation expiry, real 30-second recovery expiry, hibernation and runtime restart |
+| `npm run test:e2e` | **38 passed**, 37.3 seconds; desktop + mobile Chromium, EN/UK/RU |
+| Prettier check on changed TS/TSX files | Passed |
+| Native builds/Swift tests | Not rerun for this browser-only change; earlier results above are historical |
+
+Screenshots of the recovered controller are under `docs/screenshots/*-reconnected-controller.png` for all three languages and both viewports. Visual review of the mobile Russian controller found readable wrapped labels and accessible large controls; the page scrolls to the remaining controls. No production site, public WSS, physical iPhone/Safari, Apple signing or CloudKit verification is claimed for this follow-up.

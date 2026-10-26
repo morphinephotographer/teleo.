@@ -404,11 +404,20 @@ function App() {
         connecting: "connecting",
         waiting: "waiting",
         connected: "connected",
+        reconnecting: "reconnecting",
         disconnected: "disconnected",
         unavailable: "unavailable",
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
       if (e.type === "approval") setApproval(true);
+      if (e.type === "unconfirmed") setNotice("unconfirmed");
+      if (e.type === "stateRequest" && reading)
+        remote.current.state({
+          playing: engine.playing,
+          speed: engine.speed,
+          position: engine.position,
+        });
+      if (e.type === "state" && e.state) setRemoteState(e.state);
       if (e.type === "command" && e.command && reading) {
         command(e.command);
         remote.current.send({
@@ -425,6 +434,18 @@ function App() {
         setRemoteState(e.state);
     };
   });
+  useEffect(() => {
+    if (!reading || remoteStatus !== "connected") return;
+    const snapshot = () =>
+      remote.current.state({
+        playing: engine.playing,
+        speed: engine.speed,
+        position: engine.position,
+      });
+    snapshot();
+    const timer = setInterval(snapshot, 1000);
+    return () => clearInterval(timer);
+  }, [reading, remoteStatus]);
   useEffect(() => {
     if (route !== "/remote") return;
     const pair = new URLSearchParams(location.hash.slice(1)).get("pair");
@@ -456,7 +477,6 @@ function App() {
   function exitReader() {
     setReading(false);
     engine.suspend();
-    remote.current.send({ type: "revoke" });
     remote.current.close();
     setInvite("");
     setRemoteStatus(null);
@@ -662,7 +682,6 @@ function App() {
                 {remoteState.speed.toFixed(2)}×
               </output>
               {button("revoke", () => {
-                remote.current.send({ type: "revoke" });
                 remote.current.close();
                 setRemoteStatus("disconnected");
               })}
@@ -1127,13 +1146,16 @@ function App() {
                   })}
                   {button("deny", () => {
                     remote.current.send({ type: "deny" });
+                    remote.current.close();
+                    setRemoteStatus("disconnected");
                     setApproval(false);
                     setInvite("");
                   })}
                 </>
               )}
               {button("revoke", () => {
-                remote.current.send({ type: "revoke" });
+                remote.current.close();
+                setRemoteStatus("disconnected");
                 setInvite("");
                 setApproval(false);
               })}

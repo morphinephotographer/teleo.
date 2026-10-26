@@ -32,7 +32,7 @@ sequenceDiagram
   H->>R: ACK + numeric playback state
   R->>P: ACK (matching outstanding ID)
   H->>R: Revoke
-  R-->>P: Close; reconnect requires new invitation
+  R-->>P: Close; invalidate resume capabilities
 ```
 
 ```mermaid
@@ -63,3 +63,7 @@ sequenceDiagram
 ```
 
 CloudKit is never used as a remote-control transport. Web and Apple libraries are separate. Cross-browser/native remote interoperability is not implemented. No automatic concurrent text merge is claimed. Read QA_REPORT for the current implementation and verification limits.
+
+## Browser recovery ownership
+
+The relay is authoritative for resume authorization and the 30-second detached-role deadlines. `RemoteLink` owns a tab-local 25-second recovery budget and never persists resume secrets or command queues. Only the host owns playback; a lost network ACK is not proof that a command failed to execute. Fresh state is requested after each socket replacement and sequence-checked by the controller. `Room` persists role-specific hashed resume capabilities, active connection IDs, replay ledger and state sequence; WebSocket attachments carry their socket ID and rate window across hibernation. All mutations remain serialized by the Durable Object concurrency gate. Native LAN recovery is unchanged and separate.

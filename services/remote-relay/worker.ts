@@ -4,6 +4,7 @@ interface Env {
   ROOMS: DurableObjectNamespace<Room>;
   ALLOWED_ORIGINS: string;
 }
+type Role = "host" | "controller";
 type RoomData = {
   hostHash: string;
   inviteHash: string;
@@ -14,11 +15,35 @@ type RoomData = {
   revoked: boolean;
   seen: string[];
   pending: string[];
+  resume: Partial<Record<Role, string>>;
+  connections: Partial<Record<Role, string>>;
+  detached: Partial<Record<Role, number>>;
+  sequence: number;
+  lastSeen: Partial<Record<Role, number>>;
 };
 type Attachment = {
-  role: "new" | "host" | "controller";
+  role: "new" | Role;
+  id: string;
   window: number;
   count: number;
+};
+const RECONNECT_GRACE = 30_000;
+const validState = (
+  s: unknown,
+): s is { playing: boolean; speed: number; position: number } => {
+  if (!s || typeof s !== "object") return false;
+  const v = s as Record<string, unknown>;
+  return (
+    Object.keys(v).sort().join(",") === "playing,position,speed" &&
+    typeof v.playing === "boolean" &&
+    typeof v.speed === "number" &&
+    Number.isFinite(v.speed) &&
+    v.speed >= 0.5 &&
+    v.speed <= 3 &&
+    typeof v.position === "number" &&
+    Number.isFinite(v.position) &&
+    v.position >= 0
+  );
 };
 const token = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
@@ -103,6 +128,11 @@ export class Room extends DurableObject<Env> {
         revoked: false,
         seen: [],
         pending: [],
+        resume: {},
+        connections: {},
+        detached: {},
+        sequence: 0,
+        lastSeen: {},
       } satisfies RoomData);
       await this.ctx.storage.setAlarm(now + 120000);
       return Response.json(
@@ -111,7 +141,27 @@ export class Room extends DurableObject<Env> {
       );
     }
     const data = await this.ctx.storage.get<RoomData>("room");
-    if (!data || data.revoked || Date.now() > data.expires)
+    // After a runtime restart socket attachments may be gone without close events.
+    // Missing peers get a conservative deadline anchored to their last observed frame.
+    if (data?.approved && data.lastSeen && data.connections && data.detached) {
+      let changed = false;
+      for (const role of ["host", "controller"] as const) {
+        if (
+          data.connections[role] &&
+          !this.peers(data, role).length &&
+          !data.detached[role]
+        ) {
+          delete data.connections[role];
+          data.detached[role] = (data.lastSeen[role] ?? 0) + RECONNECT_GRACE;
+          changed = true;
+        }
+      }
+      if (changed) {
+        await this.ctx.storage.put("room", data);
+        await this.schedule(data);
+      }
+    }
+    if (!data || this.expired(data, Date.now()))
       return new Response(null, { status: 410 });
     if (this.ctx.getWebSockets().length >= 3)
       return new Response(null, { status: 429 });
@@ -119,16 +169,54 @@ export class Room extends DurableObject<Env> {
     this.ctx.acceptWebSocket(pair[1]);
     pair[1].serializeAttachment({
       role: "new",
+      id: crypto.randomUUID(),
       window: Date.now(),
       count: 0,
     } satisfies Attachment);
     return new Response(null, { status: 101, webSocket: pair[0] });
   }
-  private send(role: string, value: unknown) {
-    for (const s of this.ctx.getWebSockets()) {
-      if ((s.deserializeAttachment() as Attachment)?.role === role)
-        s.send(JSON.stringify(value));
-    }
+
+  private expired(d: RoomData, now: number) {
+    return (
+      !d.lastSeen ||
+      !d.resume ||
+      !d.connections ||
+      !d.detached ||
+      d.revoked ||
+      now >= d.expires ||
+      (!d.approved && now >= d.inviteExpires) ||
+      Object.values(d.detached).some((deadline) => now >= deadline)
+    );
+  }
+  private peers(d: RoomData, role: Role) {
+    return this.ctx.getWebSockets().filter((ws) => {
+      const a = ws.deserializeAttachment() as Attachment;
+      return (
+        a.role === role && a.id === d.connections[role] && ws.readyState === 1
+      );
+    });
+  }
+  private ready(d: RoomData) {
+    return (
+      this.peers(d, "host").length > 0 && this.peers(d, "controller").length > 0
+    );
+  }
+  private send(d: RoomData, role: Role, value: unknown) {
+    for (const ws of this.peers(d, role)) ws.send(JSON.stringify(value));
+  }
+  private async schedule(d: RoomData) {
+    await this.ctx.storage.setAlarm(
+      Math.min(
+        d.approved ? d.expires : d.inviteExpires,
+        ...Object.values(d.detached),
+      ),
+    );
+  }
+  private connected(d: RoomData) {
+    if (!this.ready(d)) return;
+    this.send(d, "host", { type: "connected" });
+    this.send(d, "controller", { type: "connected" });
+    this.send(d, "host", { type: "stateRequest" });
   }
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     await this.ctx.blockConcurrencyWhile(async () => {
@@ -143,62 +231,79 @@ export class Room extends DurableObject<Env> {
         if (++a.count > 20) throw Error();
         ws.serializeAttachment(a);
         const d = await this.ctx.storage.get<RoomData>("room");
-        if (!d || d.revoked || now > d.expires) throw Error();
+        if (!d || this.expired(d, now)) throw Error();
         const m = JSON.parse(message);
         if (a.role === "new") {
-          if (
-            m.type !== "auth" ||
-            typeof m.token !== "string" ||
-            m.token.length !== 64
-          )
+          if (typeof m.token !== "string" || !/^[a-f0-9]{64}$/.test(m.token))
             throw Error();
           const h = await hash(m.token);
-          if (
-            h === d.hostHash &&
-            !this.ctx
-              .getWebSockets()
-              .some(
-                (s) =>
-                  (s.deserializeAttachment() as Attachment)?.role === "host",
-              )
-          ) {
-            a.role = "host";
-            ws.serializeAttachment(a);
-            ws.send(JSON.stringify({ type: "waiting" }));
+          let role: Role;
+          if (m.type === "resume" && d.approved) {
+            const matched = (["host", "controller"] as const).find(
+              (r) => d.resume[r] === h,
+            );
+            if (!matched) throw Error();
+            role = matched;
           } else if (
-            h === d.inviteHash &&
-            !d.used &&
-            now <= d.inviteExpires &&
-            this.ctx
-              .getWebSockets()
-              .some(
-                (s) =>
-                  (s.deserializeAttachment() as Attachment)?.role === "host",
-              )
+            m.type === "auth" &&
+            typeof m.resume === "string" &&
+            /^[a-f0-9]{64}$/.test(m.resume) &&
+            m.resume !== m.token
           ) {
-            d.used = true;
-            a.role = "controller";
-            ws.serializeAttachment(a);
-            await this.ctx.storage.put("room", d);
-            this.send("host", { type: "approval" });
-            ws.send(JSON.stringify({ type: "waiting" }));
+            if (h === d.hostHash && !d.resume.host) role = "host";
+            else if (
+              h === d.inviteHash &&
+              !d.used &&
+              now < d.inviteExpires &&
+              this.peers(d, "host").length
+            ) {
+              role = "controller";
+              d.used = true;
+            } else throw Error();
+            d.resume[role] = await hash(m.resume);
           } else throw Error();
+          const previous = this.peers(d, role);
+          a.role = role;
+          d.connections[role] = a.id;
+          d.lastSeen[role] = now;
+          delete d.detached[role];
+          ws.serializeAttachment(a);
+          await this.ctx.storage.put("room", d);
+          await this.schedule(d);
+          for (const old of previous) old.close(4000, "Connection replaced");
+          ws.send(JSON.stringify({ type: "authenticated" }));
+          if (m.type === "auth") {
+            ws.send(JSON.stringify({ type: "waiting" }));
+            if (role === "controller")
+              this.send(d, "host", { type: "approval" });
+          } else {
+            ws.send(JSON.stringify({ type: "reconnecting" }));
+            this.connected(d);
+          }
           return;
         }
+        if (d.connections[a.role] !== a.id) throw Error();
+        d.lastSeen[a.role] = now;
+        await this.ctx.storage.put("room", d);
         if (m.type === "ping") {
           ws.send(JSON.stringify({ type: "pong" }));
           return;
         }
-        if (a.role === "host" && ["deny", "revoke"].includes(m.type)) {
+        if (m.type === "revoke" || (a.role === "host" && m.type === "deny")) {
           await this.revoke();
           return;
         }
-        if (a.role === "host" && m.type === "allow" && d.used && !d.approved) {
+        if (
+          a.role === "host" &&
+          m.type === "allow" &&
+          d.used &&
+          !d.approved &&
+          this.ready(d)
+        ) {
           d.approved = true;
           await this.ctx.storage.put("room", d);
-          await this.ctx.storage.setAlarm(d.expires);
-          this.send("controller", { type: "connected" });
-          this.send("host", { type: "connected" });
+          await this.schedule(d);
+          this.connected(d);
           return;
         }
         if (!d.approved) throw Error();
@@ -210,32 +315,56 @@ export class Room extends DurableObject<Env> {
           /^[a-f0-9-]{36}$/.test(m.id) &&
           validCommand(m.command)
         ) {
+          if (!this.ready(d)) {
+            ws.send(JSON.stringify({ type: "unconfirmed", id: m.id }));
+            return;
+          }
           if (d.seen.includes(m.id)) return;
           d.seen.push(m.id);
           if (d.seen.length > 1000) throw Error();
           d.pending.push(m.id);
           if (d.pending.length > 50) throw Error();
           await this.ctx.storage.put("room", d);
-          this.send("host", { type: "command", id: m.id, command: m.command });
+          this.send(d, "host", {
+            type: "command",
+            id: m.id,
+            command: m.command,
+          });
           return;
         }
         if (
           a.role === "host" &&
           m.type === "ack" &&
           typeof m.id === "string" &&
-          d.pending.includes(m.id) &&
-          m.state &&
-          Object.keys(m.state).sort().join(",") === "playing,position,speed" &&
-          typeof m.state.playing === "boolean" &&
-          Number.isFinite(m.state.speed) &&
-          m.state.speed >= 0.5 &&
-          m.state.speed <= 3 &&
-          Number.isFinite(m.state.position) &&
-          m.state.position >= 0
+          d.seen.includes(m.id) &&
+          validState(m.state)
         ) {
+          if (!d.pending.includes(m.id)) return; // Late ACK from before a disconnect is not fresh state.
           d.pending = d.pending.filter((id) => id !== m.id);
+          d.sequence++;
           await this.ctx.storage.put("room", d);
-          this.send("controller", { type: "ack", id: m.id, state: m.state });
+          this.send(d, "controller", {
+            type: "ack",
+            id: m.id,
+            state: m.state,
+            sequence: d.sequence,
+          });
+          return;
+        }
+        if (
+          a.role === "host" &&
+          m.type === "state" &&
+          Object.keys(m).sort().join(",") === "state,type" &&
+          validState(m.state)
+        ) {
+          if (!this.ready(d)) return;
+          d.sequence++;
+          await this.ctx.storage.put("room", d);
+          this.send(d, "controller", {
+            type: "state",
+            state: m.state,
+            sequence: d.sequence,
+          });
           return;
         }
         throw Error();
@@ -248,40 +377,53 @@ export class Room extends DurableObject<Env> {
     const d = await this.ctx.storage.get<RoomData>("room");
     if (d) {
       d.revoked = true;
+      d.resume = {};
+      d.pending = [];
       await this.ctx.storage.put("room", d);
     }
-    for (const s of this.ctx.getWebSockets()) s.close(1000, "Session ended");
+    for (const ws of this.ctx.getWebSockets()) ws.close(4001, "Session ended");
     await this.ctx.storage.setAlarm(Date.now() + 1000);
+  }
+  private async disconnected(ws: WebSocket, code: number) {
+    await this.ctx.blockConcurrencyWhile(async () => {
+      const a = ws.deserializeAttachment() as Attachment;
+      if (a.role === "new") return;
+      const d = await this.ctx.storage.get<RoomData>("room");
+      if (!d || d.revoked || d.connections[a.role] !== a.id) return;
+      if (!d.approved || code === 1008) {
+        await this.revoke();
+        return;
+      }
+      delete d.connections[a.role];
+      d.detached[a.role] = Date.now() + RECONNECT_GRACE;
+      d.pending = [];
+      await this.ctx.storage.put("room", d);
+      await this.schedule(d);
+      this.send(d, a.role === "host" ? "controller" : "host", {
+        type: "reconnecting",
+      });
+    });
   }
   async webSocketClose(
     ws: WebSocket,
-    _code: number,
+    code: number,
     _reason: string,
     _clean: boolean,
   ) {
-    if ((ws.deserializeAttachment() as Attachment)?.role !== "new")
-      await this.revoke();
+    await this.disconnected(ws, code);
   }
   async webSocketError(ws: WebSocket) {
-    if ((ws.deserializeAttachment() as Attachment)?.role !== "new")
-      await this.revoke();
+    await this.disconnected(ws, 1006);
   }
   async alarm() {
-    const d = await this.ctx.storage.get<RoomData>("room");
-    if (!d) {
-      await this.ctx.storage.deleteAll();
-      return;
-    }
-    if (d.revoked) {
-      await this.ctx.storage.deleteAll();
-      return;
-    }
-    if (
-      Date.now() >= d.expires ||
-      (!d.approved && Date.now() >= d.inviteExpires)
-    ) {
-      await this.revoke();
-    } else
-      await this.ctx.storage.setAlarm(d.approved ? d.expires : d.inviteExpires);
+    await this.ctx.blockConcurrencyWhile(async () => {
+      const d = await this.ctx.storage.get<RoomData>("room");
+      if (!d || d.revoked) {
+        await this.ctx.storage.deleteAll();
+        return;
+      }
+      if (this.expired(d, Date.now())) await this.revoke();
+      else await this.schedule(d);
+    });
   }
 }

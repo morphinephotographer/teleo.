@@ -1,6 +1,6 @@
 # QA report — 2026-10-26 (Europe/Kyiv)
 
-**Current browser status:** public staging is deployed; the owner confirmed physical iPhone pairing and controller buttons on 2026-10-26. The owner also confirmed automatic reconnection after interruption on the physical iPhone; interruption duration and network details are unspecified. Initial checkpoint details are retained below as history.
+**Current browser status:** public staging is deployed; the owner confirmed physical iPhone pairing and controller buttons on 2026-10-26. The owner also confirmed automatic reconnection after interruption and explicit revoke without automatic return on the physical iPhone; timings and network details are unspecified. Initial checkpoint details are retained below as history.
 
 This is a verified development checkpoint, **not acceptance of every v1.0 P0**. Implemented source, automated pass, manual/device pass, blocked and not tested are separate statuses. No production deployment, iCloud account access, hardware Bluetooth test or push occurred.
 
@@ -183,3 +183,16 @@ This supersedes earlier physical phone “Not tested” entries for this basic b
 Following the requested interruption test, the owner reported: “работает, отключается но потом переподключается автоматически”. **Passed (owner-reported):** the browser remote disconnects and subsequently reconnects automatically on the physical iPhone, in the existing public staging test context. This supersedes the earlier “physical network interruption/reconnect not tested” status for this reported scenario.
 
 No exact outage duration, network transition, reconnect latency, iPhone/iOS/browser version or host playback continuity was reported; these are not inferred. Long outages, background/sleep, native LAN, HID, CloudKit and separate physical revoke/expiry checks retain their prior status. This is a documentation-only update; no deployment or automated test rerun was needed.
+
+
+## Owner-confirmed revoke and reconnect action — 2026-10-26
+
+The owner confirmed on the physical iPhone staging path that explicit access revocation breaks the connection and does not automatically reconnect. Exact device/OS/browser versions, observation duration and network details remain unspecified. This is owner-reported acceptance of that behavior, not a broader security audit.
+
+Requested UX change: the host's terminal disconnected/unavailable panel now replaces Revoke with localized Reconnect (EN), Підключити знову (UK), Переподключить (RU). It creates a new one-use invitation, clears stale approval/QR state and still requires scanning/opening the new invite plus explicit host approval. Temporary reconnecting sessions retain Revoke so recovery can be cancelled. Revoked keys are never reactivated.
+
+The regression test exposed an existing same-document navigation issue: opening a new /remote#pair invitation in an already used controller tab changed the fragment without starting a new session. The remote page now consumes invitations on hashchange as well as initial navigation and immediately removes the fragment. Locale/script state is preserved, listener cleanup is explicit, and the new session still awaits host approval. Tests now cover button replacement in all three locales, a fresh/different invitation, no automatic return of the old phone session, re-pairing in the same tab and subsequent command ACK.
+
+`npx vitest run tests/domain.test.ts tests/remote-client.test.ts`: **31 passed**, including dictionary parity and client lifecycle. The relay/native sources are unchanged; their longer integration suites were not rerun for this UI change. Full browser/build/public results follow after execution. The user's attached photograph is not copied into the repository; screenshots contain generated QA copy only.
+
+For this change, `npm run staging:check` passed (typecheck, production staging build, Wrangler dry-run), `npm run lint` passed and `npm run test:e2e` passed **48/48** in 41.6 seconds. This includes the new fresh-invitation/same-tab re-pairing checks on desktop and mobile.

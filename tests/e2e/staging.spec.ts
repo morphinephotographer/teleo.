@@ -100,6 +100,39 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await expect(page.locator(".pair-panel p[role=status]")).toHaveText(
       t.disconnected,
     );
+    const panel = page.locator(".pair-panel");
+    await expect(
+      panel.getByRole("button", { name: t.revoke, exact: true }),
+    ).toHaveCount(0);
+    await expect(
+      panel.getByRole("button", { name: t.reconnect, exact: true }),
+    ).toBeVisible();
+    if (locale === "ru") {
+      await panel.screenshot({
+        path: `docs/screenshots/${info.project.name}-reconnect-after-revoke.png`,
+      });
+      await panel
+        .getByRole("button", { name: t.reconnect, exact: true })
+        .click();
+      const newLink = page.getByRole("link", { name: t.invite });
+      await expect(newLink).toBeVisible();
+      const nextInvite = (await newLink.getAttribute("href"))!;
+      expect(nextInvite).not.toBe(invite);
+      await expect(phone.locator("p[role=status]")).toHaveText(t.disconnected);
+      // A new invitation must still obtain explicit host approval.
+      await phone.goto(nextInvite);
+      await expect(
+        panel.getByRole("button", { name: t.allow, exact: true }),
+      ).toBeVisible();
+      await expect(
+        phone.getByRole("button", { name: t.play, exact: true }),
+      ).toHaveCount(0);
+      await panel.getByRole("button", { name: t.allow, exact: true }).click();
+      await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+      await phone.getByRole("button", { name: t.pause, exact: true }).click();
+      await expect(phone.locator("output")).toContainText(t.pause);
+      await panel.getByRole("button", { name: t.revoke, exact: true }).click();
+    }
     await context.close();
   });
 }

@@ -29,3 +29,5 @@ Commands use newline-framed JSON, maximum 1024-byte frame, 4096-byte buffered re
 A real same-Mac TLS loopback test covers successful enrollment, approval, command/ACK/revoke and wrong-key rejection where verified in QA. This does not certify Bonjour discovery, physical iPhone, firewall UX or sleep behavior. Native transport status/errors and physical matrix must be reviewed before shipping.
 
 References reviewed: [Apple TN3213](https://developer.apple.com/documentation/technotes/tn3213-moving-from-multipeer-connectivity-to-network-framework), [onKeyPress](https://developer.apple.com/documentation/swiftui/view/onkeypress(_:action:)), [Cloudflare WebSockets](https://developers.cloudflare.com/durable-objects/best-practices/websockets/).
+
+After explicit revoke, the host panel offers Reconnect instead of a redundant Revoke button. This starts a fresh invitation/approval flow and never resumes the revoked authorization. Opening that new invitation in the same phone tab is supported through fragment-change handling; a page refresh is not required.

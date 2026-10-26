@@ -448,16 +448,24 @@ function App() {
   }, [reading, remoteStatus]);
   useEffect(() => {
     if (route !== "/remote") return;
-    const pair = new URLSearchParams(location.hash.slice(1)).get("pair");
-    if (pair) {
+    const acceptInvitation = () => {
+      const pair = new URLSearchParams(location.hash.slice(1)).get("pair");
+      if (!pair) return;
       history.replaceState({}, "", location.pathname + location.search);
       try {
         remote.current.controller(pair);
+        lastAck.current = "";
+        setNotice(null);
       } catch {
         setRemoteStatus("expired");
       }
-    }
-    return () => remote.current.close();
+    };
+    acceptInvitation();
+    window.addEventListener("hashchange", acceptInvitation);
+    return () => {
+      window.removeEventListener("hashchange", acceptInvitation);
+      remote.current.close();
+    };
   }, [route]);
   function navigate(path: string) {
     void flush();
@@ -487,6 +495,9 @@ function App() {
     setReading(true);
   }
   async function connect() {
+    setApproval(false);
+    setInvite("");
+    setQR("");
     if (!reading) {
       await startReader();
     }
@@ -1153,12 +1164,14 @@ function App() {
                   })}
                 </>
               )}
-              {button("revoke", () => {
-                remote.current.close();
-                setRemoteStatus("disconnected");
-                setInvite("");
-                setApproval(false);
-              })}
+              {remoteStatus === "disconnected" || remoteStatus === "unavailable"
+                ? button("reconnect", () => void connect())
+                : button("revoke", () => {
+                    remote.current.close();
+                    setRemoteStatus("disconnected");
+                    setInvite("");
+                    setApproval(false);
+                  })}
             </div>
           )}
         </section>

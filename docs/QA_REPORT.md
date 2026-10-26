@@ -1,6 +1,6 @@
 # QA report — 2026-10-26 (Europe/Kyiv)
 
-**Current browser recovery status:** bounded approved-session reconnect is implemented; see the follow-up section at the end. Initial checkpoint details are retained below as history.
+**Current browser status:** public staging is deployed; the owner confirmed physical iPhone pairing and controller buttons on 2026-10-26. Bounded reconnect is automated-tested; physical interruption/recovery is not yet confirmed. Initial checkpoint details are retained below as history.
 
 This is a verified development checkpoint, **not acceptance of every v1.0 P0**. Implemented source, automated pass, manual/device pass, blocked and not tested are separate statuses. No production deployment, iCloud account access, hardware Bluetooth test or push occurred.
 
@@ -84,7 +84,7 @@ No macOS XCTest UI pass is claimed. The built application itself launched succes
 | iPhone + Bluetooth clicker/pedal | Delivered HID events | **Not tested**; model/accessory unspecified |
 | Mac + iPhone signed into same iCloud account | Create/edit/offline divergence/delete/sign-out/quota | **Blocked / not tested** |
 | Physical iPhone + Mac, no internet | Bonjour + authenticated TLS, approval/ACK/revoke/sleep/denial | **Not tested** |
-| Browser Mac + physical phone on public domain | HTTPS QR / WSS | **Not deployed / not tested** |
+| Browser host + physical iPhone on public staging | HTTPS / WSS browser controller | **Passed (owner-reported)** pairing and all controller buttons; model/OS/browser unspecified |
 | VoiceOver, Reduce Motion, multiple displays | OS accessibility / scaling | **Not tested**, except semantic web controls and focus in automation |
 
 ## Remaining release work, in order
@@ -167,3 +167,12 @@ The public Studio was also opened in the in-app browser; its Russian library/emp
 A post-deployment visual review at 970px found that the empty-library panel wrapped below the sidebar. The grid now spans columns 2 through the last column, fitting both the two-column and three-column layouts. A medium-width browser regression test was added for desktop/mobile projects. After the fix, `npm run staging:check` passed and the full local suite passed **48/48**, 42.6 seconds. The next staging revision includes this CSS fix; initial public results above describe the earlier revision.
 
 Final staging revision: **50366211-227f-4a80-879a-af4607c22dae**, application source **31f4a8d**, same workers.dev URL. After redeploying the one-line responsive grid fix, the public command `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging` passed **10/10** checks in 17.1 seconds. This includes both medium-width layout regressions as well as the real HTTPS/WSS pairing checks. The final local full suite remains **48/48 passed**. Physical iPhone/Safari is still Not tested.
+
+
+## Owner-reported physical iPhone acceptance — 2026-10-26
+
+After testing the published staging, the owner reported in chat: “Проверил на айфоне, все работает, подключается как пульт и все кнопки работают должным образом”.
+
+**Passed — owner-reported, not an additional agent-observed test:** a real iPhone connects as the browser remote and its displayed controller buttons work correctly. Context: public staging at https://teleo-staging.your-subdomain.workers.dev, latest recorded deployment 50366211-227f-4a80-879a-af4607c22dae. Exact iPhone model, iOS version, browser and network details were not supplied and are not inferred; in particular this is not labeled Safari-specific certification.
+
+This supersedes earlier physical phone “Not tested” entries for this basic browser pairing/control path only. It does not verify native iPhone→Mac LAN, Bluetooth HID, CloudKit, background/sleep behavior, Wake Lock, orientation/accessibility or physical network interruption/reconnect. Explicit revoke/denial/expiry security behavior retains automated coverage; the report is not expanded into a separate physical security acceptance claim. No application code, deployment or automated test results changed for this documentation update.

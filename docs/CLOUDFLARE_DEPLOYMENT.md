@@ -59,3 +59,7 @@ To suspend the test service, stop using/close both tabs and request removal of t
 ### Current staging revision
 
 The medium-width empty-library fix was redeployed to the same URL. Current Cloudflare version: **50366211-227f-4a80-879a-af4607c22dae**. Published application source: **31f4a8d**. Final public verification: **10/10 passed**, 17.1 seconds, including the new medium-width layout checks. Final local suite: **48/48 passed**, 42.6 seconds. Production domains/DNS remain unchanged.
+
+### Physical iPhone report — 2026-10-26
+
+The owner tested the public staging on a real iPhone and confirmed successful browser-remote connection and correct operation of all controller buttons. This is owner-reported acceptance; model, iOS/browser versions and network details were not supplied. Physical interruption/reconnect, background/sleep, native LAN, HID and CloudKit are not covered by that report. See QA_REPORT for the recorded evidence and remaining manual checks.

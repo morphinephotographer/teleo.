@@ -2,7 +2,7 @@
 
 Your words. Your pace.
 
-A private browser teleprompter in English, Ukrainian and Russian, plus native SwiftUI iPhone and macOS clients. This repository contains working local clients and two independent phone-control transports. **It is not a production release:** real CloudKit two-device sync, physical HID accessories, physical iPhone→Mac LAN and public HTTPS/WSS still require the owner/device verification described in [QA](docs/QA_REPORT.md).
+A private browser teleprompter in English, Ukrainian and Russian, plus native SwiftUI iPhone and macOS clients. This repository contains working local clients and two independent phone-control transports. **It is not a production release:** real CloudKit two-device sync, physical HID accessories, physical native iPhone→Mac LAN still require the owner/device verification described in [QA](docs/QA_REPORT.md).
 
 ## Run the web client and real local relay
 
@@ -54,6 +54,6 @@ No accounts, subscriptions, AI, recording, public sharing or Android. System fon
 
 The isolated staging Worker combines built assets and the real relay on one origin. `npm run staging:check` builds and dry-runs it without publishing; `npm run staging:local` serves it at port 8788. `npm run test:staging` checks routes/security/real pairing locally. After owner-approved publication, set `TELEO_STAGING_URL` to the returned workers.dev URL and rerun `npm run test:staging` against public HTTPS/WSS. [Setup and physical phone checklist](docs/CLOUDFLARE_DEPLOYMENT.md#isolated-phone-test-staging-worker). No Apple Developer Team is required.
 
-Verified public staging: [Open teleo. Studio](https://teleo-staging.your-subdomain.workers.dev/studio). Published with owner approval on 2026-10-26; 10 public HTTPS/WSS/layout checks passed. The physical phone/Safari checklist remains for the owner. teleo.cc is not published by this staging deployment.
+Verified public staging: [Open teleo. Studio](https://teleo-staging.your-subdomain.workers.dev/studio). Published with owner approval on 2026-10-26; 10 public HTTPS/WSS/layout checks passed. The owner confirmed physical iPhone browser pairing and all controller buttons on 2026-10-26. Exact browser/version and physical reconnect/background scenarios remain unverified. teleo.cc is not published by this staging deployment.
 
 Localhost and the public staging hostname have separate browser libraries. Use .txt/JSON import/export for manual transfer, or create a new disposable script for phone testing.

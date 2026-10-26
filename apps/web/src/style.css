@@ -1828,3 +1828,14 @@ output {
     padding-right: 6px;
   }
 }
+/* Preserve the standalone controller's existing light palette in dark-system browsers. */
+.app-shell.route-remote {
+  --canvas: #f1f1f0;
+  --surface: #fff;
+  --subtle: #f0f0f2;
+  --line: #e5e5e7;
+  --ink: #191919;
+  --muted: #666;
+  background: var(--canvas);
+  color: var(--ink);
+}

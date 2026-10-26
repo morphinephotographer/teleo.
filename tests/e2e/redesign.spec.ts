@@ -80,9 +80,17 @@ test("reduced motion bypasses intro; remote deep links are never covered", async
   await page.goto("/?lang=ru");
   await expect(page.locator(".workspace")).toBeVisible();
   await expect(page.locator(".brand-intro")).toHaveCount(0);
-  await page.emulateMedia({ reducedMotion: "no-preference" });
+  await page.emulateMedia({
+    reducedMotion: "no-preference",
+    colorScheme: "dark",
+  });
   await page.goto("/remote?lang=ru");
   await expect(page.locator(".controller")).toBeVisible();
+  expect(
+    await page
+      .locator(".controller")
+      .evaluate((el) => getComputedStyle(el).color),
+  ).toBe("rgb(25, 25, 25)");
   await expect(page.locator(".brand-intro")).toHaveCount(0);
 });
 test("session storage denial still permits skipping and internal navigation", async ({

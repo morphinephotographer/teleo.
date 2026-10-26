@@ -147,3 +147,21 @@ Prepared a separate teleo-staging Worker with actual ASSETS binding + the existi
 `npm run test:e2e -- staging.spec.ts` passed **8/8** checks: desktop/mobile assets and security headers, no-Origin/foreign-Origin rejection including forged forwarding header, same-origin room creation, API-vs-SPA routing and independent browser phone pairing/commands/ACK/revoke in EN/UK/RU. Physical iPhone, public TLS/WSS and account deployment are separate from these local checks. Screenshots: docs/screenshots/*-staging-controller.png. Full-suite/public results follow below.
 
 Cloudflare OAuth completed successfully after owner approval. `wrangler whoami` showed one account; `wrangler deployments list --name teleo-staging --config services/staging/wrangler.jsonc` returned code 10007 (Worker does not exist), so initial staging publication will not replace an existing Worker. Account identifiers/tokens are not added to source. The full local browser suite passed **46/46** checks, including the 8 staging checks. Public deployment results are recorded in a later checkpoint.
+
+The first public check attempt failed because the local test harness sent synthetic CF-Connecting-IP UUID values to Cloudflare. Cloudflare rejected those requests; the real in-app browser loaded the published app successfully. The harness now injects isolated test addresses only on localhost and lets Cloudflare provide the real client address for public verification. No edge/security protections were disabled. This harness fix requires no Worker code change/redeployment.
+
+
+### Verified public staging result
+
+Owner-approved deployment succeeded: **https://teleo-staging.your-subdomain.workers.dev**, Cloudflare version **7d54f434-75e8-4995-a291-5769f7e20ab9**, application source checkpoint **5b59588**. Worker and ROOMS namespace are separate from production; no teleo.cc/api.teleo.cc DNS or custom routes were changed and no plan purchase occurred.
+
+- `npm run typecheck`: passed, including staging entry/config.
+- `npm run lint`: passed.
+- `npm run staging:check`: passed production staging build + upload-free Wrangler dry-run.
+- `npm run test:e2e`: **46/46 passed**, 42.8 seconds, local combined staging included.
+- `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging`: **8/8 passed**, 15.8 seconds, real public HTTPS/WSS and independent host/controller contexts, all three locales and desktop/mobile sizes.
+- Earlier 46 Vitest tests were not rerun for this wrapper/configuration change; the shared relay source is unchanged from ad0bc37. Native tests/signing/CloudKit/hardware were not touched.
+
+The public Studio was also opened in the in-app browser; its Russian library/empty state rendered correctly. Test screenshots contain only disposable QA copy. **Physical iPhone and Safari remain Not tested.** A public URL and automated mobile viewport are not a physical device pass. Owner can now create a disposable script on the Mac, open Read → Connect phone, scan with iPhone and approve on Mac.
+
+A post-deployment visual review at 970px found that the empty-library panel wrapped below the sidebar. The grid now spans columns 2 through the last column, fitting both the two-column and three-column layouts. A medium-width browser regression test was added for desktop/mobile projects. After the fix, `npm run staging:check` passed and the full local suite passed **48/48**, 42.6 seconds. The next staging revision includes this CSS fix; initial public results above describe the earlier revision.

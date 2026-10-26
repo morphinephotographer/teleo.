@@ -25,7 +25,7 @@ npx playwright install chromium
 npm run test:e2e         # starts local dev/relay + built preview at 5174
 ```
 
-The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Deployment is prepared in `wrangler.jsonc` and `services/remote-relay/wrangler.jsonc`; **no deployment or DNS mutation has been performed**. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
+The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Deployment is prepared in `wrangler.jsonc` and `services/remote-relay/wrangler.jsonc`; **production deployment and production DNS mutation have not been performed**. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
 
 ## Native iPhone and Mac
 
@@ -53,3 +53,7 @@ No accounts, subscriptions, AI, recording, public sharing or Android. System fon
 ## Phone-test staging
 
 The isolated staging Worker combines built assets and the real relay on one origin. `npm run staging:check` builds and dry-runs it without publishing; `npm run staging:local` serves it at port 8788. `npm run test:staging` checks routes/security/real pairing locally. After owner-approved publication, set `TELEO_STAGING_URL` to the returned workers.dev URL and rerun `npm run test:staging` against public HTTPS/WSS. [Setup and physical phone checklist](docs/CLOUDFLARE_DEPLOYMENT.md#isolated-phone-test-staging-worker). No Apple Developer Team is required.
+
+Verified public staging: [Open teleo. Studio](https://teleo-staging.your-subdomain.workers.dev/studio). Published with owner approval on 2026-10-26; 8 public HTTPS/WSS checks passed. The physical phone/Safari checklist remains for the owner. teleo.cc is not published by this staging deployment.
+
+Localhost and the public staging hostname have separate browser libraries. Use .txt/JSON import/export for manual transfer, or create a new disposable script for phone testing.

@@ -1,8 +1,12 @@
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 const staging = process.env.TELEO_STAGING_URL || "http://127.0.0.1:8788";
+const local =
+  new URL(staging).hostname === "127.0.0.1" ||
+  new URL(staging).hostname === "localhost";
 test.beforeEach(async ({ page }) => {
-  await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
+  if (local)
+    await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
 });
 test("staging serves assets, security headers and strict same-origin API routing", async ({
   request,
@@ -35,7 +39,10 @@ test("staging serves assets, security headers and strict same-origin API routing
     ).status(),
   ).toBe(403);
   const created = await request.post(staging + "/api/rooms", {
-    headers: { Origin: staging, "CF-Connecting-IP": crypto.randomUUID() },
+    headers: {
+      Origin: staging,
+      ...(local ? { "CF-Connecting-IP": crypto.randomUUID() } : {}),
+    },
   });
   expect(created.status()).toBe(200);
   expect(created.headers()["access-control-allow-origin"]).toBe(staging);
@@ -96,3 +103,20 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await context.close();
   });
 }
+
+test("empty library stays beside its sidebar at medium window width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 970, height: 900 });
+  await page.goto(staging + "/studio?lang=ru");
+  const sidebar = await page.locator(".library").boundingBox();
+  const empty = await page.locator(".empty").boundingBox();
+  expect(sidebar).not.toBeNull();
+  expect(empty).not.toBeNull();
+  expect(empty!.x).toBeGreaterThanOrEqual(sidebar!.x + sidebar!.width - 1);
+  expect(empty!.y).toBeLessThan(sidebar!.y + 20);
+  await page.screenshot({
+    path: `docs/screenshots/${test.info().project.name}-staging-medium-library.png`,
+    fullPage: true,
+  });
+});

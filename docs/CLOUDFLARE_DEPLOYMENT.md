@@ -1,6 +1,6 @@
-# Cloudflare deployment (prepared, NOT deployed)
+# Cloudflare deployment — staging live, production not deployed
 
-The owner already owns `teleo.cc` at Cloudflare Registrar. No registration, transfer, purchase, DNS mutation, credential request or deployment has occurred. The GitHub source remote is configured; this does not grant Cloudflare access. All commands below are for an owner-authorized deployment, not instructions that were executed against production.
+The owner already owns `teleo.cc` at Cloudflare Registrar. No registration, transfer, purchase or production DNS mutation has occurred. The isolated staging Worker was deployed after explicit owner approval; the production site is not deployed. The GitHub source remote is configured; this does not grant Cloudflare access. All commands below are for an owner-authorized deployment, not instructions that were executed against production.
 
 Local prerequisites: Node 24+, `npm ci`, `npm run dev`, `npm run relay`. Vite proxies same-origin `/api` to port 8787. Another phone cannot reach 127.0.0.1; use approved HTTPS staging hosting for physical-browser validation. Do not expose a plaintext dev session as production.
 
@@ -41,3 +41,17 @@ The public check configuration uses only the given staging URL and does not star
 Physical checklist: on Mac open staging /studio, write a disposable script, Read → Connect phone; scan QR with iPhone camera; confirm Allow on Mac; verify Play/Pause, speed/paragraph, Revoke and a brief phone network interruption. Refreshing either tab requires a fresh invitation. Record exact phone/browser versions and network behavior; mobile viewport emulation is not physical iPhone proof.
 
 To suspend the test service, stop using/close both tabs and request removal of the staging deployment through the owner's account. Do not run blanket Worker deletion or remove Durable Object namespaces without checking ownership/retention. Production release remains a separate approval.
+
+
+## Verified staging deployment record — 2026-10-26
+
+- URL: https://teleo-staging.your-subdomain.workers.dev
+- Worker: teleo-staging; separate ROOMS namespace + ASSETS binding.
+- Cloudflare version: 7d54f434-75e8-4995-a291-5769f7e20ab9.
+- Published application/configuration source checkpoint: Git commit 5b59588.
+- Owner explicitly approved OAuth login and staging publication in chat. The account preflight showed one account and no existing teleo-staging Worker (API code 10007).
+- Executed: `WRANGLER_SEND_METRICS=false npx wrangler deploy --config services/staging/wrangler.jsonc` — succeeded, returned the URL/version above.
+- Public verification: `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging` — **8 passed**, 15.8 seconds. Assets/security/strict Origin/API routing and two independent browser contexts exercised real HTTPS/WSS pairing, Play/Pause, ACK and revoke in EN/UK/RU on desktop/mobile viewports.
+- Local full Playwright suite: **46 passed**, 42.8 seconds. Dry-run/typecheck/lint passed.
+- Public tests never forge CF-Connecting-IP; synthetic per-client addresses are only for local emulator isolation. An initial public harness attempt was rejected by Cloudflare because it forwarded local test headers; the harness was corrected, with no security setting changes.
+- teleo.cc and api.teleo.cc custom DNS/routes were not changed. No production site was published. No plan upgrade or purchase was made. Physical iPhone/Safari is **not tested**; use the checklist above.

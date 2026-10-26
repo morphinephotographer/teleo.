@@ -67,3 +67,7 @@ The owner tested the public staging on a real iPhone and confirmed successful br
 ### Reconnect-button update — 2026-10-26
 
 Current staging version: **20596440-d736-4994-8609-bd5300c7fa5f**, application source **f13b572**. The terminal host panel replaces Revoke with Reconnect and starts a new invitation/approval flow. New QR links work in a reused phone tab. Public staging verification: **10/10 passed**, 20.0 seconds; local full regression **48/48 passed**. The owner also confirmed that explicit revoke disconnects the physical iPhone without automatic return. Production DNS/routes are unchanged.
+
+### Compact monochrome redesign — 2026-10-26
+
+Current staging version: **e3e950a2-e15b-48c2-a701-d17218c4f183**; application source **7b5bf21**. Web studio and phone controller use the new viewport-sized monochrome layout. Local browser regression **54/54**, public staging **10/10** (18.7 seconds), typecheck/lint/build/dry-run passed. Mobile layout checks include compact portrait and landscape. See WEB_UI.md for internal-scroll regions and Safari vibration limitations. No production domain, DNS or account-plan changes.

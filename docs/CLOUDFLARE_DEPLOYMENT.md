@@ -62,4 +62,4 @@ The medium-width empty-library fix was redeployed to the same URL. Current Cloud
 
 ### Physical iPhone report — 2026-10-26
 
-The owner tested the public staging on a real iPhone and confirmed successful browser-remote connection and correct operation of all controller buttons. This is owner-reported acceptance; model, iOS/browser versions and network details were not supplied. Physical interruption/reconnect, background/sleep, native LAN, HID and CloudKit are not covered by that report. See QA_REPORT for the recorded evidence and remaining manual checks.
+The owner tested the public staging on a real iPhone and confirmed successful browser-remote connection and correct operation of all controller buttons. This is owner-reported acceptance; model, iOS/browser versions and network details were not supplied. In a subsequent test, the owner also confirmed disconnection followed by automatic reconnection on the iPhone. Exact interruption duration, network transition and host playback continuity were not reported. Background/sleep, native LAN, HID and CloudKit are not covered by those reports. See QA_REPORT for the recorded evidence and remaining manual checks.

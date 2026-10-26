@@ -1,6 +1,6 @@
 # QA report — 2026-10-26 (Europe/Kyiv)
 
-**Current browser status:** public staging is deployed; the owner confirmed physical iPhone pairing and controller buttons on 2026-10-26. Bounded reconnect is automated-tested; physical interruption/recovery is not yet confirmed. Initial checkpoint details are retained below as history.
+**Current browser status:** public staging is deployed; the owner confirmed physical iPhone pairing and controller buttons on 2026-10-26. The owner also confirmed automatic reconnection after interruption on the physical iPhone; interruption duration and network details are unspecified. Initial checkpoint details are retained below as history.
 
 This is a verified development checkpoint, **not acceptance of every v1.0 P0**. Implemented source, automated pass, manual/device pass, blocked and not tested are separate statuses. No production deployment, iCloud account access, hardware Bluetooth test or push occurred.
 
@@ -176,3 +176,10 @@ After testing the published staging, the owner reported in chat: “Провер
 **Passed — owner-reported, not an additional agent-observed test:** a real iPhone connects as the browser remote and its displayed controller buttons work correctly. Context: public staging at https://teleo-staging.your-subdomain.workers.dev, latest recorded deployment 50366211-227f-4a80-879a-af4607c22dae. Exact iPhone model, iOS version, browser and network details were not supplied and are not inferred; in particular this is not labeled Safari-specific certification.
 
 This supersedes earlier physical phone “Not tested” entries for this basic browser pairing/control path only. It does not verify native iPhone→Mac LAN, Bluetooth HID, CloudKit, background/sleep behavior, Wake Lock, orientation/accessibility or physical network interruption/reconnect. Explicit revoke/denial/expiry security behavior retains automated coverage; the report is not expanded into a separate physical security acceptance claim. No application code, deployment or automated test results changed for this documentation update.
+
+
+### Physical iPhone automatic reconnect — owner report, 2026-10-26
+
+Following the requested interruption test, the owner reported: “работает, отключается но потом переподключается автоматически”. **Passed (owner-reported):** the browser remote disconnects and subsequently reconnects automatically on the physical iPhone, in the existing public staging test context. This supersedes the earlier “physical network interruption/reconnect not tested” status for this reported scenario.
+
+No exact outage duration, network transition, reconnect latency, iPhone/iOS/browser version or host playback continuity was reported; these are not inferred. Long outages, background/sleep, native LAN, HID, CloudKit and separate physical revoke/expiry checks retain their prior status. This is a documentation-only update; no deployment or automated test rerun was needed.

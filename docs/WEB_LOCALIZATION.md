@@ -1,0 +1,11 @@
+# Website localization
+
+`apps/web/src/i18n.ts` bundles typed English, Ukrainian and Russian dictionaries. `Key` derives from English; both other dictionaries must implement every key. Translation unit tests check parity and nonempty values. All five routes, reader settings, physical key learning, errors, pairing approval, controller, help/privacy and accessible labels use the same dictionary. Script bodies/titles never pass through translation or an external service. Numbers and timestamps use Intl for the active locale.
+
+First visit: query `?lang=en|uk|ru`, then persisted manual choice, then the first supported base language in `navigator.languages` (regional variants supported), then English. Manual choices update React state immediately and persist separately from scripts. Storage errors are caught; session switching remains available. English individual-key fallback is present; typed dictionaries and parity tests make missing entries fail during development/tests.
+
+Locale changes do not remount the editor, command engine, selected script or WebSocket session. Pairing capability remains in the URL fragment; the controller removes it from browser history after reading it. Existing route paths remain unchanged. Public page locale URLs use `?lang=` with matching canonical and en/uk/ru hreflang links; client-rendered metadata is updated immediately. This is a client-rendered SEO strategy, not static prerendering. Deployment should verify crawler behavior before claiming SEO indexing.
+
+Production builds generate a service worker precaching the app shell, scripts, CSS and bundled dictionaries. It excludes `/api/` and external origins. Offline navigation falls back to the shell. Clearing site data also clears offline assets and scripts. Fresh first visits require a network; offline support begins only after successful caching. Development mode does not register a service worker.
+
+QA: automated regional detection, manual override, refresh, storage-disabled locale switching, key parity, script preservation, active playback preservation, html lang/metadata, route screenshots at desktop/mobile sizes, production offline switch across all locales. Real iPhone Safari, VoiceOver and linguistic copy review by native-speaking owners remain distinct manual checks.

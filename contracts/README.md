@@ -1,0 +1,5 @@
+# Portable v1 contract
+
+`script-v1.json` is consumed by TypeScript and Swift conformance tests. Dates use UTC ISO8601; strings preserve Unicode and newlines. Preferences: speed 0.5–3, fontSize 16–100, lineHeight 1–3, textWidth 280–1600, alignment left/center/right, countdown 0–10, appearance dark/light and three boolean toggles. UI offers countdown 0/3/5/10. IDs are UUID strings. Export version is exactly 1; unknown versions fail without mutating existing data. Import creates new local script identities to avoid overwrites; folders/revisions are not transported in v1.
+
+Commands are content-free objects `{action, value?}`. Only setSpeed accepts a value, finite 0.5–3. Network requests have session/request IDs and are deduplicated. Browser and native transports use separate session envelopes; the actions/scroll math agree, not their wire framing. Scroll rate = 40 points/sec × speed, frame delta <= 0.05 sec, steps ±100 points, paragraph offsets derived from platform text layout. Play/pause are idempotent; togglePlay requires request deduplication.

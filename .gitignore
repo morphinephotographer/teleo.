@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.build/
+.swiftpm/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.env
+.env.*
+!.env.example
+.dev.vars
+.wrangler/
+playwright-report/
+test-results/
+.DS_Store
+*.log

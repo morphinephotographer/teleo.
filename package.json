@@ -1,0 +1,44 @@
+{
+  "name": "teleo",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit && tsc -p services/remote-relay/tsconfig.json",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "relay": "WRANGLER_SEND_METRICS=false wrangler dev --config services/remote-relay/wrangler.jsonc --port 8787",
+    "apple:test": "swift test --package-path apps/apple"
+  },
+  "dependencies": {
+    "idb": "^8.0.3",
+    "qrcode": "^1.5.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "latest",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.0.0",
+    "@types/qrcode": "^1.5.6",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "esbuild": "0.28.2",
+    "eslint": "^9.39.0",
+    "fake-indexeddb": "^6.2.4",
+    "miniflare": "5.20261019.2-beta",
+    "prettier": "^3.9.10",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5",
+    "wrangler": "^4.45.0"
+  },
+  "overrides": {
+    "undici": "^7.30.1"
+  }
+}

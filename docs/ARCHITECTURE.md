@@ -1,0 +1,65 @@
+# Architecture
+
+The browser is a complete React/TypeScript client, not the native app's website shell. The two Apple targets compile the same native SwiftUI sources. `TeleoCore` is a separately testable Swift package; Xcode targets compile its sources directly to avoid package resolution at build time. No proprietary assets, WebViews or third-party font services are used.
+
+| Owner | Responsibility |
+|---|---|
+| `packages/protocol/domain.ts`, `apps/apple/Sources/TeleoCore` | Portable script/preferences, command validation, time-based playback |
+| `apps/web/src/storage.ts` | IndexedDB v1, revisions, folders, retained tombstones |
+| `apps/web/src/main.tsx` | Host UI, requestAnimationFrame, scoped keyboard adapter, screen wake lifecycle |
+| `apps/web/src/i18n.ts` | Typed en/uk/ru dictionaries and browser preference detection |
+| `services/remote-relay/worker.ts` | Content-free browser pairing, role/command validation, hibernating Durable Objects |
+| `apps/apple/Shared` | SwiftUI editor, native text layout/scroll views, keyboard adapter, Network.framework transport |
+| `apps/apple/Sources/TeleoCore/Storage.swift` | Versioned SwiftData schema and CloudKit opt-in configuration |
+
+Each host owns playback. Commands are `play`, `pause`, `togglePlay`, `restart`, `speedUp`, `speedDown`, `setSpeed`, paragraph jumps and ±100-point scroll. Speed is 0.5–3 in increments of 0.25; scrolling is 40 points/sec × speed. Frame delta is capped at 50ms. Native TimelineView's animation schedule drives native scroll offset updates; text layout is cached between changes. Browser requestAnimationFrame uses the same clock semantics. Pause, backgrounding and reader dismissal reset clock history. Manual scrolling pauses. Paragraph jumps use rendered paragraph geometry. Mirroring applies only to text.
+
+```mermaid
+sequenceDiagram
+  participant H as Browser host
+  participant R as Durable Object relay
+  participant P as Phone browser
+  H->>R: Create room (Origin + creation rate limit)
+  R-->>H: Public room ID + host capability + 256-bit invite
+  H-->>P: QR /remote#pair=room.invite
+  H->>R: WebSocket host auth (capability in first frame)
+  P->>R: WebSocket one-use invite auth, 120s TTL
+  R->>H: Approval requested
+  H->>R: Allow
+  R-->>P: Connected
+  P->>R: Request ID + allowlisted command
+  R->>H: Deduplicated command
+  H->>R: ACK + numeric playback state
+  R->>P: ACK (matching outstanding ID)
+  H->>R: Revoke
+  R-->>P: Close; reconnect requires new invitation
+```
+
+```mermaid
+sequenceDiagram
+  participant M as Native Mac host
+  participant I as Native iPhone
+  M->>M: Explicitly enable listener; generate 256-bit PSK
+  M-->>I: Transfer private invitation (120s); Bonjour discovery
+  I->>M: Network.framework TLS 1.2 PSK authentication
+  M->>M: User approves control
+  M-->>I: Approved
+  I->>M: Session ID + request ID + command
+  M->>M: Gate validates authorization, expiry, replay and command
+  M-->>I: ACK + playback state (no title/body)
+  M->>M: Revoke / background / close cancels connection
+```
+
+```mermaid
+sequenceDiagram
+  participant A as Native editor
+  participant L as Local SwiftData
+  participant C as Private CloudKit
+  participant B as Other signed Apple client
+  A->>L: Revision checkpoint + local save
+  L-->>A: Saved on this device
+  L->>C: Eventual mirroring when properly configured
+  C-->>B: Eventual changes (not a per-record delivery guarantee)
+```
+
+CloudKit is never used as a remote-control transport. Web and Apple libraries are separate. Cross-browser/native remote interoperability is not implemented. No automatic concurrent text merge is claimed. Read QA_REPORT for the current implementation and verification limits.

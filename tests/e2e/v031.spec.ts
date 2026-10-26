@@ -393,21 +393,48 @@ for (const locale of ["en", "uk", "ru"] as const) {
       }),
     );
     const transports: import("@playwright/test").WebSocketRoute[] = [];
+    const received: Record<string, unknown>[] = [];
+    const sent: { id: string; command: { action: string } }[] = [];
+    // Observe the routed transport itself: routed WebSockets do not generate
+    // native page websocket frame events. Forward every frame unchanged.
     await phone.routeWebSocket("**/api/rooms/*", (client) => {
       transports.push(client);
-      client.connectToServer();
-    });
-    const received: Record<string, unknown>[] = [];
-    phone.on("websocket", (socket) =>
-      socket.on("framereceived", (event) => {
+      const server = client.connectToServer();
+      client.onMessage((message) => {
         try {
-          const m = JSON.parse(String(event.payload));
-          if (m.type?.startsWith("preview")) received.push(m);
+          const m = JSON.parse(String(message));
+          if (m.type === "command") sent.push(m);
         } catch {
           /* Non-JSON transport event. */
         }
-      }),
-    );
+        server.send(message);
+      });
+      server.onMessage((message) => {
+        try {
+          const m = JSON.parse(String(message));
+          if (m.type?.startsWith("preview") || m.type === "ack")
+            received.push(m);
+        } catch {
+          /* Non-JSON transport event. */
+        }
+        client.send(message);
+      });
+    });
+    async function acknowledged(action: string, click: () => Promise<unknown>) {
+      const start = sent.length;
+      await click();
+      await expect
+        .poll(() => sent.slice(start).some((m) => m.command.action === action))
+        .toBe(true);
+      const command = sent
+        .slice(start)
+        .find((m) => m.command.action === action)!;
+      await expect
+        .poll(() =>
+          received.some((m) => m.type === "ack" && m.id === command.id),
+        )
+        .toBe(true);
+    }
     await phone.goto(invite);
     await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
@@ -428,6 +455,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await expect(
       phone.getByRole("heading", { name: t.previewPrivate, exact: true }),
     ).toBeVisible();
+    await expect
+      .poll(() =>
+        received.some(
+          (m) => m.type === "previewPermission" && m.allowed === false,
+        ),
+      )
+      .toBe(true);
     expect(received.some((m) => m.type === "previewContent")).toBe(false);
     expect(await phone.locator("body").innerText()).not.toContain(
       "A clear voice",
@@ -449,18 +483,24 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await tabs.getByRole("button", { name: t.remote, exact: true }).click();
     const wing = phone.getByRole("button", { name: t.speedUp, exact: true });
     // The broad lower flank is clickable, not only the icon.
-    await wing.click({
-      position: { x: 35, y: (await wing.boundingBox())!.height * 0.84 },
-    });
+    await acknowledged("speedUp", async () =>
+      wing.click({
+        position: { x: 35, y: (await wing.boundingBox())!.height * 0.84 },
+      }),
+    );
     await expect(phone.locator("output")).toContainText("1.25");
-    await phone.getByRole("button", { name: t.play, exact: true }).click();
+    await acknowledged("play", () =>
+      phone.getByRole("button", { name: t.play, exact: true }).click(),
+    );
     await expect(
       phone.getByRole("button", { name: t.pause, exact: true }),
     ).toBeVisible();
-    await phone.getByRole("button", { name: t.pause, exact: true }).click();
-    await phone
-      .getByRole("button", { name: t.nextParagraph, exact: true })
-      .click();
+    await acknowledged("pause", () =>
+      phone.getByRole("button", { name: t.pause, exact: true }).click(),
+    );
+    await acknowledged("nextParagraph", () =>
+      phone.getByRole("button", { name: t.nextParagraph, exact: true }).click(),
+    );
     await tabs
       .getByRole("button", { name: t.textSettings, exact: true })
       .click();

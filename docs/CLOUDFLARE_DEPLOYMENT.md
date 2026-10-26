@@ -75,3 +75,10 @@ Current staging version: **e3e950a2-e15b-48c2-a701-d17218c4f183**; application s
 ### Complete application-first redesign — 2026-10-26
 
 Latest staging source **531a3ca**; Worker **6d2438f8-99ea-4676-8b3c-0a181150b471**. `/` opens the workspace after a skippable session intro. The redesigned application retains real QR control and has safe autosave completion/recovery ownership. Final public checks: relay **10/10**, 13.5 seconds; redesign **18/18**, 35.6 seconds. Final local browser checks **72/72**, focused unit tests **35/35**, typecheck/lint/staging build/dry-run passed. No production DNS/routes or plan changes. Detailed evidence and physical-device limits: docs/audits/TELEO_UI_REDESIGN_REPORT.md.
+
+
+### v0.3.1 integrated Studio and permissioned preview — 2026-10-27
+
+Current staging application source **19a2428**, Worker **cfbad529-2d5f-4c47-857b-a5b9a058a312**. Published only to the previously authorized `teleo-staging` Worker on workers.dev; no new migration, production route/DNS or account-plan change. Preview metadata is backward-compatible; script/title frames are ephemeral and separately host-consented. Observability remains disabled.
+
+Final local checks: **64/64** full unit/relay tests, **86/86** browser regression, **14/14** focused final visual checks, typecheck/lint/staging build/dry-run. Final public checks: `TELEO_V031_URL=https://teleo-staging.your-subdomain.workers.dev npx playwright test --config playwright.v031-staging.config.ts` **32/32 passed**, 58.6 seconds; `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging -- -g 'staging serves assets'` **2/2 passed**, 2.7 seconds. Output directories are isolated. Public tests do not forge source-IP headers; each full v0.3.1 cohort creates six rooms, so leave the existing ten/minute/IP allocation policy intact when scheduling reruns. Initial harness failures and correction are recorded in the v0.3.1 audit/QA report. Feature branch codex/teleo-v031-studio-remote; no merge to main.

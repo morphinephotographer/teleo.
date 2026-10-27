@@ -72,10 +72,10 @@ Local release gates PASS:
 | `npx playwright test --config playwright.production.config.ts` | 32/32; 43.0s; local production Worker, desktop Chromium/WebKit, iPhone/iPad profiles |
 | `npx playwright test --config playwright.v07.config.ts` | 33/33; 20.9s; Chromium/WebKit/Firefox, strengthened QR/copy/expiry checks |
 
-Additional real-playback wordmark assertion: **3/3 PASS, 10.2s** across Chromium/WebKit/Firefox; clicking the host wordmark leaves active scrolling, URL and history intact. Public staging/production verification will be recorded below; no public success is claimed at this checkpoint.
+Additional real-playback wordmark assertion: **3/3 PASS, 10.2s** across Chromium/WebKit/Firefox; clicking the host wordmark leaves active scrolling, URL and history intact. Public staging/production verification is recorded below.
 
 
-Staging first pass: 21/22 scenarios passed, including both real pairing flows and final composite/rendered QR decoding. The remaining WebKit artificial network-error assertion was not intercepted because its request passed through the production Service Worker. The focused fixture now blocks Service Workers specifically for deterministic fault injection; the separate existing offline/SW suite continues to test real service-worker behavior. A final header audit also added explicit right alignment on Help/Privacy, with route assertions. Both fixes require another local focused gate and staging deployment before production.
+Staging first pass: 21/22 scenarios passed, including both real pairing flows and final composite/rendered QR decoding. The remaining WebKit artificial network-error assertion was not intercepted because its request passed through the production Service Worker. The focused fixture now blocks Service Workers specifically for deterministic fault injection; the separate existing offline/SW suite continues to test real service-worker behavior. A final header audit also added explicit right alignment on Help/Privacy, with route assertions. Both fixes were checked locally and republished before the final staging gate below.
 
 Final Help/Privacy alignment and deterministic fault fixture: typecheck/lint PASS, **33/33 PASS in 22.7s** across Chromium/WebKit/Firefox.
 
@@ -87,3 +87,26 @@ Final candidate `dae64831b468640c429f603d6400330c64f18667` published through the
 `TELEO_V07_URL=https://teleo-staging.your-subdomain.workers.dev npx playwright test --config playwright.v07.config.ts --project=v07-chromium --project=v07-webkit --workers=1`: **22/22 PASS, 43.2s**. Both final branded QR PNGs and rendered images at all five sizes decode to the exact current staging invitation; independent Ukrainian phone locale, host English, explicit approval, copy, playback, logo click during playback, revoke, manual dismissal and expiry/retry are exercised over public HTTPS/WSS. No synthetic CF client header, DNS override or disabled TLS checks. Compact dialog and public remote screenshots inspected. Artifacts: `docs/screenshots/v07-staging-*.png`.
 
 The earlier artificial-error fixture issue is resolved. Production is still the previous working version at this checkpoint; proceeding only after this passed gate. Staging's first candidate version `8c959bfe-a30a-4323-950f-45b1a3461b13` was superseded by the final candidate above.
+
+
+### Production release — PASS / LIVE
+
+PR [#3](https://github.com/morphinephotographer/Teleo./pull/3) merged normally into `codex/teleo-native-web-v1`. Deployed code commit: **`186c4e7d826b73d64e62810ca70d635311354dcd`**, release tag **`v1.0.1`**. Runtime tree matches the staging-validated feature HEAD `1fea05d4dc6d467172842b3d5639b236dee59eb6` (same runtime as candidate `dae64831b468640c429f603d6400330c64f18667`; later changes were evidence only).
+
+`npm run deploy:production` ran in its required interactive terminal from a clean committed tree, rebuilt and typechecked successfully, and published through the existing root Wrangler config. Cloudflare Worker **`teleo-web`**, version **`6b4a7ee8-b088-4f16-91cd-ed2b12aea812`**, deployment **`b8a87f02-a641-4592-832e-704b69f94f89`**, **100% traffic**, verified through the Cloudflare deployments API. Public app: `https://teleo.cc/studio`. Custom domains and Durable Object bindings remain unchanged.
+
+Post-deploy checks on the actual public origin:
+
+| Check | Result |
+| --- | --- |
+| Public route/security/release identity, Chromium | **1/1 PASS, 4.6s**; six routes 200, exact commit/version headers, strict TLS, foreign Origin 403, unknown API 404, valid preflight 204, www → canonical 308 |
+| Focused UI v0.7, Chromium + WebKit | **22/22 PASS, 41.8s**; five sizes, locale priorities/menus, final branded/rendered QR exact decoding, genuine `https://teleo.cc` invitation, independent phone language, secure approval, copy, manual dismissal, expiry/fault/retry, revoke and playback |
+| Editor/persistence/reader across en/uk/ru | **12/12 PASS, 13.8s**; desktop Chromium/WebKit and iPhone/iPad profiles |
+| Live iPhone-profile alignment + relay recovery | **1/1 PASS, 9.8s**; real public WSS, ACK/current state, typography, preview consent, pause/play, reconnect and persistence |
+| Separate clean Russian visual session | **PASS**; Chromium host + WebKit iPhone profile, dark desktop/mobile QR, live script preview after reader measurements, explicit grant and final revoke |
+
+Total structured public post-deploy scenarios: **36/36 PASS**, plus the separate Russian capture session. Browser camera/hardware is not inferred from these runs. Public cohorts preserve real quotas; no fake client IP, fixed DNS, invalid TLS acceptance or relaxed security checks. Physical camera scan remains NOT RUN.
+
+Final reviewed Russian screenshots: `docs/screenshots/v07-production-ru-qr-desktop.png`, `v07-production-ru-qr-phone.png`, `v07-production-ru-iphone-remote.png`. The QR shown in evidence was consumed and the test connection revoked. Additional public matrices: `v07-production-v07-{chromium,webkit}-*.png`; editor/reader profiles: `v07-production-live-*.png`.
+
+No known blocking regression remains in this task. Historical screenshots were restored; final evidence changes only documentation and new v0.7 images. The previous version `31201bd5-0a8a-437c-8079-781a3b144e54` remains the rollback target; no rollback was needed. Release evidence branch: `codex/v07-release-evidence`. Existing open browser tabs should be reloaded to load the new application bundle.

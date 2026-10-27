@@ -1,6 +1,10 @@
 > Current production instructions: [production launch](releases/TELEO_PRODUCTION_LAUNCH.md). The historical separate api.teleo.cc plan below is superseded by the root same-origin Worker configuration. Do not deploy the old split-relay plan for this release.
 
-# Cloudflare deployment — staging live, production not deployed
+# Cloudflare deployment
+
+Production is LIVE at https://teleo.cc; see the current production launch report linked above for the exact release/deployment identifiers and rollback.
+
+## Historical preparation and staging deployment records
 
 The owner already owns `teleo.cc` at Cloudflare Registrar. No registration, transfer, purchase or production DNS mutation has occurred. The isolated staging Worker was deployed after explicit owner approval; the production site is not deployed. The GitHub source remote is configured; this does not grant Cloudflare access. All commands below are for an owner-authorized deployment, not instructions that were executed against production.
 

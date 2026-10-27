@@ -296,14 +296,14 @@ struct ReaderView: View {
           return model.key(normalized(press)) ? .handled : .ignored
         }
     }
-    .onAppear {
+    .onAppear { [model, remote] in
       focused = true
       model.playback.speed = prefs.speed
       model.playback.position = UserDefaults.standard.double(
         forKey: "teleo.position.\(script.scriptId)")
-      remote.onCommand = { c in
-        model.dispatch(c)
-        return model.playback
+      remote.onCommand = { [weak model] c in
+        model?.dispatch(c)
+        return model?.playback ?? Playback()
       }
     }
     .onTapGesture { controlsVisible = true }
@@ -327,6 +327,7 @@ struct ReaderView: View {
       }
     }
     .onDisappear {
+      remote.onCommand = nil
       model.stop()
       remote.stop()
       savePosition()

@@ -134,6 +134,7 @@ export class Playback {
     return true;
   }
   tick(now: number) {
+    this.position = Math.max(0, Math.min(this.maximum, this.position));
     const delta =
       this.last === undefined
         ? 0

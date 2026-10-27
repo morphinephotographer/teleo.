@@ -1,4 +1,4 @@
-# teleo.
+# Teleo.
 
 Your words. Your pace.
 
@@ -27,7 +27,7 @@ npx playwright install chromium
 npm run test:e2e         # starts local dev/relay + built preview at 5174
 ```
 
-The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Deployment is prepared in `wrangler.jsonc` and `services/remote-relay/wrangler.jsonc`; **production deployment and production DNS mutation have not been performed**. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
+The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Production is live on `https://teleo.cc`, served by the same-origin Worker in root `wrangler.jsonc`. The split relay configuration is for local development; see the release records below. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
 
 ## Native iPhone and Mac
 
@@ -84,7 +84,7 @@ The phone now follows the approved dark two-state reference: live permissioned t
 
 [Approved layout](docs/design/TELEO_REMOTE_APPROVED_V06.md) · [Pairing/sync](docs/engineering/TELEO_PAIRING_AND_SYNC_V06.md) · [Audit/results](docs/audits/TELEO_UI_AUDIT_V06.md).
 
-This iteration is local-only: no deployment or remote push is authorized. The existing public staging continues to run the preceding release until a separate authorized deployment.
+Historical v0.6 implementation record: this iteration was initially local-only and was subsequently superseded by the authorized releases below.
 
 ## Previous approved four-screen UI and HTTPS LAN
 
@@ -102,9 +102,9 @@ Pairing always generates a real QR from the current one-use invitation, with loa
 
 [Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). v0.6.1 source commit `3896ec2` was published to the existing staging Worker with owner approval on 2026-10-27; six public HTTPS/WSS checks passed in Chromium/WebKit. No remote push was performed. [Publication and physical iPhone checklist](docs/audits/TELEO_V061_STAGING_DEPLOYMENT.md).
 
-## Production web release — LIVE
+## Original production web release — historical
 
-Open [teleo.cc](https://teleo.cc). Web release `v1.0.0`, source `1c3d9f3`, is published and verified by 24 public HTTPS/WSS smoke checks across Chromium, WebKit and iPhone/iPad viewports. Physical device verification of this production domain remains separate. `www` redirects to the canonical domain; staging is unchanged.
+Open [teleo.cc](https://teleo.cc). The original web release `v1.0.0`, source `1c3d9f3`, was published and verified by 24 public HTTPS/WSS smoke checks across Chromium, WebKit and iPhone/iPad viewports. Physical device verification of this production domain remains separate. `www` redirects to the canonical domain; staging is unchanged.
 
 The production target is the existing root `wrangler.jsonc` / `teleo-web`, with same-origin assets and relay, an isolated ROOMS namespace, canonical `https://teleo.cc`, and a www redirect. Production validation: `npm run production:check`. After critical checks, use a clean checkout and an interactive terminal for `npm run deploy:production`; the build clears external relay overrides. Runtime response headers identify the deployed commit and Worker version.
 
@@ -116,10 +116,25 @@ The host and iPhone remote share an inert `teleo.` wordmark and one 44px circula
 
 `npx playwright test --config playwright.v07.config.ts` verifies Chromium, WebKit and Firefox, five viewport sizes, locale precedence, keyboard handling, QR decoding at rendered sizes, pending approval/expiry, copy, recovery and real independent controller synchronization. Public runs use `TELEO_V07_URL`; respect the existing 10 rooms/minute/IP quota and use bounded cohorts. No synthetic Cloudflare client-IP headers are sent to public Workers. [v0.7 audit and release evidence](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
 
-UI v0.7 is live on [teleo.cc](https://teleo.cc/studio) as release `v1.0.1`, deployed commit `186c4e7d826b73d64e62810ca70d635311354dcd`. Public post-deploy validation passed 36/36 scenarios after 22/22 staging checks. Full evidence, screenshots, limitations and rollback version are in the [v0.7 audit](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
+UI v0.7 was released on [teleo.cc](https://teleo.cc/studio) as release `v1.0.1`, deployed commit `186c4e7d826b73d64e62810ca70d635311354dcd`. Public post-deploy validation passed 36/36 scenarios after 22/22 staging checks. Full evidence, screenshots, limitations and rollback version are in the [v0.7 audit](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
 
 ## Welcome onboarding (local, unreleased v0.8)
 
 A genuine new, empty Studio library receives one localized **Welcome** script. Returning v1 libraries, existing/recovered/deleted scripts and handled onboarding suppress automatic insertion. Settings → Getting started preserves a persistent opt-out and explicit restore/open action; edits and saved script language remain user-controlled. [Conditions, migration, behavior, screenshots and test results](docs/features/TELEO_DEMO_ONBOARDING.md).
 
-`npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature has not been deployed; the public release remains v1.0.1.
+`npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature is included in the v1.0.2 audit release. Current deployment identity and public verification are recorded in the audit verification report.
+
+
+## v1.0.2 — Welcome and reliability audit
+
+The audit release preserves the approved interface and adds conflict-safe script saves/recovery, long-session replay protection, paused-position clamping, preview error handling, navigation cleanup and native transport lifecycle guards. Welcome retains first-install-only creation, all three languages, persistent opt-out and explicit restoration. User content is never translated on a UI-language change.
+
+[Full code audit](docs/audits/TELEO_FULL_CODE_AUDIT.md) · [Verification, screenshots and deployment status](docs/audits/TELEO_FIX_VERIFICATION.md).
+
+```sh
+npx playwright test --config playwright.full-audit.config.ts
+npx playwright test --config playwright.welcome.config.ts
+npx playwright test --config playwright.v07.config.ts
+```
+
+Use separate browser cohorts when testing the public relay: room creation is limited to 10/minute/IP. Tests create isolated libraries and must never clear the owner's browser data. Production publication follows staging validation, a clean committed checkout and the existing interactive `npm run deploy:production` workflow. Native distribution, physical HID, native two-device LAN and CloudKit still require their separate device/signing checks.

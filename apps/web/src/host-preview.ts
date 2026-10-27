@@ -17,7 +17,10 @@ export class HostPreview {
   private epoch = 0;
   private allowed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
-  constructor(private link: RemoteLink) {}
+  constructor(
+    private link: RemoteLink,
+    private onError: () => void = () => {},
+  ) {}
   async script(script: Script | null) {
     const generation = ++this.generation;
     this.cancel();
@@ -28,11 +31,19 @@ export class HostPreview {
     const delay = script.scriptId === this.scriptId ? 180 : 0;
     this.scriptId = script.scriptId;
     this.compileTimer = setTimeout(async () => {
-      const compiled = await snapshot(script);
-      if (generation !== this.generation) return;
-      this.compiled = compiled;
-      this.tooLarge = !compiled;
-      if (this.allowed) this.publish();
+      try {
+        const compiled = await snapshot(script);
+        if (generation !== this.generation) return;
+        this.compiled = compiled;
+        this.tooLarge = !compiled;
+        if (this.allowed) this.publish();
+      } catch {
+        if (generation !== this.generation) return;
+        this.compiled = null;
+        this.disconnect();
+        this.link.previewPermission(false);
+        this.onError();
+      }
     }, delay);
   }
   permission(m: PreviewPermission) {

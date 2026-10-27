@@ -190,14 +190,25 @@ function App() {
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
   const sender = useRef<HostPreview | null>(null);
-  if (!sender.current) sender.current = new HostPreview(remote.current);
+  if (!sender.current)
+    sender.current = new HostPreview(remote.current, () =>
+      setNotice("unavailable"),
+    );
   useEffect(() => {
     const mq = matchMedia("(min-width: 1180px)");
     const resize = () => setWide(mq.matches);
     mq.addEventListener("change", resize);
     return () => mq.removeEventListener("change", resize);
   }, []);
-  useEffect(() => () => sender.current?.dispose(), []);
+  useEffect(
+    () => () => {
+      sender.current?.dispose();
+      clearTimeout(controlsTimer.current);
+      clearTimeout(inviteTimer.current);
+      remote.current.close();
+    },
+    [],
+  );
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
   const wordCount = useMemo(
     () => current?.body.trim().split(/\s+/u).filter(Boolean).length || 0,
@@ -300,12 +311,16 @@ function App() {
   useEffect(() => {
     void sender.current?.script(current);
   }, [current?.scriptId, current?.title, current?.body]);
+  const recoveryOwner = useRef(crypto.randomUUID());
   const writer = useRef<DraftWriter | null>(null);
   if (!writer.current)
     writer.current = new DraftWriter(
       (script) => storage.save(script, true),
       (id, script) =>
-        localSet("teleo.recovery." + id, script ? JSON.stringify(script) : ""),
+        localSet(
+          "teleo.recovery." + id + "." + recoveryOwner.current,
+          script ? JSON.stringify(script) : "",
+        ),
       setStatus,
     );
   const persist = (script: Script) => writer.current!.enqueue(script);
@@ -355,28 +370,42 @@ function App() {
   useEffect(() => {
     Promise.all([storage.list(), storage.folders()])
       .then(async ([list, fs]) => {
+        let preferredRecovery: string | undefined;
+        // Snapshot keys: cleanup must not skip entries. One malformed draft must not block others.
+        const keys: string[] = [];
         try {
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key?.startsWith("teleo.recovery.")) {
-              const raw = localGet(key);
-              if (raw) {
-                const recovered = JSON.parse(raw) as Script;
-                const old = list.find((s) => s.scriptId === recovered.scriptId);
-                if (!old || old.updatedAt <= recovered.updatedAt) {
-                  const index = list.findIndex(
-                    (s) => s.scriptId === recovered.scriptId,
-                  );
-                  if (index >= 0) list[index] = recovered;
-                  else list.push(recovered);
-                  welcomeContext.current.recovered = true;
-                  writer.current!.enqueue(recovered);
-                }
-              }
-            }
+            if (key?.startsWith("teleo.recovery.")) keys.push(key);
           }
         } catch {
-          /* Storage may be disabled. */
+          /* Storage can be unavailable. */
+        }
+        for (const key of keys) {
+          const raw = localGet(key);
+          if (!raw) continue;
+          try {
+            const draft = JSON.parse(raw) as Script;
+            const recovered = await storage.recover(
+              draft,
+              dictionaries[localeRef.current].recoveredCopy,
+            );
+            if (recovered.deletedAt) {
+              if (localGet(key) === raw) localSet(key, "");
+              continue;
+            }
+            const index = list.findIndex(
+              (s) => s.scriptId === recovered.scriptId,
+            );
+            if (index >= 0) list[index] = recovered;
+            else list.push(recovered);
+            if (draft.scriptId === localGet("teleo.selectedScript"))
+              preferredRecovery = recovered.scriptId;
+            welcomeContext.current.recovered = true;
+            if (localGet(key) === raw) localSet(key, "");
+          } catch {
+            setStatus("saveError");
+          }
         }
         const initialized = await storage.welcome(localeRef.current, {
           automatic: ["/", "/studio"].includes(location.pathname),
@@ -391,7 +420,9 @@ function App() {
         setFolders(fs);
         const selection =
           visible.find(
-            (item) => item.scriptId === localGet("teleo.selectedScript"),
+            (item) =>
+              item.scriptId ===
+              (preferredRecovery || localGet("teleo.selectedScript")),
           ) ||
           initialized.selected ||
           visible[0];
@@ -456,6 +487,8 @@ function App() {
       setReading(false);
       endRemote();
       setRemoteStatus(null);
+      dismissTransient();
+      void flush();
       setRoute(location.pathname === "/" ? "/studio" : location.pathname);
     };
     window.addEventListener("popstate", pop);
@@ -866,6 +899,7 @@ function App() {
   async function restoreWelcome() {
     if (restoringWelcome) return;
     setRestoringWelcome(true);
+    mutation.current = "*";
     try {
       await writer.current!.requireSaved();
       const result = await storage.welcome(localeRef.current, {
@@ -875,7 +909,9 @@ function App() {
       const restored = result.selected!;
       setScripts((previous) =>
         previous.some((script) => script.scriptId === restored.scriptId)
-          ? previous
+          ? previous.map((script) =>
+              script.scriptId === restored.scriptId ? restored : script,
+            )
           : [restored, ...previous],
       );
       setSelected(restored.scriptId);
@@ -885,6 +921,7 @@ function App() {
     } catch {
       setStatus("saveError");
     } finally {
+      mutation.current = null;
       setRestoringWelcome(false);
     }
   }
@@ -902,6 +939,14 @@ function App() {
     setPreviewPending(false);
     refreshPreview((x) => x + 1);
   }
+  function dismissTransient() {
+    setSettingsOpen(false);
+    setConnectionOpen(false);
+    setActionDialog(null);
+    setRevisions(null);
+    setImmersive(false);
+    setLearn(null);
+  }
   function navigate(path: string) {
     void flush();
     engine.suspend();
@@ -910,7 +955,7 @@ function App() {
     setRemoteStatus(null);
     setConnectionOpen(false);
     history.pushState({}, "", path);
-    setSettingsOpen(false);
+    dismissTransient();
     setRoute(path === "/" ? "/studio" : path);
   }
   async function add(s = createScript(t("untitled"))) {
@@ -933,7 +978,8 @@ function App() {
       speed: engine.speed,
       position: engine.position,
     });
-    if (document.fullscreenElement) void document.exitFullscreen();
+    if (document.fullscreenElement)
+      void document.exitFullscreen().catch(() => {});
   }
   function exitReader() {
     setLibraryOpen(libraryBeforeReading.current);
@@ -944,7 +990,8 @@ function App() {
     endRemote();
     setInvite("");
     setRemoteStatus(null);
-    if (document.fullscreenElement) void document.exitFullscreen();
+    if (document.fullscreenElement)
+      void document.exitFullscreen().catch(() => {});
   }
   async function startReader() {
     await flush();
@@ -1273,7 +1320,7 @@ function App() {
   }, []);
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
-      void document.exitFullscreen();
+      void document.exitFullscreen().catch(() => {});
       setImmersive(false);
       return;
     }
@@ -1625,7 +1672,11 @@ function App() {
                   <div className="editor-top">
                     <span
                       role="status"
-                      className={status === "saveError" ? "error" : "muted"}
+                      className={
+                        status === "saveError" || status === "saveConflict"
+                          ? "error"
+                          : "muted"
+                      }
                     >
                       {t(status)}
                     </span>

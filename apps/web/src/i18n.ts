@@ -117,6 +117,9 @@ export const en = {
   saved: "Saved on this device",
   saving: "Saving…",
   saveError: "Cannot save locally. Export your text now; keep this page open.",
+  saveConflict:
+    "Another tab changed this script. Export your draft, then reload to recover it as a separate copy.",
+  recoveredCopy: "Recovered draft",
   empty: "Choose a script or create your first one.",
   read: "Read",
   exit: "Exit reader",
@@ -341,6 +344,9 @@ export const uk: Record<Key, string> = {
   saved: "Збережено на цьому пристрої",
   saving: "Збереження…",
   saveError: "Не вдалося зберегти. Експортуйте текст і не закривайте сторінку.",
+  saveConflict:
+    "Інша вкладка змінила цей сценарій. Експортуйте чернетку, потім перезавантажте сторінку, щоб відновити її як окрему копію.",
+  recoveredCopy: "Відновлена чернетка",
   empty: "Виберіть текст або створіть перший.",
   read: "Читати",
   exit: "Вийти з читання",
@@ -566,6 +572,9 @@ export const ru: Record<Key, string> = {
   saving: "Сохранение…",
   saveError:
     "Не удалось сохранить. Экспортируйте текст и не закрывайте страницу.",
+  saveConflict:
+    "Другая вкладка изменила этот сценарий. Экспортируйте черновик, затем перезагрузите страницу, чтобы восстановить его отдельной копией.",
+  recoveredCopy: "Восстановленный черновик",
   empty: "Выберите текст или создайте первый.",
   read: "Читать",
   exit: "Выйти из чтения",

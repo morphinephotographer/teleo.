@@ -289,7 +289,7 @@ export function RemoteController({
   );
   async function fullscreen() {
     if (document.fullscreenElement) {
-      await document.exitFullscreen();
+      await document.exitFullscreen().catch(() => {});
       setFilling(false);
     } else if (
       document.fullscreenEnabled &&

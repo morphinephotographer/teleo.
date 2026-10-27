@@ -4,6 +4,24 @@ import XCTest
 @testable import TeleoCore
 
 final class CoreTests: XCTestCase {
+  func testPausedLayoutShrink() {
+    var playback = Playback()
+    playback.maximum = 900
+    playback.position = 850
+    playback.maximum = 100
+    playback.tick(0)
+    XCTAssertEqual(playback.position, 100)
+  }
+  func testLongSessionKeepsReplayProtection() {
+    var gate = SessionGate(expires: 3600)
+    gate.approved = true
+    let first = ControlRequest(session: gate.id, command: Command(.play))
+    XCTAssertTrue(gate.accept(first, now: 1))
+    for _ in 0..<1001 {
+      XCTAssertTrue(gate.accept(ControlRequest(session: gate.id, command: Command(.pause)), now: 100))
+    }
+    XCTAssertFalse(gate.accept(first, now: 101))
+  }
   func testCanonicalFixture() throws {
     var root = URL(fileURLWithPath: #filePath)
     for _ in 0..<5 { root.deleteLastPathComponent() }

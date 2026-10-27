@@ -8,7 +8,9 @@ export class DraftWriter {
   constructor(
     private save: (script: Script) => Promise<void>,
     private recovery: (id: string, script: Script | null) => void,
-    private status: (value: "saving" | "saved" | "saveError") => void,
+    private status: (
+      value: "saving" | "saved" | "saveError" | "saveConflict",
+    ) => void,
   ) {}
   enqueue(script: Script) {
     this.pending.set(script.scriptId, script);
@@ -27,6 +29,7 @@ export class DraftWriter {
     if (!batch.length) return this.writes;
     this.writes = this.writes.then(async () => {
       let failed = false;
+      let conflict = false;
       for (const script of batch) {
         try {
           await this.save(script);
@@ -34,7 +37,9 @@ export class DraftWriter {
             this.dirty.delete(script.scriptId);
             this.recovery(script.scriptId, null);
           }
-        } catch {
+        } catch (error) {
+          conflict ||=
+            error instanceof Error && error.message === "saveConflict";
           // Never replace a later pending revision with a stale failed snapshot.
           if (this.dirty.get(script.scriptId) === script)
             this.pending.set(script.scriptId, script);
@@ -42,7 +47,13 @@ export class DraftWriter {
         }
       }
       this.status(
-        this.dirty.size ? (failed ? "saveError" : "saving") : "saved",
+        this.dirty.size
+          ? conflict
+            ? "saveConflict"
+            : failed
+              ? "saveError"
+              : "saving"
+          : "saved",
       );
     });
     return this.writes;

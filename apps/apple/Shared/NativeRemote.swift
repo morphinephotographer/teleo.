@@ -88,7 +88,7 @@ struct LANAck: Codable {
       if advertise { l.service = NWListener.Service(name: i.service, type: "_teleo._tcp") }
       l.newConnectionHandler = { [weak self] c in
         Task { @MainActor in
-          guard let self, self.connection == nil, Date() < i.expires else {
+          guard let self, self.gate.id == i.session, self.listener != nil, self.connection == nil, Date() < i.expires else {
             c.cancel()
             return
           }
@@ -97,7 +97,7 @@ struct LANAck: Codable {
         }
       }
       l.stateUpdateHandler = { [weak self] state in
-        Task { @MainActor in if case .failed = state { self?.status = "Local network unavailable" }
+        Task { @MainActor in if self?.gate.id == i.session, self?.listener != nil, case .failed = state { self?.status = "Local network unavailable" }
         }
       }
       l.start(queue: .main)
@@ -116,12 +116,16 @@ struct LANAck: Codable {
     nearby = []
     let b = NWBrowser(for: .bonjour(type: "_teleo._tcp", domain: nil), using: .tcp)
     browser = b
-    b.browseResultsChangedHandler = { [weak self] results, _ in
-      Task { @MainActor in self?.nearby = Array(results) }
-    }
-    b.stateUpdateHandler = { [weak self] state in
+    b.browseResultsChangedHandler = { [weak self, weak b] results, _ in
       Task { @MainActor in
-        if case .failed = state { self?.status = "Local network permission denied or unavailable" }
+        guard let self, let b, self.browser === b else { return }
+        self.nearby = Array(results)
+      }
+    }
+    b.stateUpdateHandler = { [weak self, weak b] state in
+      Task { @MainActor in
+        guard let self, let b, self.browser === b else { return }
+        if case .failed = state { self.status = "Local network permission denied or unavailable" }
       }
     }
     b.start(queue: .main)
@@ -162,6 +166,10 @@ struct LANAck: Codable {
   }
   private func attach(_ c: NWConnection, host: Bool) {
     buffer = Data()
+    count = 0
+    window = Date()
+    ack = nil
+    latestRequest = nil
     setupTimeout?.cancel()
     setupTimeout = Task {
       do { try await Task.sleep(for: .seconds(8)) } catch { return }
@@ -170,7 +178,7 @@ struct LANAck: Codable {
     }
     c.stateUpdateHandler = { [weak self] state in
       Task { @MainActor in
-        guard let self else { return }
+        guard let self, self.connection === c else { return }
         switch state {
         case .ready:
           self.setupTimeout?.cancel()
@@ -246,7 +254,7 @@ struct LANAck: Codable {
     c.receive(minimumIncompleteLength: 1, maximumLength: 2048) {
       [weak self] data, _, complete, error in
       Task { @MainActor in
-        guard let self else { return }
+        guard let self, self.connection === c else { return }
         if complete || error != nil {
           self.stop()
           return

@@ -249,8 +249,8 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     await expect(menu).not.toBeVisible();
     await openSettings(page, t, "appearance");
     await closeSettings(page, t);
-    const countdown = page.locator(".reader-controls").getByRole("combobox", {
-      name: t.alignment,
+    const countdown = page.locator("header").getByRole("combobox", {
+      name: t.currentScript,
       exact: true,
     });
     menu = await popup(countdown);
@@ -327,8 +327,8 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   await closeSettings(page, t);
   const darkMenu = await popup(
     page
-      .locator(".reader-controls")
-      .getByRole("combobox", { name: t.alignment, exact: true }),
+      .locator("header")
+      .getByRole("combobox", { name: t.currentScript, exact: true }),
   );
   await expect(darkMenu).toHaveCSS("background-color", "rgb(36, 36, 38)");
   await page.screenshot({

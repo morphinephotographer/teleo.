@@ -16,7 +16,7 @@ npm run dev    # terminal 2: http://127.0.0.1:5173
 
 Both `/` and `/studio` open the workspace after a skippable, once-per-tab-session brand intro (bypassed with reduced motion). The library collapses; reading has a floating control dock; settings use an accessible modal sheet. TXT/JSON storage and remotes retain their existing contracts. [Design and UI verification](docs/audits/TELEO_UI_REDESIGN_REPORT.md).
 
-Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Loopback pairing offers a same-Mac link and deliberately omits the phone QR. For a physical phone use the explicit trusted HTTPS LAN workflow below or the approved HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
+Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Loopback pairing shows a real QR and invitation link explicitly labeled as same-Mac only; neither can connect a physical iPhone. For a physical phone use the explicit trusted HTTPS LAN workflow below or the approved HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
 
 ```sh
 npm run typecheck
@@ -86,10 +86,18 @@ The phone now follows the approved dark two-state reference: live permissioned t
 
 This iteration is local-only: no deployment or remote push is authorized. The existing public staging continues to run the preceding release until a separate authorized deployment.
 
-## Current approved four-screen UI and HTTPS LAN
+## Previous approved four-screen UI and HTTPS LAN
 
-The latest approved remote reference is `design-references/02_APPROVED_REMOTE_FOUR_STATES.png`; it supersedes the v0.6 three-slider quick panel described above. The bottom button opens the approved six-item menu; the gear opens full-screen categorized settings and timer/typography details. Studio operational controls now live in the bottom toolbar, with an icon-only countdown immediately after text width. The obsolete three-dot navigation is removed; public routes remain.
+The previous approved remote reference is `design-references/02_APPROVED_REMOTE_FOUR_STATES.png`; the v0.6.1 text-sheet requirements below supersede its six-item quick menu. The bottom button opens the approved six-item menu; the gear opens full-screen categorized settings and timer/typography details. Studio operational controls now live in the bottom toolbar, with an icon-only countdown immediately after text width. The obsolete three-dot navigation is removed; public routes remain.
 
 `npm run dev` remains loopback-only. `npm run dev:lan` explicitly binds a chosen private interface with a trusted certificate, an isolated loopback HTTPS relay and an exact-origin allowlist. It does not modify certificate trust, firewall, DNS or public deployments. See [connection diagnosis and LAN setup](docs/TELEO_REMOTE_CONNECTION_FIX.md) before testing an iPhone. This iteration's local LAN HTTPS/WSS clients ran on the Mac; physical iPhone scanning remains unverified.
 
 [Implementation](docs/TELEO_UI_IMPLEMENTATION.md) · [Visual/functional QA](docs/TELEO_VISUAL_QA.md) · [Individual test results](docs/TELEO_TEST_RESULTS.md).
+
+## Current v0.6.1 alignment and QR pairing
+
+Studio's **bottom toolbar** and the remote's bottom text sheet share one accessible, icon-only Left / Center / Right capsule. The phone sheet retains all three typography sliders. The single top-right gear retains advanced settings. Alignment uses the existing authenticated command/state/ACK transport, exact enum validation and host authority; it persists with the script without restarting playback or resetting the reading position.
+
+Pairing always generates a real QR from the current one-use invitation, with loading, rendering-error and regeneration states. Closing the dialog preserves the pending session; only authorized connection automatically dismisses it. Loopback (`127.0.0.1`, `localhost`, `::1`) is **same-Mac testing only**: on an iPhone, loopback refers to the iPhone itself. For a physical phone, open the same reachable HTTPS LAN or authorized HTTPS staging origin on both devices. A local source change does not update public staging or transfer local scripts.
+
+[Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). No v0.6.1 deployment or remote push has been performed.

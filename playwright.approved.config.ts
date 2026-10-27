@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 export default defineConfig({
   ...base,
-  testMatch: ["approved.spec.ts", "audit.spec.ts"],
+  testMatch: ["approved.spec.ts", "audit.spec.ts", "v061.spec.ts"],
   outputDir: "test-results/approved",
   projects: [
     { name: "approved-chromium", use: { ...devices["Desktop Chrome"] } },

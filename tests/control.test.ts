@@ -41,6 +41,9 @@ describe("v0.6 approved controls", () => {
   it("allowlists typography and secondary preferences with exact types and bounds", () => {
     for (const [key, value] of [
       ["fontSize", 68],
+      ["alignment", "left"],
+      ["alignment", "center"],
+      ["alignment", "right"],
       ["lineHeight", 1.5],
       ["textWidth", 1300],
       ["countdownSeconds", 3],
@@ -53,6 +56,10 @@ describe("v0.6 approved controls", () => {
       ).toBe(true);
     for (const [key, value] of [
       ["fontSize", 101],
+      ["alignment", "justify"],
+      ["alignment", "LEFT"],
+      ["alignment", ""],
+      ["alignment", 1],
       ["lineHeight", 0],
       ["textWidth", 100],
       ["countdownSeconds", 11],
@@ -65,8 +72,12 @@ describe("v0.6 approved controls", () => {
         validControlCommand({ action: "setPreference", target, key, value }),
       ).toBe(false);
   });
-  it("transfers only numeric/boolean control metadata and preserves old state compatibility", () => {
+  it("transfers only allowlisted control metadata and preserves old state compatibility", () => {
     expect(validControlState(controls)).toBe(true);
+    for (const alignment of ["left", "center", "right"])
+      expect(validControlState({ ...controls, alignment })).toBe(true);
+    for (const alignment of ["justify", "Left", null, 1])
+      expect(validControlState({ ...controls, alignment })).toBe(false);
     expect(validControlState({ ...controls, focusDimming: true })).toBe(true);
     expect(validControlState({ ...controls, focusDimming: 1 })).toBe(false);
     expect(validControlState({ ...controls, marks: [0, 0.2, 1] })).toBe(true);
@@ -85,6 +96,7 @@ describe("v0.6 approved controls", () => {
           controls: {
             ...controls,
             focusDimming: true,
+            alignment: "center",
             marks: Array(12).fill(0.1234),
           },
         },

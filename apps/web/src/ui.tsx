@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "alignLeft"
+  | "alignCenter"
+  | "alignRight"
   | "timer"
   | "back"
   | "align"
@@ -28,6 +31,9 @@ export type IconName =
   | "next"
   | "text";
 const paths: Record<IconName, ReactNode> = {
+  alignLeft: <path d="M4 5h16M4 10h10M4 15h16M4 20h10" />,
+  alignCenter: <path d="M4 5h16M7 10h10M4 15h16M7 20h10" />,
+  alignRight: <path d="M4 5h16M10 10h10M4 15h16M10 20h10" />,
   timer: (
     <>
       <circle cx="12" cy="12" r="9" />

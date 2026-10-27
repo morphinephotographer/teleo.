@@ -3177,3 +3177,52 @@ input[type="checkbox"] {
   letter-spacing: -0.04em;
   font-weight: 650;
 }
+
+/* v0.6.1: the same icon-only capsule in the Studio dock and remote text sheet. */
+.alignment-control {
+  width: 100%;
+  min-height: 44px;
+}
+.alignment-control > button {
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  min-width: 44px;
+  min-height: 44px;
+}
+.alignment-control svg {
+  width: 20px;
+  height: 20px;
+}
+.reader-controls .dock-alignment {
+  flex: 0 0 144px;
+  width: 144px;
+}
+.quick-typography {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.quick-alignment {
+  padding: 12px 0 0;
+}
+.remote-quick-menu .alignment-control {
+  background: var(--subtle);
+  border-color: var(--line);
+}
+.remote-quick-menu .alignment-control button {
+  color: var(--ink);
+}
+.remote-quick-menu .alignment-control button[aria-pressed="true"] {
+  color: var(--surface);
+}
+/* Keep the QR, warning and link intact; the composition owns vertical scrolling. */
+.pairing-composition .pair-panel {
+  z-index: auto;
+  overflow: visible;
+  max-width: 100%;
+  min-height: 0;
+}
+.pairing-composition .pair-panel > * {
+  flex-shrink: 0;
+}

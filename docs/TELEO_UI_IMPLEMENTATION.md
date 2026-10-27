@@ -1,3 +1,5 @@
+> Historical verification of the preceding release. The v0.6.1 alignment/text-sheet and localhost QR behavior supersedes the corresponding UI descriptions: [current audit](audits/TELEO_V061_ALIGNMENT_QR_FIX.md).
+
 # teleo. — реализация утверждённого интерфейса
 
 Исходный локальный коммит: `bb58b9b`, рабочая ветка `codex/approved-ui-connection`. Дерево перед работой было чистым. Push и deploy этой итерацией не выполняются.

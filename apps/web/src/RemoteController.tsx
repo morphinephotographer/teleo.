@@ -10,6 +10,7 @@ import {
   type ControlValues,
 } from "../../../packages/protocol/control";
 import { type Key } from "./i18n";
+import { AlignmentControl, type Alignment } from "./AlignmentControl";
 import { Icon, IconButton, Sheet, type IconName } from "./ui";
 import {
   feedback,
@@ -171,7 +172,9 @@ export function RemoteController({
   useEffect(() => {
     if (!quick) return;
     const id = requestAnimationFrame(() =>
-      quickRef.current?.querySelector<HTMLButtonElement>("button")?.focus(),
+      quickRef.current
+        ?.querySelector<HTMLInputElement | HTMLButtonElement>("input,button")
+        ?.focus(),
     );
     return () => cancelAnimationFrame(id);
   }, [quick]);
@@ -217,8 +220,30 @@ export function RemoteController({
     feedback();
     onCommand(action);
   };
-  const pref = (key: keyof ControlValues, value: number | boolean) => {
+  const pref = (
+    key: keyof ControlValues,
+    value: number | boolean | Alignment,
+  ) => {
     if (c) act({ action: "setPreference", target: c.target, key, value });
+  };
+  // Collapse a burst to its final choice while retaining host-authoritative selection.
+  // A new script or transport state cancels any queued gesture.
+  const alignmentFrame = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (alignmentFrame.current !== null)
+        cancelAnimationFrame(alignmentFrame.current);
+      alignmentFrame.current = null;
+    },
+    [c?.target, connected],
+  );
+  const align = (value: Alignment) => {
+    if (alignmentFrame.current !== null)
+      cancelAnimationFrame(alignmentFrame.current);
+    alignmentFrame.current = requestAnimationFrame(() => {
+      alignmentFrame.current = null;
+      pref("alignment", value);
+    });
   };
   const fraction = c?.maximum
     ? Math.max(0, Math.min(1, state.position / c.maximum))
@@ -453,42 +478,39 @@ export function RemoteController({
         id="remote-quick"
         open={quick}
         className="remote-quick-menu"
-        title={t("quickSettings")}
+        title={t("textSettings")}
         closeLabel={t("close")}
         onClose={closeQuick}
       >
         <div className="sheet-handle" aria-hidden="true" />
-        <div ref={quickRef} className="remote-list">
+        <div ref={quickRef} className="quick-typography">
           {(
             [
-              ["timer", "timer"],
-              ["showText", "text"],
-              ["mirror", "mirror"],
-              ["focus", "focus"],
-              ["fullscreen", "fullscreen"],
-              ["connection", "monitor"],
+              ["fontSize", "size", 16, 100, 1],
+              ["lineHeight", "spacing", 1, 3, 0.1],
+              ["textWidth", "width", 280, 1600, 10],
             ] as const
-          ).map(([key, icon]) => (
-            <button
-              key={key}
-              onClick={() => {
-                if (key === "fullscreen") {
-                  void fullscreen();
-                  closeQuick();
-                } else if (key === "showText") setVisibleText((v) => !v);
-                else {
-                  setQuick(false);
-                  setDetail(key);
-                  setAdvanced(true);
-                }
-              }}
-              aria-pressed={key === "showText" ? visibleText : undefined}
-            >
-              <Icon name={icon} />
-              <span>{t(key)}</span>
-              <Icon name="chevron" />
-            </button>
+          ).map(([key, icon, min, max, step]) => (
+            <HostSlider
+              key={(c?.target || "none") + key}
+              name={t(key)}
+              icon={icon}
+              min={min}
+              max={max}
+              step={step}
+              value={c?.[key] || min}
+              disabled={!connected || !c}
+              onChange={(v) => pref(key, v)}
+            />
           ))}
+          <div className="quick-alignment">
+            <AlignmentControl
+              t={t}
+              value={c?.alignment}
+              disabled={!connected || !c?.alignment}
+              onChange={align}
+            />
+          </div>
         </div>
       </Sheet>
       <Sheet

@@ -1,3 +1,5 @@
+> Historical verification of the preceding release. The v0.6.1 alignment/text-sheet and localhost QR behavior supersedes the corresponding UI descriptions: [current audit](audits/TELEO_V061_ALIGNMENT_QR_FIX.md).
+
 # Результаты отдельных автоматических тестов
 
 Итоговая проверка teleo., 27 октября 2026. Каждый ряд — фактический результат репортера. Повторные наборы пересекаются по продуктовым сценариям; количества между ними не суммируются как уникальные функции. Тестовые профили и тексты изолированы от личной библиотеки.

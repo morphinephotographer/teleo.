@@ -6,7 +6,8 @@ import React, {
   useState,
 } from "react";
 import { createRoot } from "react-dom/client";
-import QRCode from "qrcode";
+import { makeInvitationQR } from "./qr";
+import { AlignmentControl } from "./AlignmentControl";
 import { phonePairingIssue } from "./pairing-origin";
 import { RemoteIllustration } from "./RemoteIllustration";
 import {
@@ -84,6 +85,9 @@ function App() {
   const [pairOpen, setPairOpen] = useState(false);
   const pairingIssue = phonePairingIssue(location.origin);
   const [inviteDeadline, setInviteDeadline] = useState(0);
+  const [qrState, setQRState] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
   const inviteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -259,6 +263,7 @@ function App() {
                       ),
                   }
                 : {}),
+              alignment: p.alignment,
               fontSize: p.fontSize,
               lineHeight: p.lineHeight,
               textWidth: p.textWidth,
@@ -557,6 +562,8 @@ function App() {
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
       if (e.type === "connected") {
+        pairGeneration.current++;
+        setQRState("idle");
         clearTimeout(inviteTimer.current);
         setInviteDeadline(0);
         setPairOpen(false);
@@ -668,7 +675,8 @@ function App() {
                   0,
                   view.scrollHeight - view.clientHeight,
                 );
-                engine.position = fraction * engine.maximum;
+                if (requested.key !== "alignment")
+                  engine.position = fraction * engine.maximum;
                 view.scrollTop = engine.position;
               }
               acknowledge();
@@ -714,7 +722,13 @@ function App() {
     snapshot();
     const timer = setInterval(snapshot, 500);
     return () => clearInterval(timer);
-  }, [reading, remoteStatus, previewAllowed, controlTarget]);
+  }, [
+    reading,
+    remoteStatus,
+    previewAllowed,
+    controlTarget,
+    current?.preferences.alignment,
+  ]);
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
     const update = () => {
@@ -779,6 +793,7 @@ function App() {
     };
   }, [route]);
   function endRemote() {
+    setQRState("idle");
     clearTimeout(inviteTimer.current);
     setInviteDeadline(0);
     pairGeneration.current++;
@@ -852,32 +867,39 @@ function App() {
     setApproval(false);
     setInvite("");
     setQR("");
+    setQRState("loading");
     try {
       setRemoteStatus("connecting");
       const url = await remote.current.host();
-      const image = pairingIssue
-        ? ""
-        : await QRCode.toDataURL(url, {
-            width: 260,
-            margin: 4,
-            errorCorrectionLevel: "M",
-          });
       if (generation !== pairGeneration.current) return;
       setInvite(url);
-      setQR(image);
       setInviteDeadline(Date.now() + 120000);
       clearTimeout(inviteTimer.current);
       inviteTimer.current = setTimeout(() => {
         if (generation !== pairGeneration.current) return;
+        pairGeneration.current++;
+        setQRState("idle");
         remote.current.close();
         setRemoteStatus("expired");
         setInvite("");
         setQR("");
         setInviteDeadline(0);
       }, 120000);
+      let image: string;
+      try {
+        image = await makeInvitationQR(url);
+      } catch {
+        if (generation === pairGeneration.current) setQRState("error");
+        return;
+      }
+      if (generation !== pairGeneration.current) return;
+      setQR(image);
+      setQRState("ready");
     } catch {
-      if (generation === pairGeneration.current)
+      if (generation === pairGeneration.current) {
+        setQRState("idle");
         setRemoteStatus("serverUnreachable");
+      }
     }
   }
   async function importFile(file: File) {
@@ -1183,16 +1205,13 @@ function App() {
           action: () => pref({ countdownSeconds: n }),
         }))}
       />
-      <TeleoSelect
-        className="dock-alignment"
-        label={t("alignment")}
-        value={current?.preferences.alignment || "center"}
-        onChange={(v) => pref({ alignment: v as Preferences["alignment"] })}
-        options={(["left", "center", "right"] as const).map((value) => ({
-          value,
-          label: t(value),
-        }))}
-      />
+      <div className="dock-alignment">
+        <AlignmentControl
+          t={t}
+          value={current?.preferences.alignment}
+          onChange={(alignment) => pref({ alignment })}
+        />
+      </div>
       <div className="dock-group text-group">
         <IconButton
           name="mirror"
@@ -1711,11 +1730,14 @@ function App() {
                 <span className="brand pairing-brand" aria-hidden="true">
                   teleo.
                 </span>
-                <h3>{t("connect")}</h3>
-                <p
-                  role="status"
-                  className={remoteStatus === "waiting" ? "sr-only" : ""}
-                >
+                <h3>
+                  {t(
+                    pairingIssue === "localPairingOnly"
+                      ? "localPairingTitle"
+                      : "connect",
+                  )}
+                </h3>
+                <p role="status">
                   {t(remoteStatus || "waiting")}
                 </p>
                 {remoteStatus === "connected" && previewConsent}
@@ -1725,12 +1747,17 @@ function App() {
                     <>
                       {!pairingIssue && <p>{t("pairInstructions")}</p>}
                       <p>{t("inviteLifetime")}</p>
-                      {pairingIssue ? (
+                      {pairingIssue && (
                         <p className="pairing-warning" role="note">
                           {t(pairingIssue)}
                         </p>
-                      ) : (
-                        <img src={qr} alt={t("invite")} />
+                      )}
+                      {qrState === "ready" && (
+                        <img
+                          src={qr}
+                          alt={t("invite")}
+                          onError={() => setQRState("error")}
+                        />
                       )}
                       {inviteDeadline > 0 && (
                         <span className="sr-only">{t("inviteLifetime")}</span>
@@ -1751,6 +1778,13 @@ function App() {
                       </button>
                     </>
                   )}
+                {qrState === "loading" && <p role="status">{t("qrLoading")}</p>}
+                {qrState === "error" && (
+                  <>
+                    <p role="alert">{t("qrError")}</p>
+                    {button("renewInvite", () => void connect())}
+                  </>
+                )}
                 {approval && (
                   <>
                     <p>{t("approval")}</p>

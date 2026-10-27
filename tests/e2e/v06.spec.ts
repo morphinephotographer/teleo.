@@ -52,7 +52,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     const invite = await pairing
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
-    await expect(pairing.locator("img")).toHaveCount(0);
+    await expect(pairing.locator("img")).toBeVisible();
     await expect(pairing.getByText(t.localPairingOnly)).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/v06-${info.project.name}-${locale}-qr.png`,
@@ -254,7 +254,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("button", { name: t.quickSettings, exact: true })
       .click();
     const quick = phone.locator(".remote-quick-menu");
-    await expect(quick.locator(".remote-list > button")).toHaveCount(6);
+    await expect(quick.getByRole("slider")).toHaveCount(3);
     await phone.screenshot({
       path: `docs/screenshots/approved-${info.project.name}-${locale}-quick.png`,
     });
@@ -338,13 +338,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
           .getByRole("button", { name: t.quickSettings, exact: true })
           .click();
         await expect(quick).toBeInViewport();
-        await expect(quick.locator(".remote-list > button")).toHaveCount(6);
+        await expect(quick.getByRole("slider")).toHaveCount(3);
         await quick
-          .locator(".remote-list > button")
+          .locator(".alignment-control > button")
           .last()
           .scrollIntoViewIfNeeded();
         await expect(
-          quick.locator(".remote-list > button").last(),
+          quick.locator(".alignment-control > button").last(),
         ).toBeInViewport();
         await phone.screenshot({
           path: `docs/screenshots/v06-${info.project.name}-quick-${size.width}x${size.height}.png`,

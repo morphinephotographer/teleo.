@@ -1,6 +1,6 @@
 import { validCommand, type Command, type Preferences } from "./domain";
 
-/** Numeric control metadata is available to an approved controller even when text is private. */
+/** Allowlisted settings metadata is available even when the script text stays private. */
 export type ControlValues = Pick<
   Preferences,
   | "fontSize"
@@ -10,7 +10,7 @@ export type ControlValues = Pick<
   | "mirrorVertical"
   | "focusLine"
   | "countdownSeconds"
-> & { focusDimming?: boolean };
+> & { focusDimming?: boolean; alignment?: Preferences["alignment"] };
 export type ControlState = ControlValues & {
   version: 1;
   target: string;
@@ -24,7 +24,7 @@ export type ControlCommand =
       action: "setPreference";
       target: string;
       key: keyof ControlValues;
-      value: number | boolean;
+      value: number | boolean | Preferences["alignment"];
     };
 const uuid = (v: unknown): v is string =>
   typeof v === "string" && /^[a-f0-9-]{36}$/.test(v);
@@ -37,6 +37,8 @@ const bounds = {
 const bools = ["mirrorHorizontal", "mirrorVertical", "focusLine"];
 export function validControlValue(key: unknown, value: unknown) {
   if (typeof key !== "string") return false;
+  if (key === "alignment")
+    return value === "left" || value === "center" || value === "right";
   if (key === "focusDimming" || bools.includes(key))
     return typeof value === "boolean";
   const range = bounds[key as keyof typeof bounds];
@@ -72,7 +74,7 @@ export function validControlState(v: unknown): v is ControlState {
   const m = v as Record<string, unknown>;
   return (
     Object.keys(m)
-      .filter((k) => k !== "marks" && k !== "focusDimming")
+      .filter((k) => k !== "marks" && k !== "focusDimming" && k !== "alignment")
       .sort()
       .join(",") ===
       "countdownSeconds,focusLine,fontSize,lineHeight,maximum,mirrorHorizontal,mirrorVertical,target,textWidth,version" &&
@@ -84,6 +86,8 @@ export function validControlState(v: unknown): v is ControlState {
             typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1,
         ))) &&
     (m.focusDimming === undefined || typeof m.focusDimming === "boolean") &&
+    (m.alignment === undefined ||
+      validControlValue("alignment", m.alignment)) &&
     m.version === 1 &&
     uuid(m.target) &&
     typeof m.maximum === "number" &&

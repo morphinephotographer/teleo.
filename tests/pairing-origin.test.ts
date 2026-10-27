@@ -5,7 +5,7 @@ it.each([
   "https://localhost:5183",
   "http://[::1]:5173",
   "http://127.1.2.3:5173",
-])("never offers a physical-phone QR for %s", (origin) => {
+])("labels %s as same-Mac pairing only", (origin) => {
   expect(phonePairingIssue(origin)).toBe("localPairingOnly");
 });
 it("requires trusted HTTPS on LAN and uses the actual reachable origin", () => {

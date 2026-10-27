@@ -1,10 +1,17 @@
 export const en = {
+  alignLeft: "Align left",
+  alignCenter: "Align center",
+  alignRight: "Align right",
+  qrLoading: "Preparing the QR code…",
+  qrError:
+    "The QR code could not be displayed. Copy the invitation link or generate a new invitation.",
+  localPairingTitle: "Test on this Mac",
   timer: "Timer",
   quickSettings: "Settings",
   displaySettings: "Display",
   focus: "Focus",
   localPairingOnly:
-    "This address works only on this Mac. For an iPhone, open a reachable HTTPS LAN address on both devices or use the approved HTTPS staging. The link below is for this Mac only; no phone QR is generated.",
+    "This address works only on this Mac. For an iPhone, open a reachable HTTPS LAN address on both devices or use the approved HTTPS staging. The QR code and link below work only on this Mac.",
   securePairingRequired:
     "Phone pairing needs a trusted HTTPS address. Open the HTTPS LAN address on both devices.",
   serverUnreachable:
@@ -202,12 +209,19 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  alignLeft: "Вирівняти ліворуч",
+  alignCenter: "Вирівняти по центру",
+  alignRight: "Вирівняти праворуч",
+  qrLoading: "Створення QR-коду…",
+  qrError:
+    "Не вдалося показати QR-код. Скопіюйте посилання або створіть нове запрошення.",
+  localPairingTitle: "Перевірка на цьому Mac",
   timer: "Таймер",
   quickSettings: "Налаштування",
   displaySettings: "Відображення",
   focus: "Фокус",
   localPairingOnly:
-    "Ця адреса працює лише на цьому Mac. Для iPhone відкрийте доступну HTTPS-адресу локальної мережі на обох пристроях або затверджений HTTPS staging. Посилання нижче лише для цього Mac; QR для телефона не створюється.",
+    "Ця адреса працює лише на цьому Mac. Для iPhone відкрийте доступну HTTPS-адресу локальної мережі на обох пристроях або затверджений HTTPS staging. QR-код і посилання нижче працюють лише на цьому Mac.",
   securePairingRequired:
     "Підключення телефона потребує довіреної HTTPS-адреси. Відкрийте HTTPS-адресу локальної мережі на обох пристроях.",
   serverUnreachable:
@@ -403,12 +417,19 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  alignLeft: "Выровнять слева",
+  alignCenter: "Выровнять по центру",
+  alignRight: "Выровнять справа",
+  qrLoading: "Создаём QR-код…",
+  qrError:
+    "Не удалось показать QR-код. Скопируйте ссылку или создайте новое приглашение.",
+  localPairingTitle: "Проверка на этом Mac",
   timer: "Таймер",
   quickSettings: "Настройки",
   displaySettings: "Отображение",
   focus: "Фокус",
   localPairingOnly:
-    "Этот адрес работает только на этом Mac. Для iPhone откройте доступный HTTPS-адрес локальной сети на обоих устройствах или утверждённый HTTPS staging. Ссылка ниже только для этого Mac; QR для телефона не создаётся.",
+    "Этот адрес работает только на этом Mac. Для iPhone откройте доступный HTTPS-адрес локальной сети на обоих устройствах или утверждённый HTTPS staging. QR-код и ссылка ниже работают только на этом Mac.",
   securePairingRequired:
     "Для подключения телефона нужен доверенный HTTPS-адрес. Откройте HTTPS-адрес локальной сети на обоих устройствах.",
   serverUnreachable:

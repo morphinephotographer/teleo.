@@ -3,7 +3,6 @@ import { dictionaries } from "../../apps/web/src/i18n";
 import {
   openSettings,
   closeSettings,
-  chooseSelect,
   remoteValue,
   closeRemoteValue,
   setTimer,
@@ -39,7 +38,7 @@ for (const locale of ["en", "uk", "ru"] as const)
       .getByRole("button", { name: t.timer, exact: true })
       .boundingBox();
     const alignment = await dock
-      .getByRole("combobox", { name: t.alignment, exact: true })
+      .getByRole("group", { name: t.alignment, exact: true })
       .boundingBox();
     expect(width && timer && alignment).toBeTruthy();
     // DOM order remains stable even where responsive rows wrap.
@@ -71,10 +70,7 @@ for (const locale of ["en", "uk", "ru"] as const)
     await dock
       .getByRole("slider", { name: t.textWidth, exact: true })
       .fill("1300");
-    await chooseSelect(
-      dock.getByRole("combobox", { name: t.alignment, exact: true }),
-      "left",
-    );
+    await dock.getByRole("button", { name: t.alignLeft, exact: true }).click();
     await dock.getByRole("button", { name: t.play, exact: true }).click();
     await expect(page.locator(".reader")).toBeVisible();
     await page
@@ -97,7 +93,7 @@ for (const locale of ["en", "uk", "ru"] as const)
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
     await expect(pair.getByText(t.localPairingOnly)).toBeVisible();
-    await expect(pair.locator("img")).toHaveCount(0);
+    await expect(pair.locator("img")).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/approved-${info.project.name}-${locale}-pairing.png`,
     });
@@ -140,36 +136,43 @@ for (const locale of ["en", "uk", "ru"] as const)
     });
     await phone.locator(".remote-quick-trigger").click();
     const quick = phone.locator(".remote-quick-menu");
-    await expect(quick.locator(".remote-list > button")).toHaveCount(6);
-    await expect(quick.locator(".remote-list > button")).toHaveText([
-      t.timer,
-      t.showText,
-      t.mirror,
-      t.focus,
-      t.fullscreen,
-      t.connection,
-    ]);
+    await expect(quick.getByRole("slider")).toHaveCount(3);
+    await expect(
+      quick.getByRole("group", { name: t.alignment }).getByRole("button"),
+    ).toHaveCount(3);
     await phone.screenshot({
       path: `docs/screenshots/approved-${info.project.name}-${locale}-02-quick.png`,
     });
-    await quick.getByRole("button", { name: t.showText, exact: true }).click();
     await quick.getByRole("button", { name: t.close, exact: true }).click();
-    await expect(phone.locator(".remote-text")).toContainText(t.textHidden);
-    await phone.locator(".remote-quick-trigger").click();
-    await quick.getByRole("button", { name: t.showText, exact: true }).click();
-    await quick.getByRole("button", { name: t.close, exact: true }).click();
-    for (const key of ["mirror", "focus", "connection"] as const) {
-      await phone.locator(".remote-quick-trigger").click();
-      await quick.getByRole("button", { name: t[key], exact: true }).click();
+    for (const hidden of [true, false]) {
+      await phone
+        .getByRole("button", { name: t.advancedSettings, exact: true })
+        .click();
       const detail = phone.locator(".remote-settings-page");
-      if (key === "connection")
-        await expect(
-          detail.getByRole("button", { name: t.revoke, exact: true }),
-        ).toBeVisible();
-      else await expect(detail.getByRole("checkbox")).toHaveCount(2);
+      await detail
+        .getByRole("checkbox", { name: t.showText, exact: true })
+        .click();
       await detail.getByRole("button", { name: t.back, exact: true }).click();
-      await detail.getByRole("button", { name: t.back, exact: true }).click();
+      if (hidden)
+        await expect(phone.locator(".remote-text")).toContainText(t.textHidden);
+      else
+        await expect(phone.locator(".remote-text")).toContainText(
+          "A calm voice.",
+        );
     }
+    await phone
+      .getByRole("button", { name: t.advancedSettings, exact: true })
+      .click();
+    const connection = phone.locator(".remote-settings-page");
+    await connection
+      .locator(".remote-list button")
+      .filter({ hasText: t.studio })
+      .click();
+    await expect(
+      connection.getByRole("button", { name: t.revoke, exact: true }),
+    ).toBeVisible();
+    await connection.getByRole("button", { name: t.back, exact: true }).click();
+    await connection.getByRole("button", { name: t.back, exact: true }).click();
     await phone.evaluate(() =>
       Object.defineProperty(document, "fullscreenEnabled", {
         value: false,
@@ -177,9 +180,15 @@ for (const locale of ["en", "uk", "ru"] as const)
       }),
     );
     for (const enabled of [true, false]) {
-      await phone.locator(".remote-quick-trigger").click();
-      await quick
+      await phone
+        .getByRole("button", { name: t.advancedSettings, exact: true })
+        .click();
+      const fullSettings = phone.locator(".remote-settings-page");
+      await fullSettings
         .getByRole("button", { name: t.fullscreen, exact: true })
+        .click();
+      await fullSettings
+        .getByRole("button", { name: t.back, exact: true })
         .click();
       if (enabled)
         await expect(phone.locator(".controller")).toHaveClass(/viewport-fill/);
@@ -298,7 +307,7 @@ test("room creation failure is reported as unreachable without a stale invitatio
   await expect(page.locator(".pairing-sheet a")).toHaveCount(0);
 });
 
-test("a queued typography gesture is cancelled when the host switches scripts", async ({
+test("queued typography and alignment gestures are cancelled when the host switches scripts", async ({
   page,
   browser,
 }) => {
@@ -351,8 +360,8 @@ test("a queued typography gesture is cancelled when the host switches scripts", 
   await pair.getByRole("button", { name: t.allow, exact: true }).click();
   const font = await remoteValue(phone, t, "fontSize");
   await expect(font).toHaveValue("40");
-  await phone.clock.install();
-  await phone.clock.pauseAt(new Date());
+  await phone.clock.install({ time: new Date("2030-01-01T00:00:00Z") });
+  await phone.clock.pauseAt(new Date("2030-01-01T00:00:01Z"));
   await font.fill("99");
   const selector = page
     .locator("header")
@@ -367,5 +376,28 @@ test("a queued typography gesture is cancelled when the host switches scripts", 
   await phone.clock.runFor(500);
   await expect(font).toHaveValue("68");
   await expect(page.locator(".reader article")).toHaveCSS("font-size", "68px");
+  await closeRemoteValue(phone, t);
+  await page
+    .locator(".reader-controls")
+    .getByRole("button", { name: t.alignCenter, exact: true })
+    .click();
+  await phone.locator(".remote-quick-trigger").click();
+  const alignment = phone.locator(".remote-quick-menu .alignment-control");
+  await expect(
+    alignment.getByRole("button", { name: t.alignCenter, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await alignment
+    .getByRole("button", { name: t.alignRight, exact: true })
+    .click();
+  await selector.click();
+  await page
+    .locator(`[id="${id}"]`)
+    .getByRole("option", { name: "Script B", exact: true })
+    .click();
+  await expect(
+    alignment.getByRole("button", { name: t.alignLeft, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await phone.clock.runFor(500);
+  await expect(page.locator(".reader article")).toHaveCSS("text-align", "left");
   await context.close();
 });

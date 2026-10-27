@@ -364,3 +364,12 @@
 | mobile / v031.spec.ts / en: every host picker and contextual menu selects and dismisses | passed | 8055 |
 | mobile / v031.spec.ts / uk: every host picker and contextual menu selects and dismisses | passed | 7955 |
 | mobile / v031.spec.ts / ru: every host picker and contextual menu selects and dismisses | passed | 7867 |
+
+## Контрольные снимки окончательной панели
+
+2 PASS, 24.9 с; исходный код 74768ea, эталоны не обновлялись.
+
+| Проект / файл / тест | Результат | мс |
+|---|---|---:|
+| desktop / redesign.spec.ts / ru: desktop, tablet and phone layouts preserve editing and prompting | passed | 12684 |
+| desktop / v031.spec.ts / picker positioning at every required viewport; outside/Escape and dark sheet fallback | passed | 8662 |

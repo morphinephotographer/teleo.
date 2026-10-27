@@ -12,6 +12,7 @@
 | Дополнительные переходы меню Chromium/WebKit | 6/6 PASS | все шесть пунктов quick menu, детали, fullscreen fallback, возврат к основному экрану |
 | Сравнение обновлённых эталонов без update | 12/12 PASS; финальный dock дополнительно 12/12 PASS | прежние picker/locale и paired remote потоки, намеренно обновлённые изображения |
 | Финальные короткие экраны/landscape | 6/6 PASS | доступность последнего пункта прокручиваемого меню, playback, seek, reconnect, изображения |
+| Финальные обзорные снимки / viewport | 2/2 PASS, без обновления эталонов | новая последовательность dock, desktop/tablet/phone/landscape |
 | build / typecheck / ESLint / staging dry-run | PASS | `staging:check` завершается с `--dry-run`, публикации нет |
 | HTTPS LAN route/preflight | PASS | проверенный сертификат, точный Origin, 403 постороннему origin |
 | Настоящая HTTPS/WSS LAN-пара | PASS на этом Mac | room, auth, явное approval, команда и ACK/state, revoke |

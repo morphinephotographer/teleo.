@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit && tsc -p services/remote-relay/tsconfig.json && tsc -p services/staging/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc -p services/remote-relay/tsconfig.json && tsc -p services/staging/tsconfig.json && tsc -p services/production/tsconfig.json && tsc -p services/production/tsconfig.test.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
@@ -15,7 +15,14 @@
     "build:staging": "npm run typecheck && node scripts/build-staging.mjs",
     "staging:local": "WRANGLER_SEND_METRICS=false wrangler dev --config services/staging/wrangler.jsonc --port 8788",
     "staging:check": "npm run build:staging && WRANGLER_SEND_METRICS=false wrangler deploy --config services/staging/wrangler.jsonc --dry-run --outdir .staging-dry-run",
-    "test:staging": "playwright test --config playwright.staging.config.ts"
+    "test:staging": "playwright test --config playwright.staging.config.ts",
+    "dev:lan": "node scripts/dev-lan.mjs",
+    "check:lan": "node scripts/check-lan.mjs",
+    "check:lan:pairing": "node scripts/check-lan-pairing.mjs",
+    "build:production": "npm run typecheck && node scripts/build-staging.mjs",
+    "production:check": "npm run build:production && WRANGLER_SEND_METRICS=false wrangler deploy --config wrangler.jsonc --dry-run --outdir .production-dry-run",
+    "production:local": "WRANGLER_SEND_METRICS=false wrangler dev --config services/production/wrangler.local.jsonc --port 8789 --inspector-port 9239 --persist-to .wrangler/production-qa",
+    "deploy:production": "npm run build:production && node scripts/deploy-production.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

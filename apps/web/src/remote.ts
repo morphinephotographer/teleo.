@@ -1,15 +1,21 @@
-import type { Command } from "../../../packages/protocol/domain";
-export type PlaybackState = {
-  playing: boolean;
-  speed: number;
-  position: number;
-};
+import {
+  validPreviewPayload,
+  type PreviewEnvelope,
+  type PreviewPermission,
+} from "../../../packages/protocol/preview";
+import {
+  validPlaybackState,
+  type ControlCommand,
+  type PlaybackState,
+} from "../../../packages/protocol/control";
+export type { PlaybackState } from "../../../packages/protocol/control";
 export type RemoteEvent = {
   type: string;
   id?: string;
-  command?: Command;
+  command?: ControlCommand;
   state?: PlaybackState;
   sequence?: number;
+  preview?: PreviewEnvelope | PreviewPermission;
 };
 const secret = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
@@ -53,7 +59,12 @@ export class RemoteLink {
         throw Error("cancelled");
       this.creating = undefined;
       this.start(id, host);
-      return `${location.origin}/remote#pair=${id}.${invite}`;
+      const destination = new URL("/remote", location.origin);
+      const lang = new URLSearchParams(location.search).get("lang");
+      if (lang && ["en", "uk", "ru"].includes(lang))
+        destination.searchParams.set("lang", lang);
+      destination.hash = `pair=${id}.${invite}`;
+      return destination.href;
     } finally {
       clearTimeout(timer);
       if (this.creating === request) this.creating = undefined;
@@ -102,6 +113,34 @@ export class RemoteLink {
         this.finish("unavailable");
         return;
       }
+      if (event.type === "previewPermission") {
+        const m = event as unknown as PreviewPermission;
+        if (
+          m.version === 1 &&
+          m.sessionId === this.session?.id &&
+          typeof m.allowed === "boolean" &&
+          Number.isSafeInteger(m.epoch) &&
+          m.epoch >= 0
+        )
+          this.onEvent({ type: "previewPermission", preview: m });
+        return;
+      }
+      if (
+        event.type === "previewContent" ||
+        event.type === "previewPosition" ||
+        event.type === "previewUnavailable"
+      ) {
+        const m = event as unknown as PreviewEnvelope;
+        const { sessionId, sequence, ...payload } = m;
+        if (
+          sessionId === this.session?.id &&
+          Number.isSafeInteger(sequence) &&
+          sequence >= 0 &&
+          validPreviewPayload(payload)
+        )
+          this.onEvent({ type: m.type, preview: m });
+        return;
+      }
       if (event.type === "authenticated") {
         this.authenticated = true;
         clearTimeout(this.timeout);
@@ -135,6 +174,7 @@ export class RemoteLink {
       }
       if (event.type === "ack" || event.type === "state") {
         if (
+          !validPlaybackState(event.state) ||
           typeof event.sequence !== "number" ||
           event.sequence <= this.sequence
         )
@@ -156,7 +196,13 @@ export class RemoteLink {
       this.ready = false;
       this.uncertain();
       if ([1008, 4000, 4001].includes(e.code) || !this.wasConnected) {
-        this.finish(this.wasConnected ? "disconnected" : "unavailable");
+        this.finish(
+          this.wasConnected
+            ? "disconnected"
+            : e.code === 1008 || e.code === 4001
+              ? "expired"
+              : "serverUnreachable",
+        );
         return;
       }
       this.beginRecovery();
@@ -190,10 +236,17 @@ export class RemoteLink {
     if (this.authenticated && this.socket?.readyState === WebSocket.OPEN)
       this.socket.send(JSON.stringify(message));
   }
+  previewPermission(allowed: boolean) {
+    if (this.ready)
+      this.send({ type: "previewPermission", version: 1, allowed });
+  }
+  requestPreview() {
+    if (this.ready) this.send({ type: "previewRequest", version: 1 });
+  }
   state(state: PlaybackState) {
     if (this.ready) this.send({ type: "state", state });
   }
-  command(command: Command) {
+  command(command: ControlCommand) {
     const id = crypto.randomUUID();
     if (!this.ready) {
       this.onEvent({ type: "unconfirmed", id });

@@ -1,0 +1,30 @@
+{
+  "unitIntegration": {
+    "filesPassed": 9,
+    "testsPassed": 82,
+    "durationSeconds": 152.85
+  },
+  "predeployment": {
+    "full": {
+      "startTime": "2026-10-27T15:07:53.609Z",
+      "duration": 273965.855,
+      "expected": 134,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "production-local": {
+      "startTime": "2026-10-27T15:16:11.747Z",
+      "duration": 55149.522,
+      "expected": 32,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "frontendCredentialPatternMatches": 0,
+  "typecheck": "passed",
+  "lint": "passed",
+  "workerDryRun": "passed",
+  "physicalDevices": "not tested"
+}

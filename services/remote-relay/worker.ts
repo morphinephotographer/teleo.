@@ -1,5 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
-import { validCommand } from "../../packages/protocol/domain";
+import { validPreviewPayload } from "../../packages/protocol/preview";
+import {
+  validControlCommand,
+  validPlaybackState as validState,
+} from "../../packages/protocol/control";
 interface Env {
   ROOMS: DurableObjectNamespace<Room>;
   ALLOWED_ORIGINS: string;
@@ -20,6 +24,8 @@ type RoomData = {
   detached: Partial<Record<Role, number>>;
   sequence: number;
   lastSeen: Partial<Record<Role, number>>;
+  previewAllowed?: boolean;
+  previewEpoch?: number;
 };
 type Attachment = {
   role: "new" | Role;
@@ -28,23 +34,6 @@ type Attachment = {
   count: number;
 };
 const RECONNECT_GRACE = 30_000;
-const validState = (
-  s: unknown,
-): s is { playing: boolean; speed: number; position: number } => {
-  if (!s || typeof s !== "object") return false;
-  const v = s as Record<string, unknown>;
-  return (
-    Object.keys(v).sort().join(",") === "playing,position,speed" &&
-    typeof v.playing === "boolean" &&
-    typeof v.speed === "number" &&
-    Number.isFinite(v.speed) &&
-    v.speed >= 0.5 &&
-    v.speed <= 3 &&
-    typeof v.position === "number" &&
-    Number.isFinite(v.position) &&
-    v.position >= 0
-  );
-};
 const token = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
     b.toString(16).padStart(2, "0"),
@@ -216,12 +205,24 @@ export class Room extends DurableObject<Env> {
     if (!this.ready(d)) return;
     this.send(d, "host", { type: "connected" });
     this.send(d, "controller", { type: "connected" });
+    this.send(d, "host", this.previewPermission(d));
+    this.send(d, "controller", this.previewPermission(d));
     this.send(d, "host", { type: "stateRequest" });
+  }
+  private previewPermission(d: RoomData) {
+    return {
+      type: "previewPermission",
+      version: 1,
+      allowed: !!d.previewAllowed,
+      epoch: d.previewEpoch || 0,
+      sessionId: this.ctx.id.toString(),
+    };
   }
   async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
     await this.ctx.blockConcurrencyWhile(async () => {
       try {
-        if (typeof message !== "string" || message.length > 1024) throw Error();
+        if (typeof message !== "string" || message.length > 52_000)
+          throw Error();
         const a = ws.deserializeAttachment() as Attachment;
         const now = Date.now();
         if (now - a.window > 1000) {
@@ -233,6 +234,11 @@ export class Room extends DurableObject<Env> {
         const d = await this.ctx.storage.get<RoomData>("room");
         if (!d || this.expired(d, now)) throw Error();
         const m = JSON.parse(message);
+        if (
+          message.length > 1024 &&
+          !(a.role === "host" && m.type === "previewContent")
+        )
+          throw Error();
         if (a.role === "new") {
           if (typeof m.token !== "string" || !/^[a-f0-9]{64}$/.test(m.token))
             throw Error();
@@ -308,12 +314,50 @@ export class Room extends DurableObject<Env> {
         }
         if (!d.approved) throw Error();
         if (
+          m.type === "previewPermission" &&
+          a.role === "host" &&
+          Object.keys(m).sort().join(",") === "allowed,type,version" &&
+          m.version === 1 &&
+          typeof m.allowed === "boolean"
+        ) {
+          d.previewAllowed = m.allowed;
+          d.previewEpoch = (d.previewEpoch || 0) + 1;
+          await this.ctx.storage.put("room", d);
+          this.send(d, "host", this.previewPermission(d));
+          this.send(d, "controller", this.previewPermission(d));
+          return;
+        }
+        if (
+          m.type === "previewRequest" &&
+          a.role === "controller" &&
+          m.version === 1 &&
+          Object.keys(m).sort().join(",") === "type,version"
+        ) {
+          this.send(d, "controller", this.previewPermission(d));
+          if (d.previewAllowed && this.ready(d))
+            this.send(d, "host", { type: "previewRequest" });
+          return;
+        }
+        if (a.role === "host" && validPreviewPayload(m)) {
+          // Content is forwarded only. Never assign it to room storage or socket attachments.
+          if (!d.previewAllowed || m.epoch !== d.previewEpoch || !this.ready(d))
+            return;
+          d.sequence++;
+          await this.ctx.storage.put("room", d);
+          this.send(d, "controller", {
+            ...m,
+            sessionId: this.ctx.id.toString(),
+            sequence: d.sequence,
+          });
+          return;
+        }
+        if (
           a.role === "controller" &&
           m.type === "command" &&
           Object.keys(m).every((k) => ["type", "id", "command"].includes(k)) &&
           typeof m.id === "string" &&
           /^[a-f0-9-]{36}$/.test(m.id) &&
-          validCommand(m.command)
+          validControlCommand(m.command)
         ) {
           if (!this.ready(d)) {
             ws.send(JSON.stringify({ type: "unconfirmed", id: m.id }));
@@ -377,6 +421,8 @@ export class Room extends DurableObject<Env> {
     const d = await this.ctx.storage.get<RoomData>("room");
     if (d) {
       d.revoked = true;
+      d.previewAllowed = false;
+      d.previewEpoch = (d.previewEpoch || 0) + 1;
       d.resume = {};
       d.pending = [];
       await this.ctx.storage.put("room", d);

@@ -134,7 +134,7 @@ describe("browser reconnect lifecycle", () => {
     socket.terminate();
     vi.advanceTimersByTime(60000);
     expect(Socket.instances).toHaveLength(1);
-    expect(events.at(-1)?.type).toBe("unavailable");
+    expect(events.at(-1)?.type).toBe("serverUnreachable");
   });
 });
 

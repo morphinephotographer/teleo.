@@ -1,3 +1,4 @@
+import { openSettings, closeSettings } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 
@@ -40,22 +41,21 @@ for (const locale of ["en", "uk", "ru"] as const) {
             document.documentElement.scrollWidth <= innerWidth,
         ),
       ).toBe(true);
-      const settings = page.getByRole("tab", { name: t.settings, exact: true });
-      if (await settings.isVisible()) await settings.click();
+      await openSettings(page, t, "appearance");
       await expect(
-        page.getByRole("slider", { name: t.speed, exact: true }),
+        page.getByRole("slider", { name: t.focusPosition, exact: true }),
       ).toBeVisible();
-      await page
-        .getByRole("slider", { name: t.speed, exact: true })
-        .fill("1.5");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollHeight <= innerHeight,
         ),
       ).toBe(true);
+      await closeSettings(page, t);
+      await page
+        .locator(".speed-group")
+        .getByRole("button", { name: t.speedUp, exact: true })
+        .click();
       if (size.width === 390 || size.width === 1440) {
-        if (await settings.isVisible())
-          await page.getByRole("tab", { name: t.editor, exact: true }).click();
         await page.screenshot({
           path: `docs/screenshots/compact-${info.project.name}-${locale}-${size.width}.png`,
         });
@@ -63,3 +63,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
     }
   });
 }
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+});

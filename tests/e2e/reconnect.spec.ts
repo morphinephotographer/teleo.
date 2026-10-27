@@ -1,3 +1,4 @@
+import { disconnectPhone, managePhone } from "./helpers";
 import { test, expect, type Page, type WebSocketRoute } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 // Each test is an independent local client. Cloudflare replaces this header in production.
@@ -38,9 +39,11 @@ for (const locale of ["en", "uk", "ru"] as const) {
     );
     await phone.goto(invite);
     await page.getByRole("button", { name: t.allow, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
-    await expect(phone.locator("output")).toContainText(t.play);
+    await expect(
+      phone.getByRole("button", { name: t.pause, exact: true }),
+    ).toBeVisible();
     const before = Number(
       await page.getByRole("slider", { name: t.position }).inputValue(),
     );
@@ -53,7 +56,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       reason: "QA transport interruption",
     });
     await expect.poll(() => sockets.length).toBeGreaterThan(1);
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     expect(
       Number(await page.getByRole("slider", { name: t.position }).inputValue()),
     ).toBeGreaterThanOrEqual(before);
@@ -67,11 +70,14 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .locator(".reader")
       .getByRole("button", { name: t.pause, exact: true })
       .click();
-    await expect(phone.locator("output")).toContainText(t.pause);
+    await expect(
+      phone.getByRole("button", { name: t.play, exact: true }),
+    ).toBeVisible();
     await phone.screenshot({
       path: `docs/screenshots/${info.project.name}-${locale}-reconnected-controller.png`,
     });
-    await phone.getByRole("button", { name: t.revoke, exact: true }).click();
+    await disconnectPhone(phone, t);
+    await managePhone(page, t);
     await expect(page.locator(".pair-panel p[role=status]")).toHaveText(
       t.disconnected,
     );
@@ -112,7 +118,7 @@ test("host reconnect keeps script and playback; unconfirmed command is not repla
   });
   await phone.goto(invite);
   await page.getByRole("button", { name: "Allow", exact: true }).click();
-  await expect(phone.locator("p[role=status]")).toHaveText("Connected");
+  await expect(phone.locator(".remote-connection")).toHaveText("Connected");
   // Drop a real command before delivery, then interrupt the host. No fake success response.
   let dropped = 0;
   const server = connections[0].server;
@@ -133,7 +139,7 @@ test("host reconnect keeps script and playback; unconfirmed command is not repla
       );
     });
   await expect.poll(() => connections.length).toBeGreaterThan(1);
-  await expect(phone.locator("p[role=status]")).toHaveText("Connected");
+  await expect(phone.locator(".remote-connection")).toHaveText("Connected");
   await expect(
     page.locator(".reader").getByRole("button", { name: "Play", exact: true }),
   ).toBeVisible();
@@ -164,7 +170,7 @@ test("prolonged relay outage stops retries and preserves the local reader", asyn
   });
   await phone.goto(invite);
   await page.getByRole("button", { name: "Allow", exact: true }).click();
-  await expect(phone.locator("p[role=status]")).toHaveText("Connected");
+  await expect(phone.locator(".remote-connection")).toHaveText("Connected");
   await page
     .locator(".reader")
     .getByRole("button", { name: "Play", exact: true })
@@ -172,10 +178,10 @@ test("prolonged relay outage stops retries and preserves the local reader", asyn
   outage = true;
   await transport!.server.close({ code: 1012, reason: "QA relay outage" });
   await transport!.client.close({ code: 1012, reason: "QA relay outage" });
-  await expect(phone.locator("p[role=status]")).toHaveText(
+  await expect(phone.locator(".remote-connection")).toHaveText(
     "Connection interrupted — reconnecting…",
   );
-  await expect(phone.locator("p[role=status]")).toHaveText(
+  await expect(phone.locator(".remote-connection")).toHaveText(
     "Disconnected — create a new invitation to reconnect",
     { timeout: 30000 },
   );
@@ -192,4 +198,10 @@ test("prolonged relay outage stops retries and preserves the local reader", asyn
     page.getByRole("textbox", { name: "Your words", exact: true }),
   ).toHaveValue("Private host text 🌍\n\n".repeat(100));
   await context.close();
+});
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
 });

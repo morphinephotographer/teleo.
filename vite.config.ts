@@ -1,5 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { readFileSync } from "node:fs";
+import { Agent } from "node:https";
 export default defineConfig({
   root: "apps/web",
   plugins: [
@@ -23,5 +25,35 @@ export default defineConfig({
     },
   ],
   build: { outDir: "../../dist", emptyOutDir: true },
-  server: { proxy: { "/api": { target: "http://127.0.0.1:8787", ws: true } } },
+  server: {
+    cors: false, // API CORS/Origin policy belongs to the exact-origin relay, including OPTIONS.
+    ...(process.env.TELEO_TLS_CERT && process.env.TELEO_TLS_KEY
+      ? {
+          https: {
+            cert: readFileSync(process.env.TELEO_TLS_CERT),
+            key: readFileSync(process.env.TELEO_TLS_KEY),
+          },
+        }
+      : {}),
+    proxy: {
+      "/api": {
+        target:
+          (process.env.TELEO_RELAY_PROTOCOL || "http") +
+          "://127.0.0.1:" +
+          (process.env.TELEO_RELAY_PORT || "8787"),
+        ...(process.env.TELEO_RELAY_PROTOCOL === "https" &&
+        process.env.TELEO_TLS_CERT
+          ? {
+              agent: new Agent({
+                ca: readFileSync(
+                  process.env.TELEO_TLS_CA || process.env.TELEO_TLS_CERT,
+                ),
+                servername: process.env.TELEO_LAN_HOST,
+              }),
+            }
+          : {}),
+        ws: true,
+      },
+    },
+  },
 });

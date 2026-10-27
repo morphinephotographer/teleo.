@@ -60,6 +60,8 @@ No macOS XCTest UI pass is claimed. The built application itself launched succes
 
 ## P0 / phase status
 
+This table records the initial implementation checkpoint. Later dated follow-ups below supersede its deployment, reconnect and UI verification status; consult the final published redesign checkpoint for current web results.
+
 | Area | Implementation | Automated | Physical / external |
 |---|---|---|---|
 | A: dedicated repo, rules, architecture | Implemented | Inspected | N/A |
@@ -212,3 +214,47 @@ Final verification: `npm run staging:check` passed typecheck, staging production
 The controller requests optional 12 ms vibration only when the API exists; an instrumented browser check proves the call and subsequent command ACK, not physical vibration. iPhone Safari does not expose the standard vibration API; visual press feedback works without it. Physical acceptance of the redesigned UI and VoiceOver remain not tested. Screenshots contain generated QA text, not the owner's attached photos.
 
 Published redesign source **7b5bf21** to the existing staging site, Worker version **e3e950a2-e15b-48c2-a701-d17218c4f183**. Public `TELEO_STAGING_URL=https://teleo-staging.your-subdomain.workers.dev npm run test:staging` passed **10/10** in **18.7 seconds**, including real HTTPS/WSS commands, viewport fit, optional vibration invocation, revocation and fresh invitation in the reused controller tab. Production DNS/routes were not changed.
+
+## Complete website workspace redesign — 2026-10-26
+
+The new owner brief supersedes the conventional homepage: `/` now opens the same workspace as `/studio`, following a skippable 3.45-second letter-convergence intro once per tab session. Reduced motion bypasses intro and remote deep links never show it. Added reusable SVG icon buttons, sliding segmented groups and a native dialog settings sheet; collapsible library, current script selector, editor metrics, reading preview, viewport reader/dock, local light/dark/system theme, adjustable guide and optional text dimming. The phone controller and native Apple UI are retained from the prior phase.
+
+Baseline before changes: build and focused **31/31** Vitest tests passed; **54/54** browser tests passed in 52.0 seconds. Final local source: staging build/typecheck/dry-run and lint passed; **31/31** focused Vitest tests passed; **72/72** Playwright tests passed (reported 1.3 minutes). New viewport checks cover all requested desktop/tablet/phone sizes and landscape, session intro/skip, reduced motion, focus management, mirror, fullscreen fallback, persistence and simulated keyboard viewport resize. Desktop and iPhone emulation use Chromium; WebKit is not installed. Real Safari keyboard/chrome, VoiceOver and animation smoothness remain not tested on hardware. See docs/audits/TELEO_UI_REDESIGN_REPORT.md and docs/design for decisions, screenshots and limitations. Source protocols/storage schema/native apps are unchanged. Publication results follow separately.
+
+### Follow-up discovered by public redesign checks
+
+Initial parallel public runs failed because they shared Playwright trace/report output; this was a test-runner artifact collision, not a relay/security rejection. Local, staging-relay and staging-redesign suites now have independent output directories. Public viewport tests also exposed restoration of an older speed during rapid navigation. The autosave coordinator previously let an older completion clear newer recovery and display Saved prematurely. New `DraftWriter` keeps latest dirty snapshots separate from pending/in-flight writes, preserves newer recovery and prevents stale failures from overwriting newer queued edits. The stored schema and remote protocol are unchanged.
+
+After the fix: **35/35** focused Vitest tests passed, including four controlled asynchronous save regressions; typecheck/lint/staging build/dry-run passed; focused redesign suite **18/18** passed (40.8 seconds); full local browser regression **72/72** passed again (reported 1.3 minutes). Initial failed public runs are not accepted as passes. Updated public results follow after redeployment.
+
+Save-fix source c440ba6 passed public relay **10/10** (15.4 seconds) and redesign **18/18** (34.1 seconds). A final dark-system check then isolated the retained phone controller's white palette from the new automatic interface theme. Its black-on-white text is now explicitly asserted with dark media emulation. After this final CSS correction the full local **72/72** browser suite passed again (reported 1.3 minutes), with build/typecheck/dry-run/lint passed. Final staging version/public rerun follows.
+
+### Final published redesign checkpoint
+
+Application source **531a3ca**; Worker version **6d2438f8-99ea-4676-8b3c-0a181150b471**. Final public relay/security suite **10/10 passed** (13.5 seconds); final public redesign suite **18/18 passed** (35.6 seconds), including dark-system controller contrast and saved-speed regression. Final local full browser suite **72/72 passed**, focused unit suites **35/35 passed**, build/typecheck/dry-run/lint passed. All checks use generated isolated test content. Physical acceptance of this new UI is still not tested. See docs/audits/TELEO_UI_REDESIGN_REPORT.md and docs/design. Production DNS/routes unchanged; branch codex/teleo-premium-workspace.
+
+
+## v0.3.1 integrated Studio and permissioned phone preview — 2026-10-26
+
+The reviewed v0.3.1 brief is implemented in the existing workspace: integrated Playback/Text/Appearance settings, shared top-layer pickers/action menus, tested compatibility fallback, and Remote/Text/Settings phone UI with clipped semantic speed wings. Paragraph controls remain rectangles. The existing multiplier, storage format, command engine, intro, HID mapping and explicit pairing/revoke model are retained. Editing keeps an approved phone connected for live revisions and script switches; explicit Exit still revokes.
+
+Preview is off by default and requires separate host consent for the paired session. Versioned bounded snapshots and compact position updates use the existing authenticated transport. Revocation/loss/expiry clear phone memory; bounded resume requests a fresh authoritative snapshot. Relay integration tests inspect actual test SQLite stores for absence of private title/body markers. WSS is transport encryption, not E2EE; authorized plaintext is processed transiently by the relay. Native Apple apps are unchanged.
+
+Local verification: build/typecheck/staging dry-run/lint passed; full Vitest **64/64 passed** (six files, 153.22 seconds); final full Playwright **86/86 passed** (1.9 minutes), including six visual golden comparisons and existing regressions. Focused final visual verification and public deployment results follow. The initial sandboxed Miniflare listener failure and intermediate test-harness adaptations are documented in the audit, not counted as passes.
+
+Reviewed generated screenshots and complete dropdown inventory are in docs/audits/TELEO_V03_UI_AUDIT.md; design/limits/schema in docs/design/TELEO_V03_DESIGN_SYSTEM.md and TELEO_REMOTE_V03.md. Chromium desktop/iPhone emulation only; physical iPhone/Safari/WebKit/Firefox/VoiceOver/Bluetooth and actual vibration are not certified by this iteration. Optional standard vibration is capability-gated; unsupported phone browsers show an explanation. No production domain/DNS changes.
+
+### v0.3.1 final staging checkpoint — 2026-10-27
+
+Deployed application source **19a2428**, Worker **cfbad529-2d5f-4c47-857b-a5b9a058a312**, at https://teleo-staging.your-subdomain.workers.dev. Focused local final visual checks **14/14 passed** (49.1 seconds). First public run had three seek/highlight test races (29/32): a previous phone paragraph command was still in flight when the test sought on the host. The harness now records the routed WSS frames themselves and waits for each exact command ID's ACK. It also positively verifies receipt of the default-denied permission frame before asserting no text delivery. No application change, relaxed assertion or snapshot update was needed.
+
+Final public UI/real transport suite **32/32 passed** (58.6 seconds); separate public assets/Origin/security-header suite **2/2 passed** (2.7 seconds), total **34/34**. Final typecheck/lint passed after harness correction. Full local application regression remains **86/86**, full unit/relay **64/64**. Six golden snapshots were compared without updates. Generated final screenshots use v031-*; preceding release screenshots are preserved. Normal tablet editor and drawer were both visually reviewed. Branch codex/teleo-v031-studio-remote; protocol 07271df, UI 19a2428. Production/main/DNS unchanged. Physical acceptance of this new UI and standard vibration behavior remain to be tested on actual hardware.
+
+
+## Approved v0.6 remote / Studio fixes — 2026-10-27
+
+Application source **bc3bb08**, local branch **codex/teleo-v06-approved-ui**. Implemented the owner's authoritative two-state dark remote (circular speed/play, real scrub timeline, quick host typography), single advanced gear, neutral shared shapes/chevrons/import, custom folder/deletion dialogs, inline locally scrolling actions and independently closable QR management. Auto-dismiss occurs only after authenticated approved readiness. Existing engine, storage schema, consent/relay security, intro, localization and HID mappings are preserved; targeted validated metadata/commands extend the existing ACK channel.
+
+Baseline: build PASS, unit/relay **64/64** (152.59s), browser **86/86** (1.9m). Final: typecheck/lint/production staging build/dry-run PASS; full unit/relay **70/70** (153.12s); final full browser **102/102** (2.1m), without snapshot updates. Additional placement cohort **10/10** (27.7s), direct mobile scroll/toolbar checks **2/2** (12.3s), expanded playing-seek/panel/host-keyboard assertions **6/6** (25.6s), also without snapshot updates. Seven new visual goldens were checked; actual screenshots were manually inspected and found/fixed toolbar wrapping and inaccessible advanced body scrolling. See docs/audits/TELEO_UI_AUDIT_V06.md for failures, corrections, complete menu inventory, screenshots and actual viewport/browser matrix.
+
+Physical iPhone/Safari, VoiceOver, Taptic, physical Bluetooth and camera QR scan: **NOT RUN**, emulation only. WebKit/Firefox: **NOT RUN**, unavailable runtimes. Secondary settings/bug-reference images: **NOT RUN** comparison, missing files; the approved two-state PNG was supplied and inspected. Public v0.6: **NOT RUN**, deployment/push explicitly prohibited; existing public staging is unchanged. No credentials, personal library data or native signing changes were introduced.

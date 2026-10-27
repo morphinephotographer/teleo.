@@ -3458,3 +3458,7 @@ input[type="checkbox"] {
 .pairing-sheet[open] {
   animation: none;
 }
+
+.app-shell > header > .language-control {
+  margin-left: auto;
+}

@@ -4,6 +4,9 @@ import QRCode from "qrcode";
 import { fileURLToPath } from "node:url";
 import { dictionaries } from "../../apps/web/src/i18n";
 import { chooseSelect, managePhone } from "./helpers";
+// Offline/SW persistence is covered separately. Block SW here so intentional
+// network failures reach Playwright routing consistently, including WebKit HTTPS.
+test.use({ serviceWorkers: "block" });
 const target = process.env.TELEO_V07_URL;
 if (target) test.use({ baseURL: target });
 const local = !target || new URL(target).hostname === "127.0.0.1";
@@ -206,6 +209,17 @@ test("inert wordmark and circular locale: visual viewport matrix", async ({
     });
   }
   expect(requests.filter((path) => path !== "/sw.js")).toEqual([]);
+  for (const route of ["/help", "/privacy"]) {
+    await page.goto(route);
+    const control = page.locator("header .language-control .picker-trigger");
+    const box = (await control.boundingBox())!;
+    expect(box.x + box.width).toBeGreaterThan(page.viewportSize()!.width - 24);
+    await expect(page.locator(".language-control")).toHaveCount(1);
+    await page.screenshot({
+      path: `docs/screenshots/${capture}-${info.project.name}-${route.slice(1)}.png`,
+      animations: "disabled",
+    });
+  }
 });
 function decode(png: string, url: string) {
   const result = spawnSync(

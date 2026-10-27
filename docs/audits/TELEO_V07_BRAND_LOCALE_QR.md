@@ -73,3 +73,8 @@ Local release gates PASS:
 | `npx playwright test --config playwright.v07.config.ts` | 33/33; 20.9s; Chromium/WebKit/Firefox, strengthened QR/copy/expiry checks |
 
 Additional real-playback wordmark assertion: **3/3 PASS, 10.2s** across Chromium/WebKit/Firefox; clicking the host wordmark leaves active scrolling, URL and history intact. Public staging/production verification will be recorded below; no public success is claimed at this checkpoint.
+
+
+Staging first pass: 21/22 scenarios passed, including both real pairing flows and final composite/rendered QR decoding. The remaining WebKit artificial network-error assertion was not intercepted because its request passed through the production Service Worker. The focused fixture now blocks Service Workers specifically for deterministic fault injection; the separate existing offline/SW suite continues to test real service-worker behavior. A final header audit also added explicit right alignment on Help/Privacy, with route assertions. Both fixes require another local focused gate and staging deployment before production.
+
+Final Help/Privacy alignment and deterministic fault fixture: typecheck/lint PASS, **33/33 PASS in 22.7s** across Chromium/WebKit/Firefox.

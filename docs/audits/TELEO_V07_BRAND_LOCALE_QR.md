@@ -78,3 +78,12 @@ Additional real-playback wordmark assertion: **3/3 PASS, 10.2s** across Chromium
 Staging first pass: 21/22 scenarios passed, including both real pairing flows and final composite/rendered QR decoding. The remaining WebKit artificial network-error assertion was not intercepted because its request passed through the production Service Worker. The focused fixture now blocks Service Workers specifically for deterministic fault injection; the separate existing offline/SW suite continues to test real service-worker behavior. A final header audit also added explicit right alignment on Help/Privacy, with route assertions. Both fixes require another local focused gate and staging deployment before production.
 
 Final Help/Privacy alignment and deterministic fault fixture: typecheck/lint PASS, **33/33 PASS in 22.7s** across Chromium/WebKit/Firefox.
+
+
+### Public staging gate — PASS
+
+Final candidate `dae64831b468640c429f603d6400330c64f18667` published through the existing staging config. Cloudflare version **`a1860272-8875-44be-8f6d-ae0426863cab`** at `https://teleo-staging.your-subdomain.workers.dev`.
+
+`TELEO_V07_URL=https://teleo-staging.your-subdomain.workers.dev npx playwright test --config playwright.v07.config.ts --project=v07-chromium --project=v07-webkit --workers=1`: **22/22 PASS, 43.2s**. Both final branded QR PNGs and rendered images at all five sizes decode to the exact current staging invitation; independent Ukrainian phone locale, host English, explicit approval, copy, playback, logo click during playback, revoke, manual dismissal and expiry/retry are exercised over public HTTPS/WSS. No synthetic CF client header, DNS override or disabled TLS checks. Compact dialog and public remote screenshots inspected. Artifacts: `docs/screenshots/v07-staging-*.png`.
+
+The earlier artificial-error fixture issue is resolved. Production is still the previous working version at this checkpoint; proceeding only after this passed gate. Staging's first candidate version `8c959bfe-a30a-4323-950f-45b1a3461b13` was superseded by the final candidate above.

@@ -1,8 +1,24 @@
 {
   "name": "teleo-web",
+  "main": "services/production/worker.ts",
   "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [
+    { "pattern": "teleo.cc", "custom_domain": true },
+    { "pattern": "www.teleo.cc", "custom_domain": true },
+  ],
   "assets": {
     "directory": "./dist",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    "run_worker_first": true,
   },
+  "vars": { "APP_ORIGIN": "https://teleo.cc" },
+  "version_metadata": { "binding": "DEPLOYMENT" },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "Room" }],
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room"] }],
+  "observability": { "enabled": false },
 }

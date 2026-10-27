@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "tests/e2e",
+  testIgnore: "production.spec.ts",
   outputDir: "test-results/local",
   timeout: 30000,
   fullyParallel: false,

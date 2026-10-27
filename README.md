@@ -2,7 +2,7 @@
 
 Your words. Your pace.
 
-A private browser teleprompter in English, Ukrainian and Russian, plus native SwiftUI iPhone and macOS clients. This repository contains working local clients and two independent phone-control transports. **It is not a production release:** real CloudKit two-device sync, physical HID accessories, physical native iPhone→Mac LAN still require the owner/device verification described in [QA](docs/QA_REPORT.md).
+A private browser teleprompter in English, Ukrainian and Russian, plus native SwiftUI iPhone and macOS clients. This repository contains working local clients and two independent phone-control transports. **Native release gates remain:** real CloudKit two-device sync, physical HID accessories, physical native iPhone→Mac LAN still require the owner/device verification described in [QA](docs/QA_REPORT.md).
 
 ## Run the web client and real local relay
 
@@ -101,3 +101,9 @@ Studio's **bottom toolbar** and the remote's bottom text sheet share one accessi
 Pairing always generates a real QR from the current one-use invitation, with loading, rendering-error and regeneration states. Closing the dialog preserves the pending session; only authorized connection automatically dismisses it. Loopback (`127.0.0.1`, `localhost`, `::1`) is **same-Mac testing only**: on an iPhone, loopback refers to the iPhone itself. For a physical phone, open the same reachable HTTPS LAN or authorized HTTPS staging origin on both devices. A local source change does not update public staging or transfer local scripts.
 
 [Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). v0.6.1 source commit `3896ec2` was published to the existing staging Worker with owner approval on 2026-10-27; six public HTTPS/WSS checks passed in Chromium/WebKit. No remote push was performed. [Publication and physical iPhone checklist](docs/audits/TELEO_V061_STAGING_DEPLOYMENT.md).
+
+## Production web release
+
+The production target is the existing root `wrangler.jsonc` / `teleo-web`, with same-origin assets and relay, an isolated ROOMS namespace, canonical `https://teleo.cc`, and a www redirect. Production validation: `npm run production:check`. After critical checks, use a clean checkout and an interactive terminal for `npm run deploy:production`; the build clears external relay overrides. Runtime response headers identify the deployed commit and Worker version.
+
+[Launch status, checks, release tag and rollback](docs/releases/TELEO_PRODUCTION_LAUNCH.md). The historical split api.teleo.cc instructions are superseded by this same-origin production configuration.

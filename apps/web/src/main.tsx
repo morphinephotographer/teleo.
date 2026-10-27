@@ -13,6 +13,11 @@ import { Wordmark } from "./Wordmark";
 import { LanguageControl } from "./LanguageControl";
 import { useLocale } from "./useLocale";
 import {
+  hasWorkspaceHistory,
+  pristineWelcome,
+  type WelcomeSettings,
+} from "./welcome";
+import {
   Playback,
   createScript,
   exportBundle,
@@ -65,6 +70,19 @@ function download(name: string, text: string, type = "text/plain") {
 }
 function App() {
   const [locale, setLocale] = useLocale();
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+  const welcomeContext = useRef({
+    returning: hasWorkspaceHistory(),
+    recovered: false,
+  });
+  const [libraryLoaded, setLibraryLoaded] = useState(false);
+  const [welcomeSettings, setWelcomeSettings] = useState<WelcomeSettings>({
+    handled: true,
+    autoCreate: localGet("teleo.demo.auto") !== "false",
+    records: [],
+  });
+  const [restoringWelcome, setRestoringWelcome] = useState(false);
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
@@ -172,14 +190,25 @@ function App() {
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
   const sender = useRef<HostPreview | null>(null);
-  if (!sender.current) sender.current = new HostPreview(remote.current);
+  if (!sender.current)
+    sender.current = new HostPreview(remote.current, () =>
+      setNotice("unavailable"),
+    );
   useEffect(() => {
     const mq = matchMedia("(min-width: 1180px)");
     const resize = () => setWide(mq.matches);
     mq.addEventListener("change", resize);
     return () => mq.removeEventListener("change", resize);
   }, []);
-  useEffect(() => () => sender.current?.dispose(), []);
+  useEffect(
+    () => () => {
+      sender.current?.dispose();
+      clearTimeout(controlsTimer.current);
+      clearTimeout(inviteTimer.current);
+      remote.current.close();
+    },
+    [],
+  );
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
   const wordCount = useMemo(
     () => current?.body.trim().split(/\s+/u).filter(Boolean).length || 0,
@@ -282,12 +311,16 @@ function App() {
   useEffect(() => {
     void sender.current?.script(current);
   }, [current?.scriptId, current?.title, current?.body]);
+  const recoveryOwner = useRef(crypto.randomUUID());
   const writer = useRef<DraftWriter | null>(null);
   if (!writer.current)
     writer.current = new DraftWriter(
       (script) => storage.save(script, true),
       (id, script) =>
-        localSet("teleo.recovery." + id, script ? JSON.stringify(script) : ""),
+        localSet(
+          "teleo.recovery." + id + "." + recoveryOwner.current,
+          script ? JSON.stringify(script) : "",
+        ),
       setStatus,
     );
   const persist = (script: Script) => writer.current!.enqueue(script);
@@ -336,37 +369,74 @@ function App() {
   };
   useEffect(() => {
     Promise.all([storage.list(), storage.folders()])
-      .then(([list, fs]) => {
+      .then(async ([list, fs]) => {
+        let preferredRecovery: string | undefined;
+        // Snapshot keys: cleanup must not skip entries. One malformed draft must not block others.
+        const keys: string[] = [];
         try {
           for (let i = 0; i < localStorage.length; i++) {
             const key = localStorage.key(i);
-            if (key?.startsWith("teleo.recovery.")) {
-              const raw = localGet(key);
-              if (raw) {
-                const recovered = JSON.parse(raw) as Script;
-                const old = list.find((s) => s.scriptId === recovered.scriptId);
-                if (!old || old.updatedAt <= recovered.updatedAt) {
-                  const index = list.findIndex(
-                    (s) => s.scriptId === recovered.scriptId,
-                  );
-                  if (index >= 0) list[index] = recovered;
-                  else list.push(recovered);
-                  writer.current!.enqueue(recovered);
-                }
-              }
-            }
+            if (key?.startsWith("teleo.recovery.")) keys.push(key);
           }
         } catch {
-          /* Storage may be disabled. */
+          /* Storage can be unavailable. */
         }
-        setScripts(list.filter((s) => !s.deletedAt));
+        for (const key of keys) {
+          const raw = localGet(key);
+          if (!raw) continue;
+          try {
+            const draft = JSON.parse(raw) as Script;
+            const recovered = await storage.recover(
+              draft,
+              dictionaries[localeRef.current].recoveredCopy,
+            );
+            if (recovered.deletedAt) {
+              if (localGet(key) === raw) localSet(key, "");
+              continue;
+            }
+            const index = list.findIndex(
+              (s) => s.scriptId === recovered.scriptId,
+            );
+            if (index >= 0) list[index] = recovered;
+            else list.push(recovered);
+            if (draft.scriptId === localGet("teleo.selectedScript"))
+              preferredRecovery = recovered.scriptId;
+            welcomeContext.current.recovered = true;
+            if (localGet(key) === raw) localSet(key, "");
+          } catch {
+            setStatus("saveError");
+          }
+        }
+        const initialized = await storage.welcome(localeRef.current, {
+          automatic: ["/", "/studio"].includes(location.pathname),
+          ...welcomeContext.current,
+        });
+        for (const saved of initialized.scripts)
+          if (!list.some((item) => item.scriptId === saved.scriptId))
+            list.push(saved);
+        const visible = list.filter((item) => !item.deletedAt);
+        setScripts(visible);
+        setWelcomeSettings(initialized.settings);
         setFolders(fs);
-        if (list[0]) {
-          setSelected(list[0].scriptId);
+        const selection =
+          visible.find(
+            (item) =>
+              item.scriptId ===
+              (preferredRecovery || localGet("teleo.selectedScript")),
+          ) ||
+          initialized.selected ||
+          visible[0];
+        if (selection) {
+          setSelected(selection.scriptId);
           setPanel("editor");
         }
+        setLibraryLoaded(true);
       })
-      .catch(() => setStatus("saveError"));
+      .catch((error) => {
+        setStatus("saveError");
+        if (error instanceof Error && error.message === "databaseBlocked")
+          setNotice("databaseBlocked");
+      });
     const timer = setInterval(flush, 600);
     const visibility = () => {
       void flush();
@@ -417,6 +487,8 @@ function App() {
       setReading(false);
       endRemote();
       setRemoteStatus(null);
+      dismissTransient();
+      void flush();
       setRoute(location.pathname === "/" ? "/studio" : location.pathname);
     };
     window.addEventListener("popstate", pop);
@@ -799,6 +871,60 @@ function App() {
       endRemote();
     };
   }, [route]);
+  useEffect(() => {
+    if (libraryLoaded && selected) localSet("teleo.selectedScript", selected);
+  }, [libraryLoaded, selected]);
+  useEffect(() => {
+    if (!libraryLoaded || route !== "/studio") return;
+    void storage
+      .welcome(localeRef.current, {
+        automatic: true,
+        ...welcomeContext.current,
+      })
+      .then((result) => {
+        setWelcomeSettings(result.settings);
+        if (result.selected) {
+          const created = result.selected;
+          setScripts((previous) =>
+            previous.some((script) => script.scriptId === created.scriptId)
+              ? previous
+              : [created, ...previous],
+          );
+          setSelected(created.scriptId);
+          setPanel("editor");
+        }
+      })
+      .catch(() => setStatus("saveError"));
+  }, [libraryLoaded, route]);
+  async function restoreWelcome() {
+    if (restoringWelcome) return;
+    setRestoringWelcome(true);
+    mutation.current = "*";
+    try {
+      await writer.current!.requireSaved();
+      const result = await storage.welcome(localeRef.current, {
+        restore: true,
+      });
+      setWelcomeSettings(result.settings);
+      const restored = result.selected!;
+      setScripts((previous) =>
+        previous.some((script) => script.scriptId === restored.scriptId)
+          ? previous.map((script) =>
+              script.scriptId === restored.scriptId ? restored : script,
+            )
+          : [restored, ...previous],
+      );
+      setSelected(restored.scriptId);
+      setPanel("editor");
+      setReading(false);
+      setSettingsOpen(false);
+    } catch {
+      setStatus("saveError");
+    } finally {
+      mutation.current = null;
+      setRestoringWelcome(false);
+    }
+  }
   function endRemote() {
     setQRState("idle");
     clearTimeout(inviteTimer.current);
@@ -813,6 +939,14 @@ function App() {
     setPreviewPending(false);
     refreshPreview((x) => x + 1);
   }
+  function dismissTransient() {
+    setSettingsOpen(false);
+    setConnectionOpen(false);
+    setActionDialog(null);
+    setRevisions(null);
+    setImmersive(false);
+    setLearn(null);
+  }
   function navigate(path: string) {
     void flush();
     engine.suspend();
@@ -821,7 +955,7 @@ function App() {
     setRemoteStatus(null);
     setConnectionOpen(false);
     history.pushState({}, "", path);
-    setSettingsOpen(false);
+    dismissTransient();
     setRoute(path === "/" ? "/studio" : path);
   }
   async function add(s = createScript(t("untitled"))) {
@@ -844,7 +978,8 @@ function App() {
       speed: engine.speed,
       position: engine.position,
     });
-    if (document.fullscreenElement) void document.exitFullscreen();
+    if (document.fullscreenElement)
+      void document.exitFullscreen().catch(() => {});
   }
   function exitReader() {
     setLibraryOpen(libraryBeforeReading.current);
@@ -855,7 +990,8 @@ function App() {
     endRemote();
     setInvite("");
     setRemoteStatus(null);
-    if (document.fullscreenElement) void document.exitFullscreen();
+    if (document.fullscreenElement)
+      void document.exitFullscreen().catch(() => {});
   }
   async function startReader() {
     await flush();
@@ -999,143 +1135,180 @@ function App() {
       {t("allowPreview")}
     </label>
   );
-  const settingsContent = current ? (
+  const settingsContent = (
     <aside className="settings">
       <h2>{t("settings")}</h2>
-      <div className="settings-tab-content">
-        <h3>{t("appearance")}</h3>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={current.preferences.focusLine}
-            onChange={(e) => pref({ focusLine: e.target.checked })}
-          />
-          {t("focusLine")}
-        </label>
-        <label>
-          {t("focusPosition")}
-          <output>{focusPosition}%</output>
-          <input
-            aria-label={t("focusPosition")}
-            type="range"
-            min="20"
-            max="70"
-            value={focusPosition}
-            onChange={(e) => setFocusPosition(Number(e.target.value))}
-          />
-        </label>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={focusDimming}
-            onChange={(e) => setFocusDimming(e.target.checked)}
-          />
-          {t("focusDimming")}
-        </label>
-        <div className="setting-group">
-          <span>{t("appearance")}</span>
-          <Segmented
-            label={t("appearance")}
-            value={current.preferences.appearance}
-            onChange={(appearance) => pref({ appearance })}
-            options={[
-              { value: "dark", label: t("dark") },
-              { value: "light", label: t("light") },
-            ]}
-          />
-        </div>
-        <div className="setting-group">
-          <span>{t("interfaceTheme")}</span>
-          <Segmented
-            label={t("interfaceTheme")}
-            value={theme}
-            onChange={setTheme}
-            options={[
-              { value: "light", label: t("light") },
-              { value: "dark", label: t("dark") },
-              { value: "system", label: t("system") },
-            ]}
-          />
-        </div>
-      </div>
-      <details>
-        <summary>{t("physical")}</summary>
-        <p>{t("keyHelp")}</p>
-        <label className="check">
-          <input
-            type="checkbox"
-            checked={enabled}
-            onChange={(e) => setEnabled(e.target.checked)}
-          />
-          {t("enabled")}
-        </label>
-        <label>
-          {t("profile")}
-          <TeleoSelect
-            label={t("profile")}
-            value={profile}
-            onChange={setProfile}
-            options={(["standard", "twoButton", "custom"] as const).map(
-              (value) => ({ value, label: t(value) }),
-            )}
-          />
-        </label>
-        {profile === "twoButton" && (
-          <>
-            {button("learnA", () => setLearn("togglePlay"))}
-            {button("learnB", () => setLearn("preset"))}
-            <label>
-              {t("presets")}
+      {current && (
+        <>
+          <div className="settings-tab-content">
+            <h3>{t("appearance")}</h3>
+            <label className="check">
               <input
-                value={presets}
-                onChange={(e) => setPresets(e.target.value)}
+                type="checkbox"
+                checked={current.preferences.focusLine}
+                onChange={(e) => pref({ focusLine: e.target.checked })}
+              />
+              {t("focusLine")}
+            </label>
+            <label>
+              {t("focusPosition")}
+              <output>{focusPosition}%</output>
+              <input
+                aria-label={t("focusPosition")}
+                type="range"
+                min="20"
+                max="70"
+                value={focusPosition}
+                onChange={(e) => setFocusPosition(Number(e.target.value))}
               />
             </label>
-          </>
-        )}
-        {profile === "custom" && (
-          <>
-            <TeleoSelect
-              label={t("custom")}
-              value={learnAction}
-              onChange={(v) => setLearnAction(v as Action)}
-              options={actions
-                .filter((a) => a !== "setSpeed")
-                .map((value) => ({ value, label: t(value as Key) }))}
-            />
-            {button("learn", () => setLearn(learnAction))}
-          </>
-        )}
-        {learn && <p role="status">{t("learning")}</p>}
-        {button("test", () => {
-          setTesting(true);
-          setKeyEvent("");
-        })}
-        <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
-        {Object.entries(profile === "standard" ? standardKeys : mapping).map(
-          ([key, a]) => (
-            <p key={key}>
-              <kbd>{key}</kbd> → {t(a as Key)}
-            </p>
-          ),
-        )}
-        {button("reset", () => setMapping({}))}
-      </details>
-      {remoteStatus === "connected" ? (
-        <>
-          {previewConsent}
-          {button("revoke", () => {
-            endRemote();
-            setRemoteStatus("disconnected");
-            setApproval(false);
-            setInvite("");
-          })}
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={focusDimming}
+                onChange={(e) => setFocusDimming(e.target.checked)}
+              />
+              {t("focusDimming")}
+            </label>
+            <div className="setting-group">
+              <span>{t("appearance")}</span>
+              <Segmented
+                label={t("appearance")}
+                value={current.preferences.appearance}
+                onChange={(appearance) => pref({ appearance })}
+                options={[
+                  { value: "dark", label: t("dark") },
+                  { value: "light", label: t("light") },
+                ]}
+              />
+            </div>
+            <div className="setting-group">
+              <span>{t("interfaceTheme")}</span>
+              <Segmented
+                label={t("interfaceTheme")}
+                value={theme}
+                onChange={setTheme}
+                options={[
+                  { value: "light", label: t("light") },
+                  { value: "dark", label: t("dark") },
+                  { value: "system", label: t("system") },
+                ]}
+              />
+            </div>
+          </div>
+          <details>
+            <summary>{t("physical")}</summary>
+            <p>{t("keyHelp")}</p>
+            <label className="check">
+              <input
+                type="checkbox"
+                checked={enabled}
+                onChange={(e) => setEnabled(e.target.checked)}
+              />
+              {t("enabled")}
+            </label>
+            <label>
+              {t("profile")}
+              <TeleoSelect
+                label={t("profile")}
+                value={profile}
+                onChange={setProfile}
+                options={(["standard", "twoButton", "custom"] as const).map(
+                  (value) => ({ value, label: t(value) }),
+                )}
+              />
+            </label>
+            {profile === "twoButton" && (
+              <>
+                {button("learnA", () => setLearn("togglePlay"))}
+                {button("learnB", () => setLearn("preset"))}
+                <label>
+                  {t("presets")}
+                  <input
+                    value={presets}
+                    onChange={(e) => setPresets(e.target.value)}
+                  />
+                </label>
+              </>
+            )}
+            {profile === "custom" && (
+              <>
+                <TeleoSelect
+                  label={t("custom")}
+                  value={learnAction}
+                  onChange={(v) => setLearnAction(v as Action)}
+                  options={actions
+                    .filter((a) => a !== "setSpeed")
+                    .map((value) => ({ value, label: t(value as Key) }))}
+                />
+                {button("learn", () => setLearn(learnAction))}
+              </>
+            )}
+            {learn && <p role="status">{t("learning")}</p>}
+            {button("test", () => {
+              setTesting(true);
+              setKeyEvent("");
+            })}
+            <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
+            {Object.entries(
+              profile === "standard" ? standardKeys : mapping,
+            ).map(([key, a]) => (
+              <p key={key}>
+                <kbd>{key}</kbd> → {t(a as Key)}
+              </p>
+            ))}
+            {button("reset", () => setMapping({}))}
+          </details>
+          {remoteStatus === "connected" ? (
+            <>
+              {previewConsent}
+              {button("revoke", () => {
+                endRemote();
+                setRemoteStatus("disconnected");
+                setApproval(false);
+                setInvite("");
+              })}
+            </>
+          ) : (
+            button("connect", () => void connect())
+          )}
         </>
-      ) : (
-        button("connect", () => void connect())
       )}
+      <details>
+        <summary>{t("gettingStarted")}</summary>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={welcomeSettings.autoCreate}
+            disabled={!libraryLoaded}
+            onChange={(event) => {
+              const previous = welcomeSettings;
+              const enabled = event.target.checked;
+              setWelcomeSettings({ ...previous, autoCreate: enabled });
+              localSet("teleo.demo.auto", String(enabled));
+              void storage.autoWelcome(enabled).catch(() => {
+                setWelcomeSettings(previous);
+                localSet("teleo.demo.auto", String(previous.autoCreate));
+                setStatus("saveError");
+              });
+            }}
+          />
+          {t("autoDemo")}
+        </label>
+        <p>{t("autoDemoHelp")}</p>
+        <button
+          disabled={!libraryLoaded || restoringWelcome}
+          onClick={() => void restoreWelcome()}
+        >
+          {t(
+            pristineWelcome(scripts, welcomeSettings)
+              ? "openDemo"
+              : "restoreDemo",
+          )}
+        </button>
+      </details>
     </aside>
-  ) : null;
+  );
 
   useEffect(() => {
     const fullscreenChanged = () => {
@@ -1147,7 +1320,7 @@ function App() {
   }, []);
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
-      void document.exitFullscreen();
+      void document.exitFullscreen().catch(() => {});
       setImmersive(false);
       return;
     }
@@ -1342,10 +1515,13 @@ function App() {
                 <IconButton
                   name="settings"
                   label={t("settings")}
-                  disabled={!current}
-                  active={wide && !reading ? !settingsCollapsed : settingsOpen}
+                  active={
+                    wide && current && !reading
+                      ? !settingsCollapsed
+                      : settingsOpen
+                  }
                   onClick={() =>
-                    wide && !reading
+                    wide && current && !reading
                       ? setSettingsCollapsed((v) => !v)
                       : setSettingsOpen(true)
                   }
@@ -1496,7 +1672,11 @@ function App() {
                   <div className="editor-top">
                     <span
                       role="status"
-                      className={status === "saveError" ? "error" : "muted"}
+                      className={
+                        status === "saveError" || status === "saveConflict"
+                          ? "error"
+                          : "muted"
+                      }
                     >
                       {t(status)}
                     </span>
@@ -1938,7 +2118,7 @@ function App() {
           />
         )}
         <Sheet
-          open={settingsOpen && !intro && (!wide || reading)}
+          open={settingsOpen && !intro && (!wide || reading || !current)}
           title={t("settings")}
           closeLabel={t("close")}
           onClose={() => {
@@ -1947,7 +2127,7 @@ function App() {
             setTesting(false);
           }}
         >
-          {(!wide || reading) && settingsContent}
+          {(!wide || reading || !current) && settingsContent}
         </Sheet>
       </div>
       {intro && <Intro skipLabel={t("skip")} onDone={finishIntro} />}

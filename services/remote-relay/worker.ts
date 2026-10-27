@@ -363,9 +363,14 @@ export class Room extends DurableObject<Env> {
             ws.send(JSON.stringify({ type: "unconfirmed", id: m.id }));
             return;
           }
-          if (d.seen.includes(m.id)) return;
-          d.seen.push(m.id);
-          if (d.seen.length > 1000) throw Error();
+          // Keep legacy IDs for deployed rooms; new IDs are separate durable keys.
+          // A growing JSON room value both capped valid sessions and approached KV value limits.
+          if (
+            d.seen.includes(m.id) ||
+            (await this.ctx.storage.get("seen:" + m.id))
+          )
+            return;
+          await this.ctx.storage.put("seen:" + m.id, true);
           d.pending.push(m.id);
           if (d.pending.length > 50) throw Error();
           await this.ctx.storage.put("room", d);
@@ -380,7 +385,8 @@ export class Room extends DurableObject<Env> {
           a.role === "host" &&
           m.type === "ack" &&
           typeof m.id === "string" &&
-          d.seen.includes(m.id) &&
+          (d.seen.includes(m.id) ||
+            (await this.ctx.storage.get("seen:" + m.id))) &&
           validState(m.state)
         ) {
           if (!d.pending.includes(m.id)) return; // Late ACK from before a disconnect is not fresh state.

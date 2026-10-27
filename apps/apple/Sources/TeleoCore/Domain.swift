@@ -103,6 +103,7 @@ public struct Playback: Sendable {
     return true
   }
   public mutating func tick(_ now: Double) {
+    position = max(0, min(maximum, position))
     let delta = last.map { max(0, min(0.05, now - $0)) } ?? 0
     last = now
     guard playing else { return }
@@ -154,7 +155,7 @@ public struct SessionGate: Sendable {
   public init(expires: Double) { self.expires = expires }
   public mutating func accept(_ request: ControlRequest, now: Double) -> Bool {
     guard approved, !revoked, now < expires, request.session == id, request.command.valid,
-      seen.count < 1000, !seen.contains(request.id)
+      seen.count < 72_000, !seen.contains(request.id)
     else { return false }
     seen.insert(request.id)
     return true

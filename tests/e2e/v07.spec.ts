@@ -484,3 +484,11 @@ test("QR expiry and server error expose compact recovery", async ({
   await pair.getByRole("button", { name: t.reconnect, exact: true }).click();
   await expect(pair.locator("img")).toBeVisible();
 });
+
+// Legacy scenarios start with their intended empty workspace; onboarding has its own fresh-install suite.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("teleo.demo.auto"))
+      localStorage.setItem("teleo.demo.auto", "false");
+  });
+});

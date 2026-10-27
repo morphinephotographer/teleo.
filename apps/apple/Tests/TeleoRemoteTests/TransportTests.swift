@@ -37,6 +37,24 @@ final class TransportTests: XCTestCase {
     try await wait { phone.status.contains("Disconnected") }
     XCTAssertTrue(playback.playing)
   }
+  @MainActor func testReplacementSessionSurvivesOldConnectionCallbacks() async throws {
+    let host = NativeRemote(), phone = NativeRemote()
+    defer { host.stop(); phone.stop() }
+    host.host(advertise: false)
+    for _ in 0..<3 {
+      try await wait { host.listenerPort != nil }
+      let invitation = try JSONDecoder().decode(LANInvitation.self, from: XCTUnwrap(Data(base64Encoded: host.invitation)))
+      phone.connect(invitation, endpoint: .hostPort(host: "::1", port: try XCTUnwrap(host.listenerPort)))
+      try await wait { host.approval }
+      host.approve()
+      try await wait { phone.status == "Connected" }
+      phone.stop()
+      // Cancelled receive/state callbacks run later on MainActor, after the new listener starts.
+      host.host(advertise: false)
+      try await Task.sleep(for: .milliseconds(150))
+      XCTAssertFalse(host.invitation.isEmpty)
+    }
+  }
   @MainActor func testWrongPSKCannotEnroll() async throws {
     let host = NativeRemote()
     let phone = NativeRemote()

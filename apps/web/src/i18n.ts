@@ -1,4 +1,13 @@
 export const en = {
+  databaseBlocked:
+    "Close older Teleo. tabs, then reload this page to finish updating local storage.",
+  gettingStarted: "Getting started",
+  autoDemo: "Automatically add a demo script",
+  autoDemoHelp:
+    "Create a welcome script when starting with a new, empty library.",
+  restoreDemo: "Restore demo script",
+  openDemo: "Open Welcome",
+
   pairTitle: "Connect your phone",
   pairHelper: "Scan this QR code with your iPhone.",
   pairWaiting: "Waiting for connection…",
@@ -108,6 +117,9 @@ export const en = {
   saved: "Saved on this device",
   saving: "Saving…",
   saveError: "Cannot save locally. Export your text now; keep this page open.",
+  saveConflict:
+    "Another tab changed this script. Export your draft, then reload to recover it as a separate copy.",
+  recoveredCopy: "Recovered draft",
   empty: "Choose a script or create your first one.",
   read: "Read",
   exit: "Exit reader",
@@ -216,6 +228,14 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  databaseBlocked:
+    "Закрийте старі вкладки Teleo. та перезавантажте цю сторінку, щоб завершити оновлення локального сховища.",
+  gettingStarted: "Початок роботи",
+  autoDemo: "Автоматично додавати приклад",
+  autoDemoHelp: "Створювати вступний сценарій для нової порожньої бібліотеки.",
+  restoreDemo: "Відновити приклад",
+  openDemo: "Відкрити Welcome",
+
   pairTitle: "Підключіть телефон",
   pairHelper: "Відскануйте QR-код камерою iPhone.",
   pairWaiting: "Очікування підключення…",
@@ -324,6 +344,9 @@ export const uk: Record<Key, string> = {
   saved: "Збережено на цьому пристрої",
   saving: "Збереження…",
   saveError: "Не вдалося зберегти. Експортуйте текст і не закривайте сторінку.",
+  saveConflict:
+    "Інша вкладка змінила цей сценарій. Експортуйте чернетку, потім перезавантажте сторінку, щоб відновити її як окрему копію.",
+  recoveredCopy: "Відновлена чернетка",
   empty: "Виберіть текст або створіть перший.",
   read: "Читати",
   exit: "Вийти з читання",
@@ -431,6 +454,15 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  databaseBlocked:
+    "Закройте старые вкладки Teleo. и перезагрузите эту страницу, чтобы завершить обновление локального хранилища.",
+  gettingStarted: "Начало работы",
+  autoDemo: "Автоматически добавлять пример",
+  autoDemoHelp:
+    "Создавать приветственный сценарий для новой пустой библиотеки.",
+  restoreDemo: "Восстановить пример",
+  openDemo: "Открыть Welcome",
+
   pairTitle: "Подключите телефон",
   pairHelper: "Отсканируйте QR-код камерой iPhone.",
   pairWaiting: "Ожидание подключения…",
@@ -540,6 +572,9 @@ export const ru: Record<Key, string> = {
   saving: "Сохранение…",
   saveError:
     "Не удалось сохранить. Экспортируйте текст и не закрывайте страницу.",
+  saveConflict:
+    "Другая вкладка изменила этот сценарий. Экспортируйте черновик, затем перезагрузите страницу, чтобы восстановить его отдельной копией.",
+  recoveredCopy: "Восстановленный черновик",
   empty: "Выберите текст или создайте первый.",
   read: "Читать",
   exit: "Выйти из чтения",

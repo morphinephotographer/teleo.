@@ -124,6 +124,31 @@ afterAll(async () => {
   if (persistence) await rm(persistence, { recursive: true, force: true });
 });
 describe("real Durable Object runtime", () => {
+  it("accepts over 1000 commands without forgetting earlier replay IDs", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const first = crypto.randomUUID();
+    for (let i = 0; i < 1005; i++) {
+      const id = i === 0 ? first : crypto.randomUUID();
+      phone.send({ type: "command", id, command: { action: "pause" } });
+      expect((await host.next("command")).id).toBe(id);
+      host.send({
+        type: "ack",
+        id,
+        state: { playing: false, speed: 1, position: i },
+      });
+      expect((await phone.next("ack")).id).toBe(id);
+      await new Promise((r) => setTimeout(r, 55));
+    }
+    phone.send({ type: "command", id: first, command: { action: "play" } });
+    phone.send({ type: "ping" });
+    await phone.next("pong");
+    expect(host.messages.filter((m) => m.type === "command")).toEqual([]);
+    expect(phone.closed).toBe(false);
+    host.send({ type: "revoke" });
+  }, 100000);
+
   it("rejects missing/foreign Origin and wrong routes", async () => {
     expect(
       (await mf.dispatchFetch("http://local/api/rooms", { method: "POST" }))

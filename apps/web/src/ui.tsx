@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "copy"
   | "alignLeft"
   | "alignCenter"
   | "alignRight"
@@ -31,6 +32,12 @@ export type IconName =
   | "next"
   | "text";
 const paths: Record<IconName, ReactNode> = {
+  copy: (
+    <>
+      <rect x="8" y="8" width="12" height="13" rx="2" />
+      <path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" />
+    </>
+  ),
   alignLeft: <path d="M4 5h16M4 10h10M4 15h16M4 20h10" />,
   alignCenter: <path d="M4 5h16M7 10h10M4 15h16M7 20h10" />,
   alignRight: <path d="M4 5h16M10 10h10M4 15h16M10 20h10" />,
@@ -222,10 +229,12 @@ export function Sheet({
   children,
   className = "",
   backLabel,
+  headerControl,
 }: {
   id?: string;
   open: boolean;
   backLabel?: string;
+  headerControl?: React.ReactNode;
   title: string;
   closeLabel: string;
   onClose: () => void;
@@ -282,6 +291,9 @@ export function Sheet({
           {!backLabel && <span className="eyebrow">teleo.</span>}
           <h2 id={headingId}>{title}</h2>
         </div>
+        {headerControl && (
+          <div className="sheet-header-control">{headerControl}</div>
+        )}
         {!backLabel && (
           <IconButton name="close" label={closeLabel} onClick={onClose} />
         )}

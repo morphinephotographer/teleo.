@@ -109,3 +109,9 @@ Open [teleo.cc](https://teleo.cc). Web release `v1.0.0`, source `1c3d9f3`, is pu
 The production target is the existing root `wrangler.jsonc` / `teleo-web`, with same-origin assets and relay, an isolated ROOMS namespace, canonical `https://teleo.cc`, and a www redirect. Production validation: `npm run production:check`. After critical checks, use a clean checkout and an interactive terminal for `npm run deploy:production`; the build clears external relay overrides. Runtime response headers identify the deployed commit and Worker version.
 
 [Launch status, checks, release tag and rollback](docs/releases/TELEO_PRODUCTION_LAUNCH.md). The historical split api.teleo.cc instructions are superseded by this same-origin production configuration.
+
+## UI v0.7 / release 1.0.1
+
+The host and iPhone remote share an inert `teleo.` wordmark and one 44px circular EN / UA / RU language control. A saved manual device preference wins over browser languages; URL language hints never reset it. The compact pairing dialog generates a real locally composited, high-correction QR with a small centered brand. Approval remains explicit, automatic dismissal waits for confirmed pairing, and preview permission/revoke remain in Connection settings.
+
+`npx playwright test --config playwright.v07.config.ts` verifies Chromium, WebKit and Firefox, five viewport sizes, locale precedence, keyboard handling, QR decoding at rendered sizes, pending approval/expiry, copy, recovery and real independent controller synchronization. Public runs use `TELEO_V07_URL`; respect the existing 10 rooms/minute/IP quota and use bounded cohorts. No synthetic Cloudflare client-IP headers are sent to public Workers. [v0.7 audit and release evidence](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).

@@ -56,6 +56,7 @@ test("intro resolves, dismisses automatically and never replays during navigatio
 test("intro skip works by keyboard and restores application focus", async ({
   page,
 }) => {
+  await page.addInitScript(() => localStorage.setItem("teleo.locale", "uk"));
   await page.goto("/studio?lang=uk");
   const skip = page.getByRole("button", {
     name: dictionaries.uk.skip,
@@ -64,7 +65,7 @@ test("intro skip works by keyboard and restores application focus", async ({
   await expect(skip).toBeFocused();
   await page.keyboard.press("Enter");
   await expect(page.locator(".brand-intro")).toHaveCount(0);
-  await expect(page.locator("header .brand")).toBeFocused();
+  await expect(page.locator("header button:enabled").first()).toBeFocused();
   await page
     .getByRole("button", { name: dictionaries.uk.newScript, exact: true })
     .first()
@@ -317,4 +318,14 @@ test("viewport fullscreen fallback, collapsible library and simulated keyboard r
     .click();
   await expect(page.locator(".reader")).toHaveCount(0);
   await expect(page.locator(".library")).toBeVisible();
+});
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
 });

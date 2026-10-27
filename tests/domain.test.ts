@@ -170,6 +170,9 @@ describe("localization", () => {
     expect(detectLocale(["uk-UA", "en-US"])).toBe("uk");
     expect(detectLocale(["ru-RU"])).toBe("ru");
     expect(detectLocale(["fr-FR"])).toBe("en");
+    expect(detectLocale(["fr-FR", "RU-ua"])).toBe("ru");
+    expect(detectLocale(["en-GB"])).toBe("en");
+    expect(detectLocale(["uk-UA"], "constructor")).toBe("uk");
     expect(detectLocale(["uk"], "ru")).toBe("ru");
   });
 });

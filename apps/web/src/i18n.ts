@@ -1,4 +1,11 @@
 export const en = {
+  pairTitle: "Connect your phone",
+  pairHelper: "Scan this QR code with your iPhone.",
+  pairWaiting: "Waiting for connection…",
+  pairApproval: "Approval required",
+  pairLocal:
+    "This QR works only on this Mac. Use a reachable HTTPS address for your phone.",
+
   alignLeft: "Align left",
   alignCenter: "Align center",
   alignRight: "Align right",
@@ -209,6 +216,13 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  pairTitle: "Підключіть телефон",
+  pairHelper: "Відскануйте QR-код камерою iPhone.",
+  pairWaiting: "Очікування підключення…",
+  pairApproval: "Потрібне підтвердження",
+  pairLocal:
+    "Цей QR працює лише на цьому Mac. Для телефона потрібна доступна HTTPS-адреса.",
+
   alignLeft: "Вирівняти ліворуч",
   alignCenter: "Вирівняти по центру",
   alignRight: "Вирівняти праворуч",
@@ -417,6 +431,13 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  pairTitle: "Подключите телефон",
+  pairHelper: "Отсканируйте QR-код камерой iPhone.",
+  pairWaiting: "Ожидание подключения…",
+  pairApproval: "Требуется подтверждение",
+  pairLocal:
+    "Этот QR работает только на этом Mac. Для телефона нужен доступный HTTPS-адрес.",
+
   alignLeft: "Выровнять слева",
   alignCenter: "Выровнять по центру",
   alignRight: "Выровнять справа",
@@ -632,10 +653,11 @@ export function detectLocale(
   languages: readonly string[],
   manual?: string | null,
 ): Locale {
-  if (manual && manual in dictionaries) return manual as Locale;
+  if (manual === "en" || manual === "uk" || manual === "ru")
+    return manual as Locale;
   for (const l of languages) {
     const code = l.toLowerCase().split("-")[0];
-    if (code in dictionaries) return code as Locale;
+    if (code === "en" || code === "uk" || code === "ru") return code as Locale;
   }
   return "en";
 }

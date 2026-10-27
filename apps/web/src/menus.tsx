@@ -12,6 +12,7 @@ export function Popover({
   trigger,
   selected = false,
   className = "",
+  showChevron = true,
 }: {
   label: string;
   children: ReactNode;
@@ -19,6 +20,7 @@ export function Popover({
   trigger?: ReactNode;
   selected?: boolean;
   className?: string;
+  showChevron?: boolean;
 }) {
   const id = useId();
   const anchor = useRef<HTMLButtonElement>(null),
@@ -121,7 +123,7 @@ export function Popover({
         }}
       >
         {trigger || (kind === "menu" ? label : label)}
-        {kind === "listbox" && (
+        {kind === "listbox" && showChevron && (
           <span className="picker-chevron" aria-hidden="true">
             <Icon name="chevron" />
           </span>

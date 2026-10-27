@@ -81,7 +81,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
       .click();
-    const pair = page.locator(".pairing-sheet");
+    const pair = page.getByRole("dialog", {
+      name: t.remoteConnection,
+      exact: true,
+    });
     const link = pair.getByRole("link", { name: t.invite, exact: true });
     await expect(pair.locator("img")).toBeVisible();
     await expect
@@ -126,6 +129,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     // Closing must preserve the same pending invitation.
     await pair.getByRole("button", { name: t.close, exact: true }).click();
     const context = await browser.newContext({
+      locale,
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
     });
@@ -338,7 +342,10 @@ test("QR image failure exposes error and renewal without losing the copy link", 
     .locator("header")
     .getByRole("button", { name: t.remoteConnection, exact: true })
     .click();
-  const pair = page.locator(".pairing-sheet");
+  const pair = page.getByRole("dialog", {
+    name: t.remoteConnection,
+    exact: true,
+  });
   await expect(pair.locator("img")).toBeVisible();
   const link = pair.getByRole("link", { name: t.invite, exact: true });
   const old = await link.getAttribute("href");
@@ -348,4 +355,14 @@ test("QR image failure exposes error and renewal without losing the copy link", 
   await pair.getByRole("button", { name: t.renewInvite, exact: true }).click();
   await expect(pair.locator("img")).toBeVisible();
   await expect(link).not.toHaveAttribute("href", old!);
+});
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
 });

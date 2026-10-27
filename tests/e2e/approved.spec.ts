@@ -92,7 +92,7 @@ for (const locale of ["en", "uk", "ru"] as const)
     const invite = await pair
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
-    await expect(pair.getByText(t.localPairingOnly)).toBeVisible();
+    await expect(pair.getByText(t.pairLocal)).toBeVisible();
     await expect(pair.locator("img")).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/approved-${info.project.name}-${locale}-pairing.png`,
@@ -400,4 +400,14 @@ test("queued typography and alignment gestures are cancelled when the host switc
   await phone.clock.runFor(500);
   await expect(page.locator(".reader article")).toHaveCSS("text-align", "left");
   await context.close();
+});
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
 });

@@ -53,7 +53,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
     await expect(pairing.locator("img")).toBeVisible();
-    await expect(pairing.getByText(t.localPairingOnly)).toBeVisible();
+    await expect(pairing.getByText(t.pairLocal)).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/v06-${info.project.name}-${locale}-qr.png`,
       animations: "disabled",
@@ -433,9 +433,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await trigger.click();
     const id = await trigger.getAttribute("aria-controls");
     await expect(page.locator(`[id="${id}"]`)).toBeVisible();
+    await expect(trigger.locator(".picker-chevron")).toHaveCount(0);
     const center = await trigger.evaluate((el) => {
       const a = el.getBoundingClientRect(),
-        b = el.querySelector(".picker-chevron")!.getBoundingClientRect();
+        b = el.querySelector("span")!.getBoundingClientRect();
       return Math.abs(a.y + a.height / 2 - b.y - b.height / 2);
     });
     expect(center).toBeLessThan(1);
@@ -725,4 +726,14 @@ test("JSON import/export validation, centered import and folder associations sur
   await expect(
     page.getByRole("textbox", { name: t.body, exact: true }),
   ).toHaveValue("Imported text.\n\nKeep this association safe.");
+});
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
 });

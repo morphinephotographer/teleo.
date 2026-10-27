@@ -118,14 +118,16 @@ The host and iPhone remote share an inert `teleo.` wordmark and one 44px circula
 
 UI v0.7 was released on [teleo.cc](https://teleo.cc/studio) as release `v1.0.1`, deployed commit `186c4e7d826b73d64e62810ca70d635311354dcd`. Public post-deploy validation passed 36/36 scenarios after 22/22 staging checks. Full evidence, screenshots, limitations and rollback version are in the [v0.7 audit](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
 
-## Welcome onboarding (local, unreleased v0.8)
+## Welcome onboarding (included in v1.0.2)
 
 A genuine new, empty Studio library receives one localized **Welcome** script. Returning v1 libraries, existing/recovered/deleted scripts and handled onboarding suppress automatic insertion. Settings → Getting started preserves a persistent opt-out and explicit restore/open action; edits and saved script language remain user-controlled. [Conditions, migration, behavior, screenshots and test results](docs/features/TELEO_DEMO_ONBOARDING.md).
 
 `npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature is included in the v1.0.2 audit release. Current deployment identity and public verification are recorded in the audit verification report.
 
 
-## v1.0.2 — Welcome and reliability audit
+## v1.0.2 — Welcome and reliability audit — LIVE
+
+Published on [teleo.cc](https://teleo.cc/studio), source `ed6df817f6f53dae6ad266ee62374357a61239ef`, release tag `v1.0.2`. Public validation: **50/50 staging** and **62/62 production** scenarios. The production Worker version is `29f1cd38-6f4e-4374-8993-c3b7bfab0c20`.
 
 The audit release preserves the approved interface and adds conflict-safe script saves/recovery, long-session replay protection, paused-position clamping, preview error handling, navigation cleanup and native transport lifecycle guards. Welcome retains first-install-only creation, all three languages, persistent opt-out and explicit restoration. User content is never translated on a UI-language change.
 

@@ -100,4 +100,4 @@ Studio's **bottom toolbar** and the remote's bottom text sheet share one accessi
 
 Pairing always generates a real QR from the current one-use invitation, with loading, rendering-error and regeneration states. Closing the dialog preserves the pending session; only authorized connection automatically dismisses it. Loopback (`127.0.0.1`, `localhost`, `::1`) is **same-Mac testing only**: on an iPhone, loopback refers to the iPhone itself. For a physical phone, open the same reachable HTTPS LAN or authorized HTTPS staging origin on both devices. A local source change does not update public staging or transfer local scripts.
 
-[Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). No v0.6.1 deployment or remote push has been performed.
+[Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). v0.6.1 source commit `3896ec2` was published to the existing staging Worker with owner approval on 2026-10-27; six public HTTPS/WSS checks passed in Chromium/WebKit. No remote push was performed. [Publication and physical iPhone checklist](docs/audits/TELEO_V061_STAGING_DEPLOYMENT.md).

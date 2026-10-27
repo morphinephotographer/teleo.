@@ -46,5 +46,29 @@
     }
   },
   "initialFailure": "One broad-suite scenario was interrupted by a Vite main.tsx HMR reload at 9s, confirmed in both page traces; its isolated unchanged rerun passed.",
-  "build": "typecheck, lint, build:staging and Wrangler deploy --dry-run passed. No publication."
+  "build": "typecheck, lint, build:staging and Wrangler deploy --dry-run passed. No publication.",
+  "publicStaging": {
+    "chromium": {
+      "startTime": "2026-10-27T11:23:59.349Z",
+      "duration": 23372.291,
+      "expected": 5,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    },
+    "webkit": {
+      "startTime": "2026-10-27T11:24:23.375Z",
+      "duration": 8404.765000000001,
+      "expected": 1,
+      "skipped": 0,
+      "unexpected": 0,
+      "flaky": 0
+    }
+  },
+  "publication": {
+    "sourceCommit": "3896ec2f6301a5e1956986beacf7f69707ce90f8",
+    "workerVersion": "0deb1e24-1e6d-49c1-a7dd-9fd28987f422",
+    "url": "https://teleo-staging.your-subdomain.workers.dev",
+    "ownerApproved": true
+  }
 }

@@ -5,6 +5,9 @@ import { dictionaries } from "../../apps/web/src/i18n";
 
 if (process.env.TELEO_V061_URL)
   test.use({ baseURL: process.env.TELEO_V061_URL });
+const local = ["127.0.0.1", "localhost", "[::1]"].includes(
+  new URL(process.env.TELEO_V061_URL || "http://127.0.0.1:5173").hostname,
+);
 
 for (const locale of ["en", "uk", "ru"] as const) {
   test(`${locale}: bottom alignment synchronizes without moving playback; real QR lifecycle`, async ({
@@ -13,7 +16,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
   }, info) => {
     test.setTimeout(60000);
     const t = dictionaries[locale];
-    await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
+    if (local)
+      await page.setExtraHTTPHeaders({
+        "CF-Connecting-IP": crypto.randomUUID(),
+      });
     await page.addInitScript(() =>
       sessionStorage.setItem("teleo.intro.seen.v1", "true"),
     );
@@ -318,7 +324,8 @@ test("QR image failure exposes error and renewal without losing the copy link", 
   page,
 }) => {
   const t = dictionaries.en;
-  await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
+  if (local)
+    await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
   await page.addInitScript(() =>
     sessionStorage.setItem("teleo.intro.seen.v1", "true"),
   );

@@ -21,6 +21,7 @@
     "playwright.config.ts",
     "playwright.staging.config.ts",
     "playwright.redesign-staging.config.ts",
-    "playwright.v031-staging.config.ts"
+    "playwright.v031-staging.config.ts",
+    "playwright.audit.config.ts"
   ]
 }

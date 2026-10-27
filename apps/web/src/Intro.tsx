@@ -23,6 +23,7 @@ export function Intro({
 }) {
   const skip = useRef<HTMLButtonElement>(null);
   const [leaving, setLeaving] = useState(false);
+  const [resolved, setResolved] = useState(false);
   useEffect(() => {
     try {
       sessionStorage.setItem(sessionKey, "true");
@@ -30,6 +31,8 @@ export function Intro({
       /* One mount still plays only once. */
     }
     skip.current?.focus();
+    // The final brand must not depend on six filtered/composited animation layers.
+    const resolve = setTimeout(() => setResolved(true), 2100);
     const fade = setTimeout(() => setLeaving(true), 3150);
     const done = setTimeout(onDone, 3450);
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
@@ -39,6 +42,7 @@ export function Intro({
     motion.addEventListener("change", change);
     return () => {
       clearTimeout(fade);
+      clearTimeout(resolve);
       clearTimeout(done);
       motion.removeEventListener("change", change);
     };
@@ -69,21 +73,29 @@ export function Intro({
           </span>
         ))}
       </div>
-      <div className="intro-wordmark" aria-hidden="true">
-        {[..."teleo."].map((letter, i) => (
-          <span
-            key={i}
-            style={
-              {
-                "--from-x": `${[-32, 26, -18, 31, -26, 19][i]}vw`,
-                "--from-y": `${[-24, -31, 24, 27, -9, 16][i]}vh`,
-                "--delay": `${i * 65}ms`,
-              } as React.CSSProperties
-            }
-          >
-            {letter}
-          </span>
-        ))}
+      <div
+        className={"intro-wordmark" + (resolved ? " resolved" : "")}
+        aria-hidden="true"
+      >
+        <span className="intro-static">teleo.</span>
+        {!resolved && (
+          <div className="intro-assembly">
+            {[..."teleo."].map((letter, i) => (
+              <span
+                key={i}
+                style={
+                  {
+                    "--from-x": `${[-32, 26, -18, 31, -26, 19][i]}vw`,
+                    "--from-y": `${[-24, -31, 24, 27, -9, 16][i]}vh`,
+                    "--delay": `${i * 65}ms`,
+                  } as React.CSSProperties
+                }
+              >
+                {letter}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
       <button ref={skip} className="intro-skip" onClick={onDone}>
         {skipLabel}

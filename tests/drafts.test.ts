@@ -93,3 +93,18 @@ it("a latest failed draft stays recoverable and can be retried", async () => {
   expect(status).toHaveBeenLastCalledWith("saved");
   expect(save).toHaveBeenCalledTimes(2);
 });
+
+it("destructive operations require successful durable writes, while recovery stays retryable", async () => {
+  const save = vi
+    .fn()
+    .mockRejectedValueOnce(Error("quota"))
+    .mockResolvedValue(undefined);
+  const recovery = vi.fn();
+  const writer = new DraftWriter(save, recovery, vi.fn());
+  const script = createScript("safe", "unsaved edits");
+  writer.enqueue(script);
+  await expect(writer.requireSaved()).rejects.toThrow("saveError");
+  expect(recovery).not.toHaveBeenCalledWith(script.scriptId, null);
+  await expect(writer.requireSaved()).resolves.toBeUndefined();
+  expect(recovery).toHaveBeenLastCalledWith(script.scriptId, null);
+});

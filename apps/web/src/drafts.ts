@@ -16,6 +16,11 @@ export class DraftWriter {
     this.recovery(script.scriptId, script);
     this.status("saving");
   }
+  /** Autosave keeps retryable failures in memory; destructive mutations must stop on them. */
+  async requireSaved() {
+    await this.flush();
+    if (this.dirty.size) throw Error("saveError");
+  }
   flush() {
     const batch = [...this.pending.values()];
     this.pending.clear();

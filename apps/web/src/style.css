@@ -1034,13 +1034,26 @@ output {
   pointer-events: none;
 }
 .intro-wordmark {
-  display: flex;
+  position: relative;
+  display: inline-block;
   font-size: clamp(78px, 12vw, 164px);
   font-weight: 650;
   letter-spacing: -0.08em;
   line-height: 1;
 }
-.intro-wordmark span {
+.intro-static {
+  visibility: hidden;
+}
+.intro-wordmark.resolved .intro-static {
+  visibility: visible;
+}
+.intro-assembly {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+}
+.intro-assembly > span {
   display: inline-block;
   opacity: 0;
   animation: letter-resolve 2.5s cubic-bezier(0.22, 0.75, 0.22, 1) var(--delay)
@@ -1081,7 +1094,6 @@ output {
 @keyframes letter-resolve {
   0% {
     opacity: 0;
-    filter: blur(8px);
     transform: translate(var(--from-x), var(--from-y)) rotate(-8deg) scale(0.6);
   }
   18% {
@@ -1090,7 +1102,6 @@ output {
   72%,
   100% {
     opacity: 1;
-    filter: blur(0);
     transform: translate(0, 0) rotate(0) scale(1);
   }
 }

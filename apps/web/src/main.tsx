@@ -280,8 +280,14 @@ function App() {
     );
   const persist = (script: Script) => writer.current!.enqueue(script);
   const flush = () => writer.current!.flush();
+  const mutation = useRef<string | null>(null);
   const edit = (patch: Partial<Script>) => {
     if (!currentRef.current) return;
+    if (
+      mutation.current === "*" ||
+      mutation.current === currentRef.current.scriptId
+    )
+      return;
     const next = {
       ...currentRef.current,
       ...patch,
@@ -630,6 +636,13 @@ function App() {
               [requested.key]: requested.value,
             } as Partial<ControlValues>);
             requestAnimationFrame(() => {
+              if (
+                remote.current.socket !== socket ||
+                requested.target !== controlTargetRef.current
+              ) {
+                acknowledge();
+                return;
+              }
               const view = viewport.current;
               if (view) {
                 engine.maximum = Math.max(
@@ -1750,28 +1763,43 @@ function App() {
                 await storage.folder(entry);
                 setFolders(await storage.folders());
               } else if (kind === "deleteFolder" && id) {
-                await flush();
-                await storage.removeFolder(id);
-                if (currentRef.current?.folderId === id)
-                  currentRef.current = {
-                    ...currentRef.current,
-                    folderId: undefined,
-                  };
-                setFolders(await storage.folders());
-                setScripts(await storage.list());
-                setFolder("");
+                mutation.current = "*";
+                try {
+                  await writer.current!.requireSaved();
+                  await storage.removeFolder(id);
+                  if (currentRef.current?.folderId === id)
+                    currentRef.current = {
+                      ...currentRef.current,
+                      folderId: undefined,
+                    };
+                  setFolders(await storage.folders());
+                  setScripts(await storage.list());
+                  setFolder("");
+                } finally {
+                  mutation.current = null;
+                }
               } else if (kind === "deleteScript" && id) {
                 const script = scripts.find((s) => s.scriptId === id);
                 if (!script) return;
-                persist({ ...script, deletedAt: new Date().toISOString() });
-                await flush();
-                const remaining = scripts.filter((s) => s.scriptId !== id);
-                setScripts(remaining);
-                if (selected === id) setSelected(remaining[0]?.scriptId || "");
-                if (!remaining.length) {
-                  endRemote();
-                  setRemoteStatus(null);
-                  setInvite("");
+                mutation.current = id;
+                try {
+                  await writer.current!.requireSaved();
+                  // A failed deletion must not be retried by background autosave after Cancel.
+                  await storage.save(
+                    { ...script, deletedAt: new Date().toISOString() },
+                    true,
+                  );
+                  const remaining = scripts.filter((s) => s.scriptId !== id);
+                  setScripts(remaining);
+                  if (selected === id)
+                    setSelected(remaining[0]?.scriptId || "");
+                  if (!remaining.length) {
+                    endRemote();
+                    setRemoteStatus(null);
+                    setInvite("");
+                  }
+                } finally {
+                  mutation.current = null;
                 }
               }
             }}

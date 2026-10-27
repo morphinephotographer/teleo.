@@ -1568,7 +1568,7 @@ function App() {
             ) : (
               <section className="empty">
                 <span className="empty-mark" aria-hidden="true">
-                  t.
+                  teleo.
                 </span>
                 <span className="eyebrow">{t("tagline")}</span>
                 <h2>{t("emptyTitle")}</h2>

@@ -28,6 +28,20 @@ for (const locale of ["en", "uk", "ru"])
     await page.clock.runFor(1300);
     await expect(page.locator(".brand-intro")).toHaveCount(0);
     await expect(page.locator(".app-shell")).not.toHaveAttribute("inert", "");
+    if (!(await page.locator(".empty-mark").isVisible()))
+      await page
+        .locator(".library")
+        .getByRole("button", {
+          name: dictionaries[locale as keyof typeof dictionaries].closeLibrary,
+          exact: true,
+        })
+        .click();
+    await expect(page.locator(".empty-mark")).toHaveText("teleo.");
+    await expect(page.locator(".empty-mark")).toBeVisible();
+    if (locale === "ru")
+      await page.screenshot({
+        path: `docs/screenshots/audit-${info.project.name}-empty-logo.png`,
+      });
     await page.reload();
     await expect(page.locator(".brand-intro")).toHaveCount(0);
   });

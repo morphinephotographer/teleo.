@@ -37,7 +37,7 @@ These are WebKit automation screenshots, not physical iPhone or real Safari cert
 
 ## Release gate
 
-Local verification and public staging validation are complete. Production is pending normal PR merge and the existing interactive release workflow; see concrete staging evidence below.
+Local verification, public staging validation, normal PR merge, interactive production publication and post-deployment verification are complete. Concrete identities and results follow below.
 
 Rollback to preceding production version (only if needed):
 
@@ -148,3 +148,47 @@ Inspected actual public screenshots:
 ![Staging remote](../screenshots/full-audit-staging-remote.png)
 
 Git housekeeping: an empty stale `.git/index.lock` blocked the first commit attempt. `lsof` and process inspection found no owner; after checking age/size/unchanged timestamp it was preserved in `/private/tmp/teleo-audit-index.lock.stale`. The verified source was then committed normally. No index contents, branch history or user files were discarded.
+
+
+## Production — LIVE and VERIFIED
+
+- Site: **https://teleo.cc/studio**; `www.teleo.cc` canonical redirect 308 confirmed.
+- PR [#5](https://github.com/morphinephotographer/Teleo./pull/5) merged normally at 2026-10-27 21:44:54 UTC. Deployed merge **ed6df817f6f53dae6ad266ee62374357a61239ef** on `codex/teleo-native-web-v1`.
+- Verified fix commit **b4f570814814af1d0f5b241542dfa1d4717ee62e**; feature branch `codex/full-code-audit`, final PR head **94615759bc8fdc48a1626a98118745c98f854058**. Welcome parent **1327b306e0f4782823dce9890a19effbe071d148** is included. Changes between the staging fix source and deployed merge are documentation/screenshots only.
+- Executed `npm run deploy:production` from the clean merged checkout in a real PTY. Typecheck/build passed; exact same JS/CSS asset hashes as staging. No dirty-tree bypass or DNS-conflict override.
+- Worker **teleo-web**; version **29f1cd38-6f4e-4374-8993-c3b7bfab0c20**; deployment **906e07d4-f680-4a0e-9023-25b7d8cb980b**, created **2026-10-27 21:45:47 UTC**, **100%** traffic. Cloudflare API confirmed current deployment.
+- `X-Teleo-Commit` and `X-Teleo-Deployment` match that merge and version on `/`, `/studio`, `/remote`, `/help`, `/privacy` and `/sw.js` in Chromium, WebKit, iPhone and iPad profiles. Real browser TLS/DNS and strict raw HTTPS Origin probes were used, not insecure or pinned networking.
+- Production settings readback confirms the original ROOMS namespace **6bbbae7f3b4446c783842c0a886d8903**, class Room. No namespace/migration, secret or DNS changes were made.
+
+| Public production cohort | Result |
+|---|---|
+| Routes, release identity, strict Origin/CSP/security headers, www redirect; editor persistence and live playback in EN/UK/RU across Chromium/WebKit/iPhone/iPad profiles | **16/16 PASS**, 14.6s |
+| Shared locale/brand, final composited QR decoding, independent real WSS controller, approval/consent/revoke/expiry/errors in Chromium/WebKit | **22/22 PASS**, 19.8s |
+| Genuine fresh Welcome, three selected languages, persistence, concurrent tabs, disabled/deleted/returning users and manual restoration in Chromium/iPhone-profile WebKit | **18/18 PASS**, 11.7s |
+| New audit cases: concurrent script/recovery preservation, Back/fullscreen denial, seven viewport sizes, paired preview failure clears phone, independent drafts | **5/5 PASS**, 10.1s |
+| Additional iPhone-profile WebKit real QR/alignment/host ACK/position lifecycle | **1/1 PASS**, 8.0s |
+| **Total** | **62/62 PASS** |
+
+One final CLI test filter initially selected zero tests because an anchored expression did not match Playwright's full title. The selector was corrected to `--grep 'en: bottom alignment'`; the actual iPhone scenario then ran and passed. No test assertion was removed or marked skipped.
+
+Production reproduction:
+
+```sh
+TELEO_PRODUCTION_URL=https://teleo.cc TELEO_EXPECTED_COMMIT=ed6df817f6f53dae6ad266ee62374357a61239ef TELEO_EXPECTED_VERSION=29f1cd38-6f4e-4374-8993-c3b7bfab0c20 npx playwright test --config playwright.production.config.ts production.spec.ts
+TELEO_V07_URL=https://teleo.cc npx playwright test --config playwright.v07.config.ts --project v07-chromium --project v07-webkit
+TELEO_WELCOME_URL=https://teleo.cc npx playwright test --config playwright.welcome.config.ts
+TELEO_AUDIT_URL=https://teleo.cc npx playwright test --config playwright.full-audit.config.ts --project full-chromium --grep-invert 'large local TXT'
+TELEO_PRODUCTION_URL=https://teleo.cc TELEO_V061_URL=https://teleo.cc npx playwright test --config playwright.production.config.ts v061.spec.ts --project live-iphone --grep 'en: bottom alignment'
+```
+
+Run sequentially with normal room quotas. Additional public room creation or a concurrent user's activity may require a new quota window; never spoof client-IP headers or weaken rate limits.
+
+Inspected actual post-deploy screenshots (test invitations subsequently revoked/expired):
+
+![Production Welcome](../screenshots/full-audit-production-welcome.png)
+![Production QR](../screenshots/full-audit-production-qr.png)
+![Production remote](../screenshots/full-audit-production-remote.png)
+
+Release tag: **v1.0.2**, pointing to deployed merge ed6df817. Post-deploy documentation is committed separately and does not change the running application. Rollback version remains **6b4a7ee8-b088-4f16-91cd-ed2b12aea812** (v1.0.1); rollback was not needed. Re-pair controllers after a rollback or full browser refresh; do not assume cross-version in-flight commands are replayable.
+
+Current status: browser release is published and verified. OPEN findings: native EN/UK/RU localization, historical CSS/dead illustration cleanup, and extreme multi-megabyte unbroken-text performance. Physical iPhone Safari/camera/VoiceOver, HID, native two-device LAN and CloudKit are not certified by this automation. The user's real libraries were never opened or cleared during QA.

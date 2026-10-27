@@ -93,3 +93,8 @@ Impact: extreme unbroken multi-megabyte content can make startup/reload slow; or
 
 
 Public staging validation: **50/50 PASS**, source b4f5708, Worker cf12781b-af35-4793-adba-b3b36c38b589. The web persistence/remote High findings are covered by public candidate checks and local runtime tests. The native connection High finding is verified by real TLS loopback regression and native builds; physical two-device native testing remains separate. Concrete commands/deployment evidence/screenshots are in TELEO_FIX_VERIFICATION.md. Production publication follows the owner's authorization and normal PR workflow.
+
+
+## Production disposition — LIVE
+
+Owner-authorized release **v1.0.2** published to https://teleo.cc/studio from merged source **ed6df817f6f53dae6ad266ee62374357a61239ef** ([PR #5](https://github.com/morphinephotographer/Teleo./pull/5)). Worker **29f1cd38-6f4e-4374-8993-c3b7bfab0c20**, deployment **906e07d4-f680-4a0e-9023-25b7d8cb980b**, 100% traffic; runtime headers and Cloudflare API agree. **62/62 public production scenarios PASS**, including exact release identity, security/Origin, EN/UK/RU persistence/playback, QR/WSS/consent/revoke, Welcome and new audit regressions. Native fixes are in Git and built/tested locally; no native distribution or physical-device claim. Known OPEN findings A09/A10/A11 remain explicit. Detailed results and rollback are in TELEO_FIX_VERIFICATION.md.

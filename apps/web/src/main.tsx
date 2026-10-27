@@ -32,9 +32,14 @@ import {
 } from "./i18n";
 import { storage } from "./storage";
 import { DraftWriter } from "./drafts";
-import { RemoteLink } from "./remote";
+import { RemoteLink, type PlaybackState } from "./remote";
+import {
+  type ControlCommand,
+  type ControlValues,
+} from "../../../packages/protocol/control";
+import { ActionDialog } from "./ActionDialog";
 import { Intro, introNeeded } from "./Intro";
-import { Icon, IconButton, Segmented, Sheet } from "./ui";
+import { IconButton, Segmented, Sheet } from "./ui";
 import { TeleoSelect, TeleoMenu } from "./menus";
 import { RemoteController } from "./RemoteController";
 import { HostPreview } from "./host-preview";
@@ -75,6 +80,13 @@ function App() {
   const lastPreviewPosition = useRef({ paragraph: 0, offset: 0 });
   const [, refreshPreview] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pairOpen, setPairOpen] = useState(false);
+  const pairGeneration = useRef(0);
+  const [actionDialog, setActionDialog] = useState<{
+    kind: "newFolder" | "renameFolder" | "deleteFolder" | "deleteScript";
+    id?: string;
+    initial?: string;
+  } | null>(null);
   const [immersive, setImmersive] = useState(false);
   const [focusPosition, setFocusPosition] = useState(
     () => Number(localGet("teleo.focusPosition")) || 35,
@@ -131,7 +143,7 @@ function App() {
     [invite, setInvite] = useState(""),
     [qr, setQR] = useState(""),
     [approval, setApproval] = useState(false),
-    [remoteState, setRemoteState] = useState({
+    [remoteState, setRemoteState] = useState<PlaybackState>({
       playing: false,
       speed: 1,
       position: 0,
@@ -203,6 +215,54 @@ function App() {
     localSet("teleo.theme", theme);
   }, [focusPosition, focusDimming, theme]);
   currentRef.current = current;
+  const controlTarget = useMemo(
+    () => crypto.randomUUID(),
+    [current?.scriptId, current?.body],
+  );
+  const controlTargetRef = useRef(controlTarget);
+  controlTargetRef.current = controlTarget;
+  function hostState(): PlaybackState {
+    const p = currentRef.current?.preferences;
+    return {
+      playing: engine.playing,
+      speed: engine.speed,
+      position: engine.position,
+      ...(p
+        ? {
+            controls: {
+              version: 1 as const,
+              target: controlTargetRef.current,
+              maximum: currentRef.current?.body.trim() ? engine.maximum : 0,
+              ...(previewAllowed && viewport.current && engine.maximum > 0
+                ? {
+                    marks: paragraphs()
+                      .filter(
+                        (_, i, all) =>
+                          i > 0 &&
+                          i % Math.max(1, Math.ceil(all.length / 12)) === 0,
+                      )
+                      .slice(0, 12)
+                      .map((p) =>
+                        Number(
+                          Math.max(0, Math.min(1, p / engine.maximum)).toFixed(
+                            4,
+                          ),
+                        ),
+                      ),
+                  }
+                : {}),
+              fontSize: p.fontSize,
+              lineHeight: p.lineHeight,
+              textWidth: p.textWidth,
+              mirrorHorizontal: p.mirrorHorizontal,
+              mirrorVertical: p.mirrorVertical,
+              focusLine: p.focusLine,
+              countdownSeconds: p.countdownSeconds,
+            },
+          }
+        : {}),
+    };
+  }
   const previewOffsets = useMemo(
     () => previewParagraphs(current?.body || ""),
     [current?.body],
@@ -358,7 +418,9 @@ function App() {
     const tick = (now: number) => {
       const view = viewport.current;
       if (view) {
-        engine.maximum = Math.max(0, view.scrollHeight - view.clientHeight);
+        engine.maximum = currentRef.current?.body.trim()
+          ? Math.max(0, view.scrollHeight - view.clientHeight)
+          : 0;
         view.scrollTop = engine.tick(now);
         if (now - lastSave >= 250) {
           localSet("teleo.position." + selected, String(engine.position));
@@ -477,6 +539,12 @@ function App() {
         unavailable: "unavailable",
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
+      if (e.type === "connected") {
+        setPairOpen(false);
+        setInvite("");
+        setQR("");
+        setApproval(false);
+      }
       if (
         [
           "connecting",
@@ -523,11 +591,7 @@ function App() {
         currentRef.current &&
         route === "/studio"
       )
-        remote.current.state({
-          playing: engine.playing,
-          speed: engine.speed,
-          position: engine.position,
-        });
+        remote.current.state(hostState());
       if (e.type === "state" && e.state) setRemoteState(e.state);
       if (
         e.type === "command" &&
@@ -543,18 +607,55 @@ function App() {
             socket?.readyState !== WebSocket.OPEN
           )
             return;
-          command(requested);
-          remote.current.send({
-            type: "ack",
-            id: e.id,
-            state: {
-              playing: engine.playing,
-              speed: engine.speed,
-              position: engine.position,
-            },
-          });
+          if (
+            "target" in requested &&
+            requested.target !== controlTargetRef.current
+          ) {
+            remote.current.send({ type: "ack", id: e.id, state: hostState() });
+            return;
+          }
+          const currentView = viewport.current;
+          if (currentView)
+            engine.maximum = currentRef.current?.body.trim()
+              ? Math.max(0, currentView.scrollHeight - currentView.clientHeight)
+              : 0;
+          const acknowledge = () => {
+            if (remote.current.socket !== socket) return;
+            remote.current.send({ type: "ack", id: e.id, state: hostState() });
+          };
+          if (requested.action === "setPreference") {
+            const fraction =
+              engine.maximum > 0 ? engine.position / engine.maximum : 0;
+            pref({
+              [requested.key]: requested.value,
+            } as Partial<ControlValues>);
+            requestAnimationFrame(() => {
+              const view = viewport.current;
+              if (view) {
+                engine.maximum = Math.max(
+                  0,
+                  view.scrollHeight - view.clientHeight,
+                );
+                engine.position = fraction * engine.maximum;
+                view.scrollTop = engine.position;
+              }
+              acknowledge();
+            });
+          } else {
+            if (requested.action === "seek") {
+              engine.position = requested.value * engine.maximum;
+              if (viewport.current)
+                viewport.current.scrollTop = engine.position;
+              setFrame((x) => x + 1);
+            } else {
+              command(requested);
+              if (viewport.current)
+                viewport.current.scrollTop = engine.position;
+            }
+            acknowledge();
+          }
         };
-        if (reading) apply();
+        if (reading || requested.action === "setPreference") apply();
         else
           void flush().then(() => {
             if (remote.current.socket !== socket) return;
@@ -569,16 +670,19 @@ function App() {
   });
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
-    const snapshot = () =>
-      remote.current.state({
-        playing: engine.playing,
-        speed: engine.speed,
-        position: engine.position,
-      });
+    let previous = "";
+    const snapshot = () => {
+      const state = hostState(),
+        signature = JSON.stringify(state);
+      if (signature !== previous) {
+        remote.current.state(state);
+        previous = signature;
+      }
+    };
     snapshot();
-    const timer = setInterval(snapshot, 1000);
+    const timer = setInterval(snapshot, 500);
     return () => clearInterval(timer);
-  }, [reading, remoteStatus]);
+  }, [reading, remoteStatus, previewAllowed, controlTarget]);
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
     const update = () => {
@@ -643,6 +747,8 @@ function App() {
     };
   }, [route]);
   function endRemote() {
+    pairGeneration.current++;
+    setPairOpen(false);
     remote.current.close();
     sender.current?.disconnect();
     receiver.current.allowed = false;
@@ -701,29 +807,26 @@ function App() {
     setReading(true);
   }
   async function showConnection() {
-    if (remoteStatus === "connected") {
-      if (!reading) await startReader();
-      requestAnimationFrame(() =>
-        document.querySelector<HTMLElement>(".pair-panel input")?.focus(),
-      );
-    } else await connect();
+    if (remoteStatus !== null) setPairOpen(true);
+    else await connect();
   }
   async function connect() {
     endRemote();
+    const generation = pairGeneration.current;
+    setPairOpen(true);
     setSettingsOpen(false);
     setApproval(false);
     setInvite("");
     setQR("");
-    if (!reading) {
-      await startReader();
-    }
     try {
       setRemoteStatus("connecting");
       const url = await remote.current.host();
+      const image = await QRCode.toDataURL(url, { width: 240, margin: 3 });
+      if (generation !== pairGeneration.current) return;
       setInvite(url);
-      setQR(await QRCode.toDataURL(url, { width: 220, margin: 2 }));
+      setQR(image);
     } catch {
-      setRemoteStatus("unavailable");
+      if (generation === pairGeneration.current) setRemoteStatus("unavailable");
     }
   }
   async function importFile(file: File) {
@@ -1226,8 +1329,8 @@ function App() {
             language={lang}
             onStudio={() => navigate("/studio")}
             onRequest={() => remote.current.requestPreview()}
-            onCommand={(action) => {
-              lastAck.current = remote.current.command({ action });
+            onCommand={(command: ControlCommand) => {
+              lastAck.current = remote.current.command(command);
             }}
             onDisconnect={() => {
               endRemote();
@@ -1315,45 +1418,22 @@ function App() {
                   }}
                 />
               </label>
-              {button("newFolder", () => {
-                const title = prompt(t("folderName"));
-                if (title?.trim()) {
-                  const f = { folderId: crypto.randomUUID(), title };
-                  storage
-                    .folder(f)
-                    .then(() => setFolders([...folders, f]))
-                    .catch(() => setStatus("saveError"));
-                }
-              })}
+              {button("newFolder", () =>
+                setActionDialog({ kind: "newFolder" }),
+              )}
               {folder && (
                 <>
-                  {button("renameFolder", () => {
-                    const title = prompt(
-                      t("folderName"),
-                      folders.find((f) => f.folderId === folder)?.title,
-                    );
-                    if (title?.trim()) {
-                      const f = { folderId: folder, title };
-                      storage
-                        .folder(f)
-                        .then(() =>
-                          setFolders(
-                            folders.map((x) => (x.folderId === folder ? f : x)),
-                          ),
-                        )
-                        .catch(() => setStatus("saveError"));
-                    }
-                  })}
-                  {button("deleteFolder", () => {
-                    storage
-                      .removeFolder(folder)
-                      .then(async () => {
-                        setFolders(await storage.folders());
-                        setScripts(await storage.list());
-                        setFolder("");
-                      })
-                      .catch(() => setStatus("saveError"));
-                  })}
+                  {button("renameFolder", () =>
+                    setActionDialog({
+                      kind: "renameFolder",
+                      id: folder,
+                      initial: folders.find((f) => f.folderId === folder)
+                        ?.title,
+                    }),
+                  )}
+                  {button("deleteFolder", () =>
+                    setActionDialog({ kind: "deleteFolder", id: folder }),
+                  )}
                 </>
               )}
             </aside>
@@ -1387,76 +1467,41 @@ function App() {
                     onChange={(e) => edit({ body: e.target.value })}
                     onBlur={() => void flush()}
                   />
-                  <TeleoMenu
-                    closeLabel={t("close")}
+                  <div
                     className="document-actions"
-                    label={t("documentActions")}
-                    trigger={
-                      <>
-                        <span>{t("documentActions")}</span>
-                        <Icon name="more" />
-                      </>
-                    }
-                    items={[
-                      {
-                        label: t("duplicate"),
-                        action: () =>
-                          void add(createScript(current.title, current.body)),
-                      },
-                      {
-                        label: t("export"),
-                        action: () =>
-                          download(
-                            (current.title || "teleo") + ".txt",
-                            current.body,
-                          ),
-                      },
-                      {
-                        label: t("exportJSON"),
-                        action: () =>
-                          download(
-                            "teleo.json",
-                            exportBundle([current]),
-                            "application/json",
-                          ),
-                      },
-                      {
-                        label: t("versions"),
-                        action: () => {
-                          void flush()
-                            .then(() => storage.revisions(current.scriptId))
-                            .then(setRevisions)
-                            .catch(() => setStatus("saveError"));
-                        },
-                      },
-                      {
-                        label: t("delete"),
-                        action: () => {
-                          if (confirm(t("confirmDelete"))) {
-                            persist({
-                              ...current,
-                              deletedAt: new Date().toISOString(),
-                            });
-                            void flush();
-                            setScripts(
-                              scripts.filter(
-                                (script) => script.scriptId !== selected,
-                              ),
-                            );
-                            const next = scripts.find(
-                              (script) => script.scriptId !== selected,
-                            )?.scriptId;
-                            setSelected(next || "");
-                            if (!next) {
-                              endRemote();
-                              setRemoteStatus(null);
-                              setInvite("");
-                            }
-                          }
-                        },
-                      },
-                    ]}
-                  />
+                    role="toolbar"
+                    aria-label={t("documentActions")}
+                  >
+                    {button(
+                      "duplicate",
+                      () => void add(createScript(current.title, current.body)),
+                    )}
+                    {button("export", () =>
+                      download(
+                        (current.title || "teleo") + ".txt",
+                        current.body,
+                      ),
+                    )}
+                    {button("exportJSON", () =>
+                      download(
+                        "teleo.json",
+                        exportBundle([current]),
+                        "application/json",
+                      ),
+                    )}
+                    {button("versions", () => {
+                      void flush()
+                        .then(() => storage.revisions(current.scriptId))
+                        .then(setRevisions)
+                        .catch(() => setStatus("saveError"));
+                    })}
+                    {button("delete", () =>
+                      setActionDialog({
+                        kind: "deleteScript",
+                        id: current.scriptId,
+                      }),
+                    )}
+                  </div>
                   <label>
                     {t("folder")}
                     <TeleoSelect
@@ -1611,47 +1656,126 @@ function App() {
                 setFrame(frame + 1);
               }}
             />
-            {remoteStatus && (
-              <div className="pair-panel">
-                <p role="status">{t(remoteStatus)}</p>
-                {remoteStatus === "connected" && previewConsent}
-                {invite && remoteStatus === "waiting" && (
-                  <>
-                    <img src={qr} alt={t("invite")} />
-                    <a href={invite} target="_blank" rel="noreferrer">
-                      {t("invite")}
-                    </a>
-                  </>
-                )}
-                {approval && (
-                  <>
-                    <p>{t("approval")}</p>
-                    {button("allow", () => {
-                      remote.current.send({ type: "allow" });
-                      setApproval(false);
-                      setInvite("");
-                    })}
-                    {button("deny", () => {
-                      remote.current.send({ type: "deny" });
-                      endRemote();
-                      setRemoteStatus("disconnected");
-                      setApproval(false);
-                      setInvite("");
-                    })}
-                  </>
-                )}
-                {remoteStatus === "disconnected" ||
-                remoteStatus === "unavailable"
-                  ? button("reconnect", () => void connect())
-                  : button("revoke", () => {
-                      endRemote();
-                      setRemoteStatus("disconnected");
-                      setInvite("");
-                      setApproval(false);
-                    })}
-              </div>
-            )}
           </section>
+        )}
+        {pairOpen && (
+          <Sheet
+            open={pairOpen}
+            className="pairing-sheet"
+            title={t("remoteConnection")}
+            closeLabel={t("close")}
+            onClose={() => setPairOpen(false)}
+          >
+            <div className="pair-panel">
+              <p role="status">{t(remoteStatus || "waiting")}</p>
+              {remoteStatus === "connected" && previewConsent}
+              {invite && remoteStatus === "waiting" && (
+                <>
+                  <img src={qr} alt={t("invite")} />
+                  <a href={invite} target="_blank" rel="noreferrer">
+                    {t("invite")}
+                  </a>
+                </>
+              )}
+              {approval && (
+                <>
+                  <p>{t("approval")}</p>
+                  {button("allow", () => {
+                    remote.current.send({ type: "allow" });
+                    setApproval(false);
+                    setInvite("");
+                  })}
+                  {button("deny", () => {
+                    remote.current.send({ type: "deny" });
+                    endRemote();
+                    setRemoteStatus("disconnected");
+                    setApproval(false);
+                    setInvite("");
+                  })}
+                </>
+              )}
+              {remoteStatus === "disconnected" || remoteStatus === "unavailable"
+                ? button("reconnect", () => void connect())
+                : button("revoke", () => {
+                    endRemote();
+                    setRemoteStatus("disconnected");
+                    setInvite("");
+                    setApproval(false);
+                  })}
+            </div>
+          </Sheet>
+        )}
+        {actionDialog && (
+          <ActionDialog
+            key={actionDialog.kind + (actionDialog.id || "")}
+            t={t}
+            title={t(
+              actionDialog.kind === "deleteScript"
+                ? "confirmDelete"
+                : actionDialog.kind,
+            )}
+            label={
+              actionDialog.kind === "newFolder" ||
+              actionDialog.kind === "renameFolder"
+                ? t("folderName")
+                : undefined
+            }
+            initial={actionDialog.initial}
+            confirm={t(
+              actionDialog.kind.startsWith("delete")
+                ? "confirm"
+                : actionDialog.kind === "newFolder"
+                  ? "create"
+                  : "save",
+            )}
+            danger={actionDialog.kind.startsWith("delete")}
+            onClose={() => setActionDialog(null)}
+            onSubmit={async (value) => {
+              const { kind, id } = actionDialog;
+              if (kind === "newFolder" || kind === "renameFolder") {
+                const normalized = value.normalize("NFKC").toLocaleLowerCase();
+                if (
+                  folders.some(
+                    (f) =>
+                      f.folderId !== id &&
+                      f.title.trim().normalize("NFKC").toLocaleLowerCase() ===
+                        normalized,
+                  )
+                )
+                  return "duplicateName";
+                const entry = {
+                  folderId: id || crypto.randomUUID(),
+                  title: value,
+                };
+                await storage.folder(entry);
+                setFolders(await storage.folders());
+              } else if (kind === "deleteFolder" && id) {
+                await flush();
+                await storage.removeFolder(id);
+                if (currentRef.current?.folderId === id)
+                  currentRef.current = {
+                    ...currentRef.current,
+                    folderId: undefined,
+                  };
+                setFolders(await storage.folders());
+                setScripts(await storage.list());
+                setFolder("");
+              } else if (kind === "deleteScript" && id) {
+                const script = scripts.find((s) => s.scriptId === id);
+                if (!script) return;
+                persist({ ...script, deletedAt: new Date().toISOString() });
+                await flush();
+                const remaining = scripts.filter((s) => s.scriptId !== id);
+                setScripts(remaining);
+                if (selected === id) setSelected(remaining[0]?.scriptId || "");
+                if (!remaining.length) {
+                  endRemote();
+                  setRemoteStatus(null);
+                  setInvite("");
+                }
+              }
+            }}
+          />
         )}
         <Sheet
           open={settingsOpen && !intro && (!wide || reading)}

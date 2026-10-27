@@ -1,4 +1,18 @@
 export const en = {
+  advancedSettings: "Advanced settings",
+  quickTypography: "Quick typography",
+  textHidden: "Text display is hidden",
+  showText: "Show current text",
+  expandedText: "Expanded reading view",
+  newInviteRequired: "Open a new invitation from the host to pair again.",
+  countdownHelp: "Countdown before playback starts, in seconds.",
+  cancel: "Cancel",
+  confirm: "Confirm",
+  create: "Create",
+  save: "Save",
+  nameRequired: "Enter a name.",
+  duplicateName: "A folder with this name already exists.",
+
   playbackTab: "Playback",
   remoteTabs: "Remote views",
   remoteSettings: "Settings",
@@ -174,6 +188,20 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  advancedSettings: "Додаткові налаштування",
+  quickTypography: "Параметри тексту",
+  textHidden: "Показ тексту вимкнено",
+  showText: "Показувати поточний текст",
+  expandedText: "Розгорнутий текст",
+  newInviteRequired:
+    "Для повторного підключення відкрийте нове запрошення на основному екрані.",
+  countdownHelp: "Відлік у секундах перед початком прокрутки.",
+  cancel: "Скасувати",
+  confirm: "Підтвердити",
+  create: "Створити",
+  save: "Зберегти",
+  nameRequired: "Введіть назву.",
+  duplicateName: "Папка з такою назвою вже існує.",
   playbackTab: "Прокрутка",
   remoteTabs: "Режими пульта",
   remoteSettings: "Налаштування",
@@ -348,6 +376,20 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  advancedSettings: "Расширенные настройки",
+  quickTypography: "Параметры текста",
+  textHidden: "Показ текста выключен",
+  showText: "Показывать текущий текст",
+  expandedText: "Развёрнутый текст",
+  newInviteRequired:
+    "Для повторного подключения откройте новое приглашение на основном экране.",
+  countdownHelp: "Отсчёт в секундах перед началом прокрутки.",
+  cancel: "Отмена",
+  confirm: "Подтвердить",
+  create: "Создать",
+  save: "Сохранить",
+  nameRequired: "Введите название.",
+  duplicateName: "Папка с таким названием уже существует.",
   playbackTab: "Прокрутка",
   remoteTabs: "Режимы пульта",
   remoteSettings: "Настройки",

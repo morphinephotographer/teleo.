@@ -1,6 +1,14 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "gear"
+  | "chevron"
+  | "size"
+  | "spacing"
+  | "width"
+  | "paragraphPrevious"
+  | "paragraphNext"
+  | "monitor"
   | "library"
   | "settings"
   | "remote"
@@ -18,6 +26,44 @@ export type IconName =
   | "next"
   | "text";
 const paths: Record<IconName, ReactNode> = {
+  gear: (
+    <>
+      <path d="m10 3-.7 2.1-2 .9-2-.8-2 3.5 1.5 1.6v2.4l-1.5 1.6 2 3.5 2-.8 2 .9.7 2.1h4l.7-2.1 2-.9 2 .8 2-3.5-1.5-1.6v-2.4L21 8.8l-2-3.5-2 .8-2-.9L14 3Z" />
+      <circle cx="12" cy="11.5" r="3" />
+    </>
+  ),
+  chevron: <path d="m7 10 5 5 5-5" />,
+  size: (
+    <>
+      <path d="m4 20 8-16 8 16M7 14h10" />
+    </>
+  ),
+  spacing: (
+    <>
+      <path d="M4 5h16M4 12h16M4 19h16M8 2v6m-2-2 2 2 2-2M16 16v6m-2-2 2 2 2-2" />
+    </>
+  ),
+  width: (
+    <>
+      <path d="M3 12h18M7 8l-4 4 4 4m10-8 4 4-4 4" />
+    </>
+  ),
+  paragraphPrevious: (
+    <>
+      <path d="M5 5v14m13-14L7 12l11 7Z" fill="currentColor" />
+    </>
+  ),
+  paragraphNext: (
+    <>
+      <path d="M19 5v14M6 5l11 7-11 7Z" fill="currentColor" />
+    </>
+  ),
+  monitor: (
+    <>
+      <rect x="3" y="4" width="18" height="13" rx="1" />
+      <path d="M9 21h6m-3-4v4" />
+    </>
+  ),
   library: (
     <>
       <rect x="3" y="4" width="18" height="16" rx="3" />
@@ -177,15 +223,29 @@ export function Sheet({
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = dialog.current;
-    if (open && !el?.open) el?.showModal();
-    else if (!open && el?.open) el.close();
+    if (!el || !open) {
+      if (el?.open) el.close();
+      return;
+    }
+    const previous = document.activeElement as HTMLElement | null;
+    if (!el.open) el.showModal();
+    return () => {
+      if (el.open) el.close();
+      requestAnimationFrame(() => {
+        if (previous?.isConnected && !document.querySelector("dialog[open]"))
+          previous.focus();
+      });
+    };
   }, [open]);
   return (
     <dialog
       ref={dialog}
       className={"settings-sheet " + className}
       aria-labelledby={headingId}
-      onCancel={onClose}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
       onClose={onClose}
       onClick={(e) => {
         if (e.target === e.currentTarget) {

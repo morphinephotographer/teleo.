@@ -578,3 +578,71 @@ describe("permission-scoped ephemeral text preview", () => {
     await host.waitClosed();
   });
 });
+
+describe("v0.6 numeric controls on the existing authenticated channel", () => {
+  it("forwards seek/typography once, ACKs authoritative metadata, and keeps text denied", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await host.next("connected");
+    await phone.next("connected");
+    const target = crypto.randomUUID(),
+      id = crypto.randomUUID();
+    const controls = {
+      version: 1,
+      target,
+      maximum: 400,
+      fontSize: 68,
+      lineHeight: 1.5,
+      textWidth: 1300,
+      mirrorHorizontal: false,
+      mirrorVertical: false,
+      focusLine: true,
+      countdownSeconds: 0,
+    };
+    const command = {
+      action: "setPreference",
+      target,
+      key: "fontSize",
+      value: 68,
+    };
+    phone.send({ type: "command", id, command });
+    expect((await host.next("command")).command).toEqual(command);
+    host.send({
+      type: "ack",
+      id,
+      state: { playing: false, speed: 1, position: 200, controls },
+    });
+    expect((await phone.next("ack")).state).toEqual({
+      playing: false,
+      speed: 1,
+      position: 200,
+      controls,
+    });
+    phone.send({ type: "command", id, command });
+    await new Promise((r) => setTimeout(r, 40));
+    expect(host.messages.some((m) => m.type === "command")).toBe(false);
+    expect(phone.messages.some((m) => m.type === "previewContent")).toBe(false);
+    const seek = { action: "seek", target, value: 0.5 };
+    phone.send({ type: "command", id: crypto.randomUUID(), command: seek });
+    expect((await host.next("command")).command).toEqual(seek);
+    host.send({ type: "revoke" });
+  });
+  it("rejects unknown preference names and malformed typed state", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await host.next("connected");
+    await phone.next("connected");
+    phone.send({
+      type: "command",
+      id: crypto.randomUUID(),
+      command: {
+        action: "setPreference",
+        target: crypto.randomUUID(),
+        key: "body",
+        value: "private",
+      },
+    });
+    await phone.waitClosed();
+    host.send({ type: "revoke" });
+  });
+});

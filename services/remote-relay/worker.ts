@@ -1,6 +1,9 @@
 import { DurableObject } from "cloudflare:workers";
 import { validPreviewPayload } from "../../packages/protocol/preview";
-import { validCommand } from "../../packages/protocol/domain";
+import {
+  validControlCommand,
+  validPlaybackState as validState,
+} from "../../packages/protocol/control";
 interface Env {
   ROOMS: DurableObjectNamespace<Room>;
   ALLOWED_ORIGINS: string;
@@ -31,23 +34,6 @@ type Attachment = {
   count: number;
 };
 const RECONNECT_GRACE = 30_000;
-const validState = (
-  s: unknown,
-): s is { playing: boolean; speed: number; position: number } => {
-  if (!s || typeof s !== "object") return false;
-  const v = s as Record<string, unknown>;
-  return (
-    Object.keys(v).sort().join(",") === "playing,position,speed" &&
-    typeof v.playing === "boolean" &&
-    typeof v.speed === "number" &&
-    Number.isFinite(v.speed) &&
-    v.speed >= 0.5 &&
-    v.speed <= 3 &&
-    typeof v.position === "number" &&
-    Number.isFinite(v.position) &&
-    v.position >= 0
-  );
-};
 const token = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
     b.toString(16).padStart(2, "0"),
@@ -371,7 +357,7 @@ export class Room extends DurableObject<Env> {
           Object.keys(m).every((k) => ["type", "id", "command"].includes(k)) &&
           typeof m.id === "string" &&
           /^[a-f0-9-]{36}$/.test(m.id) &&
-          validCommand(m.command)
+          validControlCommand(m.command)
         ) {
           if (!this.ready(d)) {
             ws.send(JSON.stringify({ type: "unconfirmed", id: m.id }));

@@ -3,16 +3,16 @@ import {
   type PreviewEnvelope,
   type PreviewPermission,
 } from "../../../packages/protocol/preview";
-import type { Command } from "../../../packages/protocol/domain";
-export type PlaybackState = {
-  playing: boolean;
-  speed: number;
-  position: number;
-};
+import {
+  validPlaybackState,
+  type ControlCommand,
+  type PlaybackState,
+} from "../../../packages/protocol/control";
+export type { PlaybackState } from "../../../packages/protocol/control";
 export type RemoteEvent = {
   type: string;
   id?: string;
-  command?: Command;
+  command?: ControlCommand;
   state?: PlaybackState;
   sequence?: number;
   preview?: PreviewEnvelope | PreviewPermission;
@@ -169,6 +169,7 @@ export class RemoteLink {
       }
       if (event.type === "ack" || event.type === "state") {
         if (
+          !validPlaybackState(event.state) ||
           typeof event.sequence !== "number" ||
           event.sequence <= this.sequence
         )
@@ -234,7 +235,7 @@ export class RemoteLink {
   state(state: PlaybackState) {
     if (this.ready) this.send({ type: "state", state });
   }
-  command(command: Command) {
+  command(command: ControlCommand) {
     const id = crypto.randomUUID();
     if (!this.ready) {
       this.onEvent({ type: "unconfirmed", id });

@@ -123,7 +123,7 @@ export function Popover({
         {trigger || (kind === "menu" ? <Icon name="more" /> : label)}
         {kind === "listbox" && (
           <span className="picker-chevron" aria-hidden="true">
-            ⌄
+            <Icon name="chevron" />
           </span>
         )}
       </button>

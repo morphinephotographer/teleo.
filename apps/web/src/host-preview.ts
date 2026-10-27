@@ -13,6 +13,7 @@ export class HostPreview {
   private scriptId = "";
   private tooLarge = false;
   private generation = 0;
+  private lastPosition = "";
   private epoch = 0;
   private allowed = false;
   private timer: ReturnType<typeof setTimeout> | undefined;
@@ -35,6 +36,7 @@ export class HostPreview {
     }, delay);
   }
   permission(m: PreviewPermission) {
+    this.lastPosition = "";
     this.cancel();
     this.allowed = m.allowed;
     this.epoch = m.epoch;
@@ -81,6 +83,9 @@ export class HostPreview {
   position(state: PlaybackState, paragraph: number, offset: number) {
     const c = this.compiled;
     if (!this.allowed || !c) return;
+    const signature = JSON.stringify([c.script, state, paragraph, offset]);
+    if (signature === this.lastPosition) return;
+    this.lastPosition = signature;
     this.link.send({
       type: "previewPosition",
       version: 1,

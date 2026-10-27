@@ -117,3 +117,9 @@ The host and iPhone remote share an inert `teleo.` wordmark and one 44px circula
 `npx playwright test --config playwright.v07.config.ts` verifies Chromium, WebKit and Firefox, five viewport sizes, locale precedence, keyboard handling, QR decoding at rendered sizes, pending approval/expiry, copy, recovery and real independent controller synchronization. Public runs use `TELEO_V07_URL`; respect the existing 10 rooms/minute/IP quota and use bounded cohorts. No synthetic Cloudflare client-IP headers are sent to public Workers. [v0.7 audit and release evidence](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
 
 UI v0.7 is live on [teleo.cc](https://teleo.cc/studio) as release `v1.0.1`, deployed commit `186c4e7d826b73d64e62810ca70d635311354dcd`. Public post-deploy validation passed 36/36 scenarios after 22/22 staging checks. Full evidence, screenshots, limitations and rollback version are in the [v0.7 audit](docs/audits/TELEO_V07_BRAND_LOCALE_QR.md).
+
+## Welcome onboarding (local, unreleased v0.8)
+
+A genuine new, empty Studio library receives one localized **Welcome** script. Returning v1 libraries, existing/recovered/deleted scripts and handled onboarding suppress automatic insertion. Settings → Getting started preserves a persistent opt-out and explicit restore/open action; edits and saved script language remain user-controlled. [Conditions, migration, behavior, screenshots and test results](docs/features/TELEO_DEMO_ONBOARDING.md).
+
+`npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature has not been deployed; the public release remains v1.0.1.

@@ -56,3 +56,11 @@ test("production assets: all locales and scripts work offline", async ({
     page.getByRole("textbox", { name: "Ваші слова", exact: true }),
   ).toHaveValue("Offline 🌍\n\nТекст");
 });
+
+// Legacy scenarios start with their intended empty workspace; onboarding has its own fresh-install suite.
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("teleo.demo.auto"))
+      localStorage.setItem("teleo.demo.auto", "false");
+  });
+});

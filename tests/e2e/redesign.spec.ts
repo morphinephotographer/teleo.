@@ -91,7 +91,7 @@ test("reduced motion bypasses intro; remote deep links are never covered", async
     await page
       .locator(".controller")
       .evaluate((el) => getComputedStyle(el).color),
-  ).toBe("rgb(17, 17, 17)");
+  ).toBe("rgb(243, 243, 241)");
   await expect(page.locator(".brand-intro")).toHaveCount(0);
 });
 test("session storage denial still permits skipping and internal navigation", async ({

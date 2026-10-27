@@ -48,8 +48,20 @@ export async function closeSettings(page: Page, t: typeof dictionaries.en) {
 }
 export async function disconnectPhone(phone: Page, t: typeof dictionaries.en) {
   await phone
-    .getByRole("group", { name: t.remoteTabs, exact: true })
-    .getByRole("button", { name: t.remoteSettings, exact: true })
+    .getByRole("button", { name: t.advancedSettings, exact: true })
     .click();
   await phone.getByRole("button", { name: t.revoke, exact: true }).click();
+}
+
+export async function managePhone(page: Page, t: typeof dictionaries.en) {
+  const dialog = page.getByRole("dialog", {
+    name: t.remoteConnection,
+    exact: true,
+  });
+  if (!(await dialog.isVisible()))
+    await page
+      .locator("header")
+      .getByRole("button", { name: t.remoteConnection, exact: true })
+      .click();
+  return dialog;
 }

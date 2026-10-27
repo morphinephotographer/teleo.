@@ -1,4 +1,4 @@
-import { disconnectPhone } from "./helpers";
+import { disconnectPhone, managePhone } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -100,13 +100,14 @@ for (const locale of ["en", "uk", "ru"] as const) {
     });
     await phone.goto(invite);
     await page.getByRole("button", { name: t.allow, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
-    await expect(phone.locator("output")).toContainText(t.play);
+    await expect(
+      phone.getByRole("button", { name: t.pause, exact: true }),
+    ).toBeVisible();
     await expect(phone.locator("html")).toHaveAttribute("data-haptic", "12");
     await phone
-      .getByRole("group", { name: t.remoteTabs, exact: true })
-      .getByRole("button", { name: t.remoteSettings, exact: true })
+      .getByRole("button", { name: t.advancedSettings, exact: true })
       .click();
     for (const size of [
       { width: 320, height: 568 },
@@ -133,8 +134,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       info.project.use.viewport || { width: 1280, height: 720 },
     );
     await phone
-      .getByRole("group", { name: t.remoteTabs, exact: true })
-      .getByRole("button", { name: t.remote, exact: true })
+      .getByRole("dialog", { name: t.advancedSettings, exact: true })
+      .getByRole("button", { name: t.close, exact: true })
       .click();
     await phone.getByRole("button", { name: t.pause, exact: true }).click();
     await expect(
@@ -147,6 +148,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       fullPage: true,
     });
     await disconnectPhone(phone, t);
+    await managePhone(page, t);
     await expect(page.locator(".pair-panel p[role=status]")).toHaveText(
       t.disconnected,
     );
@@ -168,7 +170,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await expect(newLink).toBeVisible();
       const nextInvite = (await newLink.getAttribute("href"))!;
       expect(nextInvite).not.toBe(invite);
-      await expect(phone.locator("p[role=status]")).toHaveText(t.disconnected);
+      await expect(phone.locator(".remote-connection")).toHaveText(
+        t.disconnected,
+      );
       // A new invitation must still obtain explicit host approval.
       await phone.goto(nextInvite);
       await expect(
@@ -176,19 +180,19 @@ for (const locale of ["en", "uk", "ru"] as const) {
       ).toBeVisible();
       await expect(
         phone.getByRole("button", { name: t.play, exact: true }),
-      ).toHaveCount(0);
+      ).toBeDisabled();
       await panel.getByRole("button", { name: t.allow, exact: true }).click();
-      await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
-      await phone
-        .getByRole("group", { name: t.remoteTabs, exact: true })
-        .getByRole("button", { name: t.remote, exact: true })
-        .click();
+      await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
+
       await phone.getByRole("button", { name: t.play, exact: true }).click();
       await expect(
         phone.getByRole("button", { name: t.pause, exact: true }),
       ).toBeVisible();
       await phone.getByRole("button", { name: t.pause, exact: true }).click();
-      await expect(phone.locator("output")).toContainText(t.pause);
+      await expect(
+        phone.getByRole("button", { name: t.play, exact: true }),
+      ).toBeVisible();
+      await managePhone(page, t);
       await panel.getByRole("button", { name: t.revoke, exact: true }).click();
     }
     await context.close();

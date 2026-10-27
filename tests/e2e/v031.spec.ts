@@ -1,6 +1,11 @@
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
-import { chooseSelect, openSettings, closeSettings } from "./helpers";
+import {
+  chooseSelect,
+  openSettings,
+  closeSettings,
+  managePhone,
+} from "./helpers";
 const staging = process.env.TELEO_V031_URL;
 test.beforeEach(async ({ page }) => {
   if (!staging)
@@ -52,23 +57,10 @@ async function popup(trigger: Locator) {
   expect(box.y + box.height).toBeLessThanOrEqual(bounds.y + bounds.height + 1);
   return menu;
 }
-async function settledSegment(group: Locator, label: string) {
-  const selected = group.getByRole("button", { name: label, exact: true });
-  await expect(selected).toHaveAttribute("aria-pressed", "true");
-  await expect
-    .poll(async () => {
-      const indicator = await group.locator(".segment-selection").boundingBox();
-      const button = await selected.boundingBox();
-      return indicator && button
-        ? Math.abs(
-            indicator.x + indicator.width / 2 - button.x - button.width / 2,
-          )
-        : Infinity;
-    })
-    .toBeLessThan(2);
-}
-async function byLabel(trigger: Locator, label: string) {
+async function byLabel(trigger: Locator, label: string, capture?: string) {
   const menu = await popup(trigger);
+  if (capture)
+    await trigger.page().screenshot({ path: capture, animations: "disabled" });
   const value = (await menu
     .getByRole("option", { name: label, exact: true })
     .getAttribute("data-value"))!;
@@ -93,10 +85,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
     ).not.toBe("0px");
     await page.screenshot({
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-language-open.png`,
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-language-open.png`,
     });
     if (info.project.name === "desktop")
-      await expect(page).toHaveScreenshot(`v031-language-${locale}.png`, {
+      await expect(page).toHaveScreenshot(`v06-language-${locale}.png`, {
         animations: "disabled",
         mask: [page.locator(".script-list small")],
         maxDiffPixelRatio: 0.005,
@@ -111,10 +103,20 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .locator("header")
         .getByRole("button", { name: t.library, exact: true })
         .click();
-    page.once("dialog", (dialog) => dialog.accept("Collection"));
     await page.getByRole("button", { name: t.newFolder, exact: true }).click();
+    const folderDialog = page.getByRole("dialog", {
+      name: t.newFolder,
+      exact: true,
+    });
+    await folderDialog.getByRole("textbox").fill("Collection");
+    await folderDialog.getByRole("textbox").press("Enter");
+    await expect(folderDialog).not.toBeVisible();
     const folder = page.getByRole("combobox", { name: t.folder, exact: true });
-    const folderId = await byLabel(folder, "Collection");
+    const folderId = await byLabel(
+      folder,
+      "Collection",
+      `docs/screenshots/v06-${info.project.name}-${locale}-folder-filter-open.png`,
+    );
     // Editor folder is a separate, bottom-edge instance of the shared picker.
     if (info.project.name === "mobile")
       await page
@@ -124,6 +126,12 @@ for (const locale of ["en", "uk", "ru"] as const) {
       name: t.scriptFolder,
       exact: true,
     });
+    await popup(assigned);
+    await page.screenshot({
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-assigned-folder-open.png`,
+      animations: "disabled",
+    });
+    await page.keyboard.press("Escape");
     await chooseSelect(assigned, folderId);
     await chooseSelect(assigned, "");
     if (!(await library.isVisible()))
@@ -147,6 +155,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .locator("header")
         .getByRole("combobox", { name: t.currentScript, exact: true }),
       "A clear voice",
+      `docs/screenshots/v06-${info.project.name}-${locale}-script-selector-open.png`,
     );
     expect(
       await page
@@ -163,6 +172,14 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "0",
     );
     await settings.getByText(t.physical, { exact: true }).click();
+    await popup(
+      settings.getByRole("combobox", { name: t.profile, exact: true }),
+    );
+    await page.screenshot({
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-profile-open.png`,
+      animations: "disabled",
+    });
+    await page.keyboard.press("Escape");
     await chooseSelect(
       settings.getByRole("combobox", { name: t.profile, exact: true }),
       "twoButton",
@@ -181,7 +198,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     menu = await popup(action);
     await page.screenshot({
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-mapping-open.png`,
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-mapping-open.png`,
     });
     await page.keyboard.press("End");
     await page.keyboard.press("Enter");
@@ -192,19 +209,21 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "standard",
     );
     await closeSettings(page, t);
-    const actions = page.getByRole("button", {
-      name: t.documentActions,
-      exact: true,
-    });
-    menu = await popup(actions);
+    await expect(
+      page
+        .getByRole("toolbar", { name: t.documentActions, exact: true })
+        .getByRole("button"),
+    ).toHaveCount(5);
     await page.screenshot({
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-actions-open.png`,
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-actions.png`,
     });
-    await page.keyboard.press("Escape");
-    await expect(actions).toBeFocused();
     const more = page.getByRole("button", { name: t.menu, exact: true });
     menu = await popup(more);
+    await page.screenshot({
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-navigation-open.png`,
+      animations: "disabled",
+    });
     await menu.getByRole("menuitem", { name: t.help, exact: true }).click();
     await expect(
       page.getByRole("heading", { name: t.helpTitle, exact: true }),
@@ -258,10 +277,14 @@ test("picker positioning at every required viewport; outside/Escape and dark she
           document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    await page.screenshot({
+      path: `docs/screenshots/v06-${info.project.name}-studio-${size.width}x${size.height}.png`,
+      animations: "disabled",
+    });
     if (info.project.name === "desktop" && [1440, 834].includes(size.width))
       await page.screenshot({
         animations: "disabled",
-        path: `docs/screenshots/v031-${size.width}-studio.png`,
+        path: `docs/screenshots/v06-${size.width}-studio.png`,
       });
     if (info.project.name === "desktop" && size.width === 834) {
       await page
@@ -273,7 +296,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
       ).toBeVisible();
       await page.screenshot({
         animations: "disabled",
-        path: "docs/screenshots/v031-834-editor.png",
+        path: "docs/screenshots/v06-834-editor.png",
       });
     }
   }
@@ -296,7 +319,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   const immersiveMenu = await popup(immersiveLanguage);
   await page.screenshot({
     animations: "disabled",
-    path: `docs/screenshots/v031-${info.project.name}-immersive-menu.png`,
+    path: `docs/screenshots/v06-${info.project.name}-immersive-menu.png`,
   });
   await page.keyboard.press("Escape");
   await expect(immersiveMenu).not.toBeVisible();
@@ -318,7 +341,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   await expect(darkMenu).toHaveCSS("background-color", "rgb(36, 36, 38)");
   await page.screenshot({
     animations: "disabled",
-    path: `docs/screenshots/v031-${info.project.name}-dark-settings-menu.png`,
+    path: `docs/screenshots/v06-${info.project.name}-dark-settings-menu.png`,
   });
   await page.keyboard.press("Escape");
   await closeSettings(page, t);
@@ -358,7 +381,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   ).toBeVisible();
   await page.screenshot({
     animations: "disabled",
-    path: `docs/screenshots/v031-${info.project.name}-fallback-menu.png`,
+    path: `docs/screenshots/v06-${info.project.name}-fallback-menu.png`,
   });
   await page.getByRole("menuitem", { name: t.help, exact: true }).click();
   await expect(
@@ -367,7 +390,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
 });
 for (const locale of ["en", "uk", "ru"] as const) {
   const t = dictionaries[locale];
-  test(`${locale}: real private preview, shaped controls, revisions, revoke and reconnect`, async ({
+  test(`${locale}: real private preview, round controls, revisions, revoke and reconnect`, async ({
     page,
     browser,
   }, info) => {
@@ -437,21 +460,28 @@ for (const locale of ["en", "uk", "ru"] as const) {
     }
     await phone.goto(invite);
     await page.getByRole("button", { name: t.allow, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
-    await chooseSelect(
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
+    await phone
+      .getByRole("button", { name: t.advancedSettings, exact: true })
+      .click();
+    const languagePopup = await popup(
       phone
-        .locator(".remote-header")
+        .locator(".remote-advanced")
         .getByRole("combobox", { name: t.language, exact: true }),
-      locale,
     );
     await phone.screenshot({
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-remote-language-open.png`,
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-remote-main.png`,
     });
-    const tabs = phone.getByRole("group", { name: t.remoteTabs, exact: true });
-    await tabs
-      .getByRole("button", { name: t.textSettings, exact: true })
+    await languagePopup.locator(`[data-value="${locale}"]`).click();
+    await phone
+      .getByRole("dialog", { name: t.advancedSettings, exact: true })
+      .getByRole("button", { name: t.close, exact: true })
       .click();
+    await phone.screenshot({
+      animations: "disabled",
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-remote-main.png`,
+    });
     await expect(
       phone.getByRole("heading", { name: t.previewPrivate, exact: true }),
     ).toBeVisible();
@@ -466,29 +496,27 @@ for (const locale of ["en", "uk", "ru"] as const) {
     expect(await phone.locator("body").innerText()).not.toContain(
       "A clear voice",
     );
+    await managePhone(page, t);
     await page
       .getByRole("checkbox", { name: t.allowPreview, exact: true })
       .check();
     await expect(phone.locator(".remote-text")).toContainText(
       "First paragraph",
     );
+    await page
+      .getByRole("dialog", { name: t.remoteConnection, exact: true })
+      .getByRole("button", { name: t.close, exact: true })
+      .click();
     await expect(phone.locator(".remote-text [aria-current=true]")).toHaveCount(
       1,
     );
-    await settledSegment(tabs, t.textSettings);
     await phone.screenshot({
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-remote-text.png`,
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-remote-text.png`,
     });
-    await tabs.getByRole("button", { name: t.remote, exact: true }).click();
     const wing = phone.getByRole("button", { name: t.speedUp, exact: true });
-    // The broad lower flank is clickable, not only the icon.
-    await acknowledged("speedUp", async () =>
-      wing.click({
-        position: { x: 35, y: (await wing.boundingBox())!.height * 0.84 },
-      }),
-    );
-    await expect(phone.locator("output")).toContainText("1.25");
+    await acknowledged("speedUp", () => wing.click());
+    await expect(phone.locator(".remote-speed")).toContainText("1.25");
     await acknowledged("play", () =>
       phone.getByRole("button", { name: t.play, exact: true }).click(),
     );
@@ -501,9 +529,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await acknowledged("nextParagraph", () =>
       phone.getByRole("button", { name: t.nextParagraph, exact: true }).click(),
     );
-    await tabs
-      .getByRole("button", { name: t.textSettings, exact: true })
-      .click();
+
     const max = Number(
       await page
         .getByRole("slider", { name: t.position, exact: true })
@@ -535,9 +561,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await page
       .getByRole("textbox", { name: t.title, exact: true })
       .fill("Revised title");
-    await expect(phone.locator(".remote-script")).toContainText(
-      "Revised title",
-    );
+
     if (!(await page.locator(".library").isVisible()))
       await page
         .locator("header")
@@ -566,6 +590,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "Updated live words.",
     );
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await managePhone(page, t);
     await page
       .getByRole("checkbox", { name: t.allowPreview, exact: true })
       .uncheck();
@@ -575,23 +600,29 @@ for (const locale of ["en", "uk", "ru"] as const) {
     expect(await phone.locator(".controller").innerText()).not.toContain(
       "Updated live words.",
     );
+    await managePhone(page, t);
     await page
       .getByRole("checkbox", { name: t.allowPreview, exact: true })
       .check();
     await expect(phone.locator(".remote-text")).toContainText(
       "Updated live words.",
     );
+    await page
+      .getByRole("dialog", { name: t.remoteConnection, exact: true })
+      .getByRole("button", { name: t.close, exact: true })
+      .click();
     await transports[0].close({ code: 1012, reason: "QA interruption" });
-    await expect(phone.locator("p[role=status]")).toContainText(t.reconnecting);
+    await expect(phone.locator(".remote-connection")).toContainText(
+      t.reconnecting,
+    );
     expect(await phone.locator(".controller").innerText()).not.toContain(
       "Updated live words.",
     );
 
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await expect(phone.locator(".remote-text")).toContainText(
       "Updated live words.",
     );
-    await tabs.getByRole("button", { name: t.remote, exact: true }).click();
     for (const size of [
       { width: 375, height: 667 },
       { width: 390, height: 844 },
@@ -601,41 +632,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await expect(
         phone.getByRole("button", { name: t.play, exact: true }),
       ).toBeInViewport();
-      expect(
-        await phone.evaluate(() => {
-          const play =
-              document.querySelector<HTMLButtonElement>(".remote-main-play")!,
-            left =
-              document.querySelector<HTMLButtonElement>(".speed-wing-left")!,
-            right =
-              document.querySelector<HTMLButtonElement>(".speed-wing-right")!;
-          const r = play.getBoundingClientRect();
-          const center = document
-            .elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)
-            ?.closest("button");
-          const display = document
-            .querySelector(".speed-display")!
-            .getBoundingClientRect();
-          const middle = document
-            .elementFromPoint(
-              display.x + display.width / 2,
-              display.y + display.height / 2,
-            )
-            ?.closest("button");
-          const l = left.getBoundingClientRect();
-          const transparent = document
-            .elementFromPoint(l.x + 1, l.y + 1)
-            ?.closest("button");
-          return (
-            center === play &&
-            middle !== left &&
-            middle !== right &&
-            transparent !== left &&
-            getComputedStyle(left).clipPath !== "none"
-          );
-        }),
-      ).toBe(true);
-
+      await expect(
+        phone.getByRole("button", { name: t.speedUp, exact: true }),
+      ).toBeInViewport();
       await expect(
         phone.getByRole("button", { name: t.nextParagraph, exact: true }),
       ).toBeInViewport();
@@ -648,41 +647,25 @@ for (const locale of ["en", "uk", "ru"] as const) {
       ).toBe(true);
     }
     await phone.setViewportSize({ width: 390, height: 844 });
-    if (info.project.name === "desktop")
-      await expect(phone).toHaveScreenshot(`v031-remote-${locale}.png`, {
-        animations: "disabled",
-        maxDiffPixelRatio: 0.005,
-      });
     await phone.screenshot({
       animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-remote-main.png`,
+      path: `docs/screenshots/v06-${info.project.name}-${locale}-private-preview.png`,
     });
-    await tabs
-      .getByRole("button", { name: t.remoteSettings, exact: true })
+    await phone
+      .getByRole("button", { name: t.advancedSettings, exact: true })
       .click();
     await expect(
       phone.getByText(t.hapticsUnavailable, { exact: true }),
     ).toBeVisible();
-    await settledSegment(tabs, t.remoteSettings);
-    await phone.screenshot({
-      animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-remote-settings.png`,
-    });
-    const appearance = phone.getByRole("combobox", {
-      name: t.remoteAppearance,
-      exact: true,
-    });
-    const menu = await popup(appearance);
-    await phone.screenshot({
-      animations: "disabled",
-      path: `docs/screenshots/v031-${info.project.name}-${locale}-remote-menu.png`,
-    });
-    await menu.getByRole("option", { name: t.dark, exact: true }).click();
-    await expect(phone.locator(".controller")).toHaveClass(
-      /remote-appearance-dark/,
-    );
+    await phone
+      .getByRole("dialog", { name: t.advancedSettings, exact: true })
+      .getByRole("button", { name: t.close, exact: true })
+      .click();
+    await managePhone(page, t);
     await page.getByRole("button", { name: t.revoke, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toContainText(t.disconnected);
+    await expect(phone.locator(".remote-connection")).toContainText(
+      t.disconnected,
+    );
     expect(await phone.locator(".controller").innerText()).not.toContain(
       "Updated live words.",
     );

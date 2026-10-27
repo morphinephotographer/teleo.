@@ -1,4 +1,4 @@
-import { openSettings, closeSettings } from "./helpers";
+import { openSettings, closeSettings, managePhone } from "./helpers";
 import { chooseSelect } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
@@ -141,16 +141,21 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await phone.goto(url + "");
     await expect(page.getByText(t.approval)).toBeVisible();
     await page.getByRole("button", { name: t.allow, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toHaveText(t.connected);
+    await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(
       page
         .locator(".reader")
         .getByRole("button", { name: t.pause, exact: true }),
     ).toBeVisible();
-    await expect(phone.locator("output")).toContainText(t.play);
+    await expect(
+      phone.getByRole("button", { name: t.pause, exact: true }),
+    ).toBeVisible();
+    await managePhone(page, t);
     await page.getByRole("button", { name: t.revoke, exact: true }).click();
-    await expect(phone.locator("p[role=status]")).toContainText(t.disconnected);
+    await expect(phone.locator(".remote-connection")).toContainText(
+      t.disconnected,
+    );
     await expect(
       page
         .locator(".reader")
@@ -176,10 +181,7 @@ test("library CRUD, import/export and version restore", async ({ page }) => {
   await page
     .getByRole("textbox", { name: "Your words", exact: true })
     .fill("Changed");
-  await page
-    .getByRole("button", { name: "Script actions", exact: true })
-    .click();
-  await page.getByRole("menuitem", { name: "Version history" }).click();
+  await page.getByRole("button", { name: "Version history" }).click();
   await expect(page.locator(".revision")).not.toHaveCount(0);
   await page
     .locator(".revision")
@@ -189,24 +191,16 @@ test("library CRUD, import/export and version restore", async ({ page }) => {
   await expect(
     page.getByRole("textbox", { name: "Your words", exact: true }),
   ).toHaveValue("Original\n\n🌍");
-  await page
-    .getByRole("button", { name: "Script actions", exact: true })
-    .click();
   const download = page.waitForEvent("download");
-  await page
-    .getByRole("menuitem", { name: "Export .txt", exact: true })
-    .click();
+  await page.getByRole("button", { name: "Export .txt", exact: true }).click();
   expect((await download).suggestedFilename()).toBe("First.txt");
-  await page
-    .getByRole("button", { name: "Script actions", exact: true })
-    .click();
-  await page.getByRole("menuitem", { name: "Duplicate", exact: true }).click();
+  await page.getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(page.locator(".script-list button")).toHaveCount(2);
+  await page.getByRole("button", { name: "Move to trash" }).click();
   await page
-    .getByRole("button", { name: "Script actions", exact: true })
+    .getByRole("dialog")
+    .getByRole("button", { name: "Confirm", exact: true })
     .click();
-  page.once("dialog", (d) => d.accept());
-  await page.getByRole("menuitem", { name: "Move to trash" }).click();
   await expect(page.locator(".script-list button")).toHaveCount(1);
   await page.locator("input[type=file]").setInputFiles({
     name: "Unicode.txt",

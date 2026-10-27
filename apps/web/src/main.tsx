@@ -7,6 +7,8 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import QRCode from "qrcode";
+import { phonePairingIssue } from "./pairing-origin";
+import { RemoteIllustration } from "./RemoteIllustration";
 import {
   Playback,
   createScript,
@@ -39,7 +41,7 @@ import {
 } from "../../../packages/protocol/control";
 import { ActionDialog } from "./ActionDialog";
 import { Intro, introNeeded } from "./Intro";
-import { IconButton, Segmented, Sheet } from "./ui";
+import { Icon, IconButton, Segmented, Sheet } from "./ui";
 import { TeleoSelect, TeleoMenu } from "./menus";
 import { RemoteController } from "./RemoteController";
 import { HostPreview } from "./host-preview";
@@ -73,7 +75,6 @@ function App() {
   const libraryBeforeReading = useRef(libraryOpen);
   const [wide, setWide] = useState(innerWidth >= 1180);
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
-  const [settingsTab, setSettingsTab] = useState("playback");
   const [previewAllowed, setPreviewAllowed] = useState(false);
   const [previewPending, setPreviewPending] = useState(false);
   const receiver = useRef(new PreviewReceiver());
@@ -81,6 +82,11 @@ function App() {
   const [, refreshPreview] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
+  const pairingIssue = phonePairingIssue(location.origin);
+  const [inviteDeadline, setInviteDeadline] = useState(0);
+  const inviteTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
   const pairGeneration = useRef(0);
   const [actionDialog, setActionDialog] = useState<{
     kind: "newFolder" | "renameFolder" | "deleteFolder" | "deleteScript";
@@ -214,6 +220,8 @@ function App() {
     localSet("teleo.focusDimming", String(focusDimming));
     localSet("teleo.theme", theme);
   }, [focusPosition, focusDimming, theme]);
+  const dimmingRef = useRef(focusDimming);
+  dimmingRef.current = focusDimming;
   currentRef.current = current;
   const controlTarget = useMemo(
     () => crypto.randomUUID(),
@@ -258,6 +266,7 @@ function App() {
               mirrorVertical: p.mirrorVertical,
               focusLine: p.focusLine,
               countdownSeconds: p.countdownSeconds,
+              focusDimming: dimmingRef.current,
             },
           }
         : {}),
@@ -543,9 +552,13 @@ function App() {
         reconnecting: "reconnecting",
         disconnected: "disconnected",
         unavailable: "unavailable",
+        serverUnreachable: "serverUnreachable",
+        expired: "expired",
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
       if (e.type === "connected") {
+        clearTimeout(inviteTimer.current);
+        setInviteDeadline(0);
         setPairOpen(false);
         setInvite("");
         setQR("");
@@ -558,6 +571,8 @@ function App() {
           "reconnecting",
           "disconnected",
           "unavailable",
+          "serverUnreachable",
+          "expired",
         ].includes(e.type)
       ) {
         sender.current?.disconnect();
@@ -632,9 +647,13 @@ function App() {
           if (requested.action === "setPreference") {
             const fraction =
               engine.maximum > 0 ? engine.position / engine.maximum : 0;
-            pref({
-              [requested.key]: requested.value,
-            } as Partial<ControlValues>);
+            if (requested.key === "focusDimming") {
+              dimmingRef.current = requested.value as boolean;
+              setFocusDimming(requested.value as boolean);
+            } else
+              pref({
+                [requested.key]: requested.value,
+              } as Partial<ControlValues>);
             requestAnimationFrame(() => {
               if (
                 remote.current.socket !== socket ||
@@ -760,6 +779,8 @@ function App() {
     };
   }, [route]);
   function endRemote() {
+    clearTimeout(inviteTimer.current);
+    setInviteDeadline(0);
     pairGeneration.current++;
     setPairOpen(false);
     remote.current.close();
@@ -834,12 +855,29 @@ function App() {
     try {
       setRemoteStatus("connecting");
       const url = await remote.current.host();
-      const image = await QRCode.toDataURL(url, { width: 240, margin: 3 });
+      const image = pairingIssue
+        ? ""
+        : await QRCode.toDataURL(url, {
+            width: 260,
+            margin: 4,
+            errorCorrectionLevel: "M",
+          });
       if (generation !== pairGeneration.current) return;
       setInvite(url);
       setQR(image);
+      setInviteDeadline(Date.now() + 120000);
+      clearTimeout(inviteTimer.current);
+      inviteTimer.current = setTimeout(() => {
+        if (generation !== pairGeneration.current) return;
+        remote.current.close();
+        setRemoteStatus("expired");
+        setInvite("");
+        setQR("");
+        setInviteDeadline(0);
+      }, 120000);
     } catch {
-      if (generation === pairGeneration.current) setRemoteStatus("unavailable");
+      if (generation === pairGeneration.current)
+        setRemoteStatus("serverUnreachable");
     }
   }
   async function importFile(file: File) {
@@ -867,8 +905,17 @@ function App() {
     max: number,
     step: number,
   ) => (
-    <label>
-      {t(key as Key)}{" "}
+    <label className="dock-adjustment" title={t(key as Key)}>
+      <Icon
+        name={
+          key === "fontSize"
+            ? "size"
+            : key === "lineHeight"
+              ? "spacing"
+              : "width"
+        }
+      />
+      <span className="sr-only">{t(key as Key)}</span>
       <output>
         {new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
           Number(current?.preferences[key]),
@@ -929,113 +976,61 @@ function App() {
   const settingsContent = current ? (
     <aside className="settings">
       <h2>{t("settings")}</h2>
-      <Segmented
-        label={t("settings")}
-        value={settingsTab}
-        onChange={setSettingsTab}
-        options={[
-          { value: "playback", label: t("playbackTab") },
-          { value: "text", label: t("textSettings") },
-          { value: "appearance", label: t("appearance") },
-        ]}
-      />
       <div className="settings-tab-content">
-        {settingsTab === "playback" && (
-          <>
-            {range("speed", 0.5, 3, 0.25)}
-            <label>
-              {t("countdown")}
-              <TeleoSelect
-                label={t("countdown")}
-                value={String(current.preferences.countdownSeconds)}
-                onChange={(v) => pref({ countdownSeconds: Number(v) })}
-                options={[0, 3, 5, 10].map((n) => ({
-                  value: String(n),
-                  label: n ? `${n} ${t("seconds")}` : t("off"),
-                }))}
-              />
-            </label>
-          </>
-        )}
-        {settingsTab === "text" && (
-          <>
-            {range("fontSize", 16, 100, 1)}
-            {range("lineHeight", 1, 3, 0.1)}
-            {range("textWidth", 280, 1600, 20)}
-            <div className="setting-group">
-              <span>{t("alignment")}</span>
-              <Segmented
-                label={t("alignment")}
-                value={current.preferences.alignment}
-                onChange={(alignment) => pref({ alignment })}
-                options={(["left", "center", "right"] as const).map(
-                  (value) => ({ value, label: t(value) }),
-                )}
-              />
-            </div>
-          </>
-        )}
-        {settingsTab === "appearance" && (
-          <>
-            {(["mirrorHorizontal", "mirrorVertical", "focusLine"] as const).map(
-              (k) => (
-                <label className="check" key={k}>
-                  <input
-                    type="checkbox"
-                    checked={current.preferences[k]}
-                    onChange={(e) => pref({ [k]: e.target.checked })}
-                  />
-                  {t(k)}
-                </label>
-              ),
-            )}
-            <label>
-              {t("focusPosition")}
-              <output>{focusPosition}%</output>
-              <input
-                aria-label={t("focusPosition")}
-                type="range"
-                min="20"
-                max="70"
-                value={focusPosition}
-                onChange={(e) => setFocusPosition(Number(e.target.value))}
-              />
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={focusDimming}
-                onChange={(e) => setFocusDimming(e.target.checked)}
-              />
-              {t("focusDimming")}
-            </label>
-            <div className="setting-group">
-              <span>{t("appearance")}</span>
-              <Segmented
-                label={t("appearance")}
-                value={current.preferences.appearance}
-                onChange={(appearance) => pref({ appearance })}
-                options={[
-                  { value: "dark", label: t("dark") },
-                  { value: "light", label: t("light") },
-                ]}
-              />
-            </div>
-            <div className="setting-group">
-              <span>{t("interfaceTheme")}</span>
-              <Segmented
-                label={t("interfaceTheme")}
-                value={theme}
-                onChange={setTheme}
-                options={[
-                  { value: "light", label: t("light") },
-                  { value: "dark", label: t("dark") },
-                  { value: "system", label: t("system") },
-                ]}
-              />
-            </div>
-          </>
-        )}
+        <h3>{t("appearance")}</h3>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={current.preferences.focusLine}
+            onChange={(e) => pref({ focusLine: e.target.checked })}
+          />
+          {t("focusLine")}
+        </label>
+        <label>
+          {t("focusPosition")}
+          <output>{focusPosition}%</output>
+          <input
+            aria-label={t("focusPosition")}
+            type="range"
+            min="20"
+            max="70"
+            value={focusPosition}
+            onChange={(e) => setFocusPosition(Number(e.target.value))}
+          />
+        </label>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={focusDimming}
+            onChange={(e) => setFocusDimming(e.target.checked)}
+          />
+          {t("focusDimming")}
+        </label>
+        <div className="setting-group">
+          <span>{t("appearance")}</span>
+          <Segmented
+            label={t("appearance")}
+            value={current.preferences.appearance}
+            onChange={(appearance) => pref({ appearance })}
+            options={[
+              { value: "dark", label: t("dark") },
+              { value: "light", label: t("light") },
+            ]}
+          />
+        </div>
+        <div className="setting-group">
+          <span>{t("interfaceTheme")}</span>
+          <Segmented
+            label={t("interfaceTheme")}
+            value={theme}
+            onChange={setTheme}
+            options={[
+              { value: "light", label: t("light") },
+              { value: "dark", label: t("dark") },
+              { value: "system", label: t("system") },
+            ]}
+          />
+        </div>
       </div>
       <details>
         <summary>{t("physical")}</summary>
@@ -1141,16 +1136,23 @@ function App() {
   const controls = (
     <div
       className="reader-controls"
-      aria-hidden={!controlsVisible}
-      inert={!controlsVisible}
+      aria-label={t("playbackSettings")}
+      role="toolbar"
+      aria-hidden={reading && !controlsVisible}
+      inert={reading && !controlsVisible}
     >
-      <div className="dock-group">
-        <IconButton
-          name="restart"
-          label={t("restart")}
-          onClick={() => command({ action: "restart" })}
-        />
-      </div>
+      <IconButton
+        className="dock-play primary"
+        name={engine.playing ? "pause" : "play"}
+        label={t(engine.playing ? "pause" : "play")}
+        onClick={() => {
+          if (!reading)
+            void startReader().then(() =>
+              requestAnimationFrame(() => command({ action: "play" })),
+            );
+          else command({ action: engine.playing ? "pause" : "play" });
+        }}
+      />
       <div className="dock-group speed-group">
         <IconButton
           name="minus"
@@ -1164,36 +1166,49 @@ function App() {
           onClick={() => command({ action: "speedUp" })}
         />
       </div>
-      <IconButton
-        className="dock-play primary"
-        name={engine.playing ? "pause" : "play"}
-        label={t(engine.playing ? "pause" : "play")}
-        onClick={() => command({ action: engine.playing ? "pause" : "play" })}
-      />
-      <div className="dock-group paragraph-group">
-        <IconButton
-          name="previous"
-          label={t("previousParagraph")}
-          onClick={() => command({ action: "previousParagraph" })}
-        />
-        <IconButton
-          name="next"
-          label={t("nextParagraph")}
-          onClick={() => command({ action: "nextParagraph" })}
-        />
+      <div className="dock-group typography-group">
+        {range("fontSize", 16, 100, 1)}
+        {range("lineHeight", 1, 3, 0.1)}
+        {range("textWidth", 280, 1600, 20)}
       </div>
+      <TeleoMenu
+        className="dock-timer"
+        label={t("timer")}
+        closeLabel={t("close")}
+        trigger={<Icon name="timer" />}
+        items={[0, 3, 5, 10].map((n) => ({
+          label:
+            (current?.preferences.countdownSeconds === n ? "\u2713 " : "") +
+            (n ? `${n} ${t("seconds")}` : t("off")),
+          action: () => pref({ countdownSeconds: n }),
+        }))}
+      />
+      <TeleoSelect
+        className="dock-alignment"
+        label={t("alignment")}
+        value={current?.preferences.alignment || "center"}
+        onChange={(v) => pref({ alignment: v as Preferences["alignment"] })}
+        options={(["left", "center", "right"] as const).map((value) => ({
+          value,
+          label: t(value),
+        }))}
+      />
       <div className="dock-group text-group">
-        <IconButton
-          name="text"
-          label={t("settings")}
-          onClick={() => setSettingsOpen(true)}
-        />
         <IconButton
           name="mirror"
           label={t("mirrorHorizontal")}
           active={current?.preferences.mirrorHorizontal}
           onClick={() =>
             pref({ mirrorHorizontal: !current?.preferences.mirrorHorizontal })
+          }
+        />
+        <IconButton
+          className="vertical-mirror"
+          name="mirror"
+          label={t("mirrorVertical")}
+          active={current?.preferences.mirrorVertical}
+          onClick={() =>
+            pref({ mirrorVertical: !current?.preferences.mirrorVertical })
           }
         />
         <IconButton
@@ -1207,6 +1222,25 @@ function App() {
           label={t("fullscreen")}
           active={immersive}
           onClick={toggleFullscreen}
+        />
+      </div>
+      <div className="dock-group">
+        <IconButton
+          name="restart"
+          label={t("restart")}
+          onClick={() => command({ action: "restart" })}
+        />
+      </div>
+      <div className="dock-group paragraph-group">
+        <IconButton
+          name="paragraphPrevious"
+          label={t("previousParagraph")}
+          onClick={() => command({ action: "previousParagraph" })}
+        />
+        <IconButton
+          name="paragraphNext"
+          label={t("nextParagraph")}
+          onClick={() => command({ action: "nextParagraph" })}
         />
       </div>
     </div>
@@ -1304,14 +1338,6 @@ function App() {
                 />
               </>
             )}
-            <TeleoMenu
-              closeLabel={t("close")}
-              className="app-menu"
-              label={t("menu")}
-              items={(["studio", "remote", "help", "privacy"] as const).map(
-                (k) => ({ label: t(k), action: () => navigate("/" + k) }),
-              )}
-            />
             {lang}
           </header>
         )}
@@ -1582,6 +1608,7 @@ function App() {
             <h1>{t("notFound")}</h1>
           </main>
         )}
+        {!reading && current && route === "/studio" && controls}
         {reading && current && (
           <section
             className={
@@ -1679,42 +1706,81 @@ function App() {
             closeLabel={t("close")}
             onClose={() => setPairOpen(false)}
           >
-            <div className="pair-panel">
-              <p role="status">{t(remoteStatus || "waiting")}</p>
-              {remoteStatus === "connected" && previewConsent}
-              {invite && remoteStatus === "waiting" && (
-                <>
-                  <img src={qr} alt={t("invite")} />
-                  <a href={invite} target="_blank" rel="noreferrer">
-                    {t("invite")}
-                  </a>
-                </>
-              )}
-              {approval && (
-                <>
-                  <p>{t("approval")}</p>
-                  {button("allow", () => {
-                    remote.current.send({ type: "allow" });
-                    setApproval(false);
-                    setInvite("");
-                  })}
-                  {button("deny", () => {
-                    remote.current.send({ type: "deny" });
-                    endRemote();
-                    setRemoteStatus("disconnected");
-                    setApproval(false);
-                    setInvite("");
-                  })}
-                </>
-              )}
-              {remoteStatus === "disconnected" || remoteStatus === "unavailable"
-                ? button("reconnect", () => void connect())
-                : button("revoke", () => {
-                    endRemote();
-                    setRemoteStatus("disconnected");
-                    setInvite("");
-                    setApproval(false);
-                  })}
+            <div className="pairing-composition">
+              <div className="pair-panel">
+                <span className="brand pairing-brand" aria-hidden="true">
+                  teleo.
+                </span>
+                <h3>{t("connect")}</h3>
+                <p
+                  role="status"
+                  className={remoteStatus === "waiting" ? "sr-only" : ""}
+                >
+                  {t(remoteStatus || "waiting")}
+                </p>
+                {remoteStatus === "connected" && previewConsent}
+                {invite &&
+                  (remoteStatus === "waiting" ||
+                    remoteStatus === "connecting") && (
+                    <>
+                      {!pairingIssue && <p>{t("pairInstructions")}</p>}
+                      <p>{t("inviteLifetime")}</p>
+                      {pairingIssue ? (
+                        <p className="pairing-warning" role="note">
+                          {t(pairingIssue)}
+                        </p>
+                      ) : (
+                        <img src={qr} alt={t("invite")} />
+                      )}
+                      {inviteDeadline > 0 && (
+                        <span className="sr-only">{t("inviteLifetime")}</span>
+                      )}
+                      <a href={invite} target="_blank" rel="noreferrer">
+                        {t("invite")}
+                      </a>
+                      {pairingIssue && <small>{t("localLink")}</small>}
+                      <button
+                        onClick={() => {
+                          void navigator.clipboard
+                            .writeText(invite)
+                            .then(() => setNotice("copied"))
+                            .catch(() => setNotice("unavailable"));
+                        }}
+                      >
+                        {t("copy")}
+                      </button>
+                    </>
+                  )}
+                {approval && (
+                  <>
+                    <p>{t("approval")}</p>
+                    {button("allow", () => {
+                      remote.current.send({ type: "allow" });
+                      setApproval(false);
+                      setInvite("");
+                    })}
+                    {button("deny", () => {
+                      remote.current.send({ type: "deny" });
+                      endRemote();
+                      setRemoteStatus("disconnected");
+                      setApproval(false);
+                      setInvite("");
+                    })}
+                  </>
+                )}
+                {remoteStatus === "disconnected" ||
+                remoteStatus === "unavailable" ||
+                remoteStatus === "serverUnreachable" ||
+                remoteStatus === "expired"
+                  ? button("reconnect", () => void connect())
+                  : button("revoke", () => {
+                      endRemote();
+                      setRemoteStatus("disconnected");
+                      setInvite("");
+                      setApproval(false);
+                    })}
+              </div>
+              <RemoteIllustration t={t} />
             </div>
           </Sheet>
         )}
@@ -1827,6 +1893,17 @@ const reactRoot =
   import.meta.hot?.data.reactRoot ??
   createRoot(document.getElementById("root")!);
 if (import.meta.hot) import.meta.hot.data.reactRoot = reactRoot;
-reactRoot.render(<App />);
+reactRoot.render(
+  window.isSecureContext ? (
+    <App />
+  ) : (
+    <main className="prose">
+      <h1>teleo.</h1>
+      <p>
+        {dictionaries[detectLocale(navigator.languages)].securePairingRequired}
+      </p>
+    </main>
+  ),
+);
 if (import.meta.env.PROD && "serviceWorker" in navigator)
   navigator.serviceWorker.register("/sw.js").catch(() => {});

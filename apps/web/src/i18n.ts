@@ -1,6 +1,21 @@
 export const en = {
+  timer: "Timer",
+  quickSettings: "Settings",
+  displaySettings: "Display",
+  focus: "Focus",
+  localPairingOnly:
+    "This address works only on this Mac. For an iPhone, open a reachable HTTPS LAN address on both devices or use the approved HTTPS staging. The link below is for this Mac only; no phone QR is generated.",
+  securePairingRequired:
+    "Phone pairing needs a trusted HTTPS address. Open the HTTPS LAN address on both devices.",
+  serverUnreachable:
+    "Cannot reach the server. Check the address and network, then create a new invitation.",
+  inviteLifetime:
+    "The invitation is valid for 120 seconds and can be used once.",
+  renewInvite: "New invitation",
+  pairInstructions:
+    "Scan with your iPhone camera, then approve the connection in Studio.",
+  localLink: "Open on this Mac",
   advancedSettings: "Advanced settings",
-  quickTypography: "Quick typography",
   textHidden: "Text display is hidden",
   showText: "Show current text",
   expandedText: "Expanded reading view",
@@ -37,7 +52,6 @@ export const en = {
   chooseScript: "Choose a script",
   workspaceMode: "Workspace mode",
   remoteConnection: "Phone connection",
-  menu: "More",
   closeLibrary: "Close library",
   words: "words",
   minutes: "min · estimate",
@@ -188,8 +202,22 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  timer: "Таймер",
+  quickSettings: "Налаштування",
+  displaySettings: "Відображення",
+  focus: "Фокус",
+  localPairingOnly:
+    "Ця адреса працює лише на цьому Mac. Для iPhone відкрийте доступну HTTPS-адресу локальної мережі на обох пристроях або затверджений HTTPS staging. Посилання нижче лише для цього Mac; QR для телефона не створюється.",
+  securePairingRequired:
+    "Підключення телефона потребує довіреної HTTPS-адреси. Відкрийте HTTPS-адресу локальної мережі на обох пристроях.",
+  serverUnreachable:
+    "Сервер недоступний. Перевірте адресу й мережу, потім створіть нове запрошення.",
+  inviteLifetime: "Запрошення діє 120 секунд і використовується один раз.",
+  renewInvite: "Нове запрошення",
+  pairInstructions:
+    "Відскануйте камерою iPhone, потім дозвольте підключення у Студії.",
+  localLink: "Відкрити на цьому Mac",
   advancedSettings: "Додаткові налаштування",
-  quickTypography: "Параметри тексту",
   textHidden: "Показ тексту вимкнено",
   showText: "Показувати поточний текст",
   expandedText: "Розгорнутий текст",
@@ -226,7 +254,6 @@ export const uk: Record<Key, string> = {
   chooseScript: "Оберіть текст",
   workspaceMode: "Режим роботи",
   remoteConnection: "З’єднання з телефоном",
-  menu: "Ще",
   closeLibrary: "Закрити бібліотеку",
   words: "слів",
   minutes: "хв · приблизно",
@@ -376,8 +403,22 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  timer: "Таймер",
+  quickSettings: "Настройки",
+  displaySettings: "Отображение",
+  focus: "Фокус",
+  localPairingOnly:
+    "Этот адрес работает только на этом Mac. Для iPhone откройте доступный HTTPS-адрес локальной сети на обоих устройствах или утверждённый HTTPS staging. Ссылка ниже только для этого Mac; QR для телефона не создаётся.",
+  securePairingRequired:
+    "Для подключения телефона нужен доверенный HTTPS-адрес. Откройте HTTPS-адрес локальной сети на обоих устройствах.",
+  serverUnreachable:
+    "Сервер недоступен. Проверьте адрес и сеть, затем создайте новое приглашение.",
+  inviteLifetime: "Приглашение действует 120 секунд и используется один раз.",
+  renewInvite: "Новое приглашение",
+  pairInstructions:
+    "Отсканируйте камерой iPhone, затем разрешите подключение в Студии.",
+  localLink: "Открыть на этом Mac",
   advancedSettings: "Расширенные настройки",
-  quickTypography: "Параметры текста",
   textHidden: "Показ текста выключен",
   showText: "Показывать текущий текст",
   expandedText: "Развёрнутый текст",
@@ -414,7 +455,6 @@ export const ru: Record<Key, string> = {
   chooseScript: "Выберите текст",
   workspaceMode: "Режим работы",
   remoteConnection: "Подключение телефона",
-  menu: "Ещё",
   closeLibrary: "Закрыть библиотеку",
   words: "слов",
   minutes: "мин · примерно",

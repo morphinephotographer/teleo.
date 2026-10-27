@@ -109,6 +109,11 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await phone
       .getByRole("button", { name: t.advancedSettings, exact: true })
       .click();
+    await phone
+      .locator(".remote-settings-page .remote-list")
+      .getByRole("button")
+      .filter({ hasText: t.studio })
+      .click();
     for (const size of [
       { width: 320, height: 568 },
       { width: 390, height: 664 },
@@ -134,8 +139,12 @@ for (const locale of ["en", "uk", "ru"] as const) {
       info.project.use.viewport || { width: 1280, height: 720 },
     );
     await phone
-      .getByRole("dialog", { name: t.advancedSettings, exact: true })
-      .getByRole("button", { name: t.close, exact: true })
+      .getByRole("dialog", { name: t.connection, exact: true })
+      .getByRole("button", { name: t.back, exact: true })
+      .click();
+    await phone
+      .locator(".remote-settings-page")
+      .getByRole("button", { name: t.back, exact: true })
       .click();
     await phone.getByRole("button", { name: t.pause, exact: true }).click();
     await expect(

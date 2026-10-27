@@ -45,6 +45,7 @@ describe("v0.6 approved controls", () => {
       ["textWidth", 1300],
       ["countdownSeconds", 3],
       ["focusLine", false],
+      ["focusDimming", true],
       ["mirrorHorizontal", true],
     ] as const)
       expect(
@@ -56,6 +57,7 @@ describe("v0.6 approved controls", () => {
       ["textWidth", 100],
       ["countdownSeconds", 11],
       ["focusLine", 1],
+      ["focusDimming", "true"],
       ["body", "private"],
       ["__proto__", 1],
     ])
@@ -65,10 +67,29 @@ describe("v0.6 approved controls", () => {
   });
   it("transfers only numeric/boolean control metadata and preserves old state compatibility", () => {
     expect(validControlState(controls)).toBe(true);
-    expect(validControlState({...controls,marks:[0,.2,1]})).toBe(true);
-    expect(validControlState({...controls,marks:[NaN]})).toBe(false);
-    expect(validControlState({...controls,marks:Array(13).fill(0)})).toBe(false);
-    expect(JSON.stringify({type:"ack",id:crypto.randomUUID(),state:{playing:true,speed:3,position:1e8,controls:{...controls,marks:Array(12).fill(.1234)}}}).length).toBeLessThan(1024);
+    expect(validControlState({ ...controls, focusDimming: true })).toBe(true);
+    expect(validControlState({ ...controls, focusDimming: 1 })).toBe(false);
+    expect(validControlState({ ...controls, marks: [0, 0.2, 1] })).toBe(true);
+    expect(validControlState({ ...controls, marks: [NaN] })).toBe(false);
+    expect(validControlState({ ...controls, marks: Array(13).fill(0) })).toBe(
+      false,
+    );
+    expect(
+      JSON.stringify({
+        type: "ack",
+        id: crypto.randomUUID(),
+        state: {
+          playing: true,
+          speed: 3,
+          position: 1e8,
+          controls: {
+            ...controls,
+            focusDimming: true,
+            marks: Array(12).fill(0.1234),
+          },
+        },
+      }).length,
+    ).toBeLessThan(1024);
     expect(validControlState({ ...controls, title: "private" })).toBe(false);
     expect(validControlState({ ...controls, maximum: Infinity })).toBe(false);
     expect(validPlaybackState({ playing: false, speed: 1, position: 0 })).toBe(

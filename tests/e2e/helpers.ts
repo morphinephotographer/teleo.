@@ -25,20 +25,7 @@ export async function openSettings(
       .click();
     settings = page.getByRole("dialog");
   }
-  if (tab)
-    await settings
-      .getByRole("group", { name: t.settings, exact: true })
-      .getByRole("button", {
-        name: t[
-          tab === "playback"
-            ? "playbackTab"
-            : tab === "text"
-              ? "textSettings"
-              : "appearance"
-        ],
-        exact: true,
-      })
-      .click();
+  void tab; // Only Appearance remains in this panel; operational controls moved to the dock.
   return settings;
 }
 export async function closeSettings(page: Page, t: typeof dictionaries.en) {
@@ -49,6 +36,11 @@ export async function closeSettings(page: Page, t: typeof dictionaries.en) {
 export async function disconnectPhone(phone: Page, t: typeof dictionaries.en) {
   await phone
     .getByRole("button", { name: t.advancedSettings, exact: true })
+    .click();
+  await phone
+    .locator(".remote-list")
+    .getByRole("button")
+    .filter({ hasText: t.studio })
     .click();
   await phone.getByRole("button", { name: t.revoke, exact: true }).click();
 }
@@ -64,4 +56,47 @@ export async function managePhone(page: Page, t: typeof dictionaries.en) {
       .getByRole("button", { name: t.remoteConnection, exact: true })
       .click();
   return dialog;
+}
+
+export async function remoteValue(
+  phone: Page,
+  t: typeof dictionaries.en,
+  key: "fontSize" | "lineHeight" | "textWidth",
+) {
+  if (!(await phone.locator(".remote-settings-page").isVisible()))
+    await phone
+      .getByRole("button", { name: t.advancedSettings, exact: true })
+      .click();
+  await phone
+    .locator(".remote-settings-page .remote-list")
+    .getByRole("button")
+    .filter({ hasText: t[key] })
+    .click();
+  return phone
+    .locator(".remote-settings-page")
+    .getByRole("slider", { name: t[key], exact: true });
+}
+export async function closeRemoteValue(phone: Page, t: typeof dictionaries.en) {
+  await phone
+    .locator(".remote-settings-page")
+    .getByRole("button", { name: t.back, exact: true })
+    .click();
+  await phone
+    .locator(".remote-settings-page")
+    .getByRole("button", { name: t.back, exact: true })
+    .click();
+}
+export async function setTimer(
+  page: Page,
+  t: typeof dictionaries.en,
+  n: number,
+) {
+  await page
+    .locator(".reader-controls")
+    .getByRole("button", { name: t.timer, exact: true })
+    .click();
+  await page
+    .getByRole("menuitem")
+    .filter({ hasText: n ? `${n} ${t.seconds}` : t.off })
+    .click();
 }

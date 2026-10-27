@@ -1,6 +1,9 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "timer"
+  | "back"
+  | "align"
   | "gear"
   | "chevron"
   | "size"
@@ -12,7 +15,6 @@ export type IconName =
   | "library"
   | "settings"
   | "remote"
-  | "more"
   | "close"
   | "play"
   | "pause"
@@ -26,6 +28,14 @@ export type IconName =
   | "next"
   | "text";
 const paths: Record<IconName, ReactNode> = {
+  timer: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 6v6l4 2" />
+    </>
+  ),
+  back: <path d="m15 5-7 7 7 7" />,
+  align: <path d="M4 5h16M7 10h10M4 15h16M7 20h10" />,
   gear: (
     <>
       <path d="m10 3-.7 2.1-2 .9-2-.8-2 3.5 1.5 1.6v2.4l-1.5 1.6 2 3.5 2-.8 2 .9.7 2.1h4l.7-2.1 2-.9 2 .8 2-3.5-1.5-1.6v-2.4L21 8.8l-2-3.5-2 .8-2-.9L14 3Z" />
@@ -81,13 +91,6 @@ const paths: Record<IconName, ReactNode> = {
     <>
       <rect x="7" y="2" width="10" height="20" rx="3" />
       <path d="M10 18h4M10 6h4M12 4v4" />
-    </>
-  ),
-  more: (
-    <>
-      <circle cx="5" cy="12" r="1" />
-      <circle cx="12" cy="12" r="1" />
-      <circle cx="19" cy="12" r="1" />
     </>
   ),
   close: <path d="m6 6 12 12M18 6 6 18" />,
@@ -205,14 +208,18 @@ export function Segmented<T extends string>({
 }
 /** Native dialog supplies modal focus containment, Escape and restoration. */
 export function Sheet({
+  id,
   open,
   title,
   closeLabel,
   onClose,
   children,
   className = "",
+  backLabel,
 }: {
+  id?: string;
   open: boolean;
+  backLabel?: string;
   title: string;
   closeLabel: string;
   onClose: () => void;
@@ -239,6 +246,7 @@ export function Sheet({
   }, [open]);
   return (
     <dialog
+      id={id}
       ref={dialog}
       className={"settings-sheet " + className}
       aria-labelledby={headingId}
@@ -260,12 +268,17 @@ export function Sheet({
         }
       }}
     >
-      <div className="sheet-heading">
+      <div className={"sheet-heading" + (backLabel ? " with-back" : "")}>
+        {backLabel && (
+          <IconButton name="back" label={backLabel} onClick={onClose} />
+        )}
         <div>
-          <span className="eyebrow">teleo.</span>
+          {!backLabel && <span className="eyebrow">teleo.</span>}
           <h2 id={headingId}>{title}</h2>
         </div>
-        <IconButton name="close" label={closeLabel} onClick={onClose} />
+        {!backLabel && (
+          <IconButton name="close" label={closeLabel} onClick={onClose} />
+        )}
       </div>
       {children}
     </dialog>

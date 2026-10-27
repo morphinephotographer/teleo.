@@ -267,53 +267,6 @@ output {
   padding: 6px 10px;
   width: 110px;
 }
-.app-menu {
-  border: 0;
-  position: relative;
-  flex-shrink: 0;
-}
-.app-menu summary {
-  width: 44px;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  border-radius: 50%;
-  list-style: none;
-}
-.app-menu summary::-webkit-details-marker {
-  display: none;
-}
-.app-menu[open] summary,
-.app-menu summary:hover {
-  background: var(--subtle);
-}
-.app-menu nav {
-  position: absolute;
-  top: 54px;
-  right: 0;
-  min-width: 190px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  box-shadow: 0 12px 40px #0001;
-  border-radius: var(--radius-base);
-  padding: 8px;
-  animation: panel-in 0.2s ease;
-}
-.app-menu nav a {
-  font-size: 13px;
-  padding: 12px 14px;
-  border-radius: var(--radius-base);
-}
-.app-menu nav a:hover,
-.app-menu nav a[aria-current="page"] {
-  background: var(--subtle);
-  text-decoration: none;
-}
 .banner {
   margin: 0;
   padding: 10px 16px;
@@ -655,7 +608,8 @@ output {
 .settings-sheet[open] {
   display: flex;
   flex-direction: column;
-  animation: sheet-in 0.22s ease;
+  /* Avoid blank top-layer surfaces in Safari animation compositing. */
+  animation: none;
 }
 .settings-sheet::backdrop {
   background: #1113;
@@ -1348,17 +1302,6 @@ output {
   .app-shell header > .segmented {
     width: calc(100% - 120px);
   }
-  .app-menu summary {
-    width: 36px;
-    height: 40px;
-  }
-  .app-menu nav {
-    position: fixed;
-    top: 108px;
-    right: 16px;
-    padding-top: 62px;
-    z-index: 21;
-  }
   .toolbar-spacer {
     display: none;
   }
@@ -1558,18 +1501,11 @@ output {
     padding: 4px 6px;
     --toolbar: 52px;
   }
-  .app-shell:not(.route-studio) header > .app-menu {
-    margin-left: auto;
-  }
   .app-shell:not(.route-studio) header > select:last-child {
     position: static;
     width: 100px;
     opacity: 1;
     pointer-events: auto;
-  }
-  .app-shell:not(.route-studio) header .app-menu nav {
-    top: 62px;
-    padding-top: 8px;
   }
   .controller {
     padding: 20px;
@@ -1857,14 +1793,6 @@ output {
   border: 1px solid var(--line);
   width: 100%;
 }
-.app-menu .picker-trigger {
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  border: 0;
-  border-radius: 50%;
-  justify-content: center;
-}
 .app-shell header > .script-selector {
   width: 180px;
   flex-shrink: 1;
@@ -1972,8 +1900,8 @@ output {
   display: flex;
   flex-direction: column;
   gap: 20px;
-  flex: 1;
-  min-height: 160px;
+  flex: 0 0 auto;
+  min-height: 0;
 }
 .settings-tab-content > * {
   flex-shrink: 0;
@@ -2509,46 +2437,11 @@ input[type="checkbox"] {
   background: #3d3e3f;
   transform: scale(0.96);
 }
-.remote-quick {
-  position: absolute;
-  bottom: max(10px, env(safe-area-inset-bottom));
-  left: 12px;
-  right: 12px;
-  z-index: 4;
-  background: #202122;
-  border: 1px solid #38393a;
-  border-radius: var(--radius-base);
-  box-shadow: 0 -8px 32px #0005;
-  padding: 0 12px 8px;
-  max-height: min(245px, 48%);
-  overflow: auto;
-  animation: sheet-up 160ms ease-out;
-}
-.quick-heading {
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-}
 .sheet-handle {
   width: 30px;
   height: 4px;
   border-radius: var(--radius-pill);
   background: #555;
-}
-.quick-heading button {
-  position: absolute;
-  right: -6px;
-  top: -1px;
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
-  border-radius: 50%;
-  padding: 11px;
-  background: transparent;
-  border: 0;
-  z-index: 2;
 }
 .quick-slider {
   display: grid;
@@ -2701,11 +2594,6 @@ input[type="checkbox"] {
     height: 44px;
     width: 44px;
   }
-  .remote-quick {
-    left: auto;
-    width: min(370px, 48%);
-    max-height: calc(var(--visual-height, 100dvh) - 64px);
-  }
 }
 @media (max-width: 600px) {
   .action-dialog,
@@ -2720,18 +2608,6 @@ input[type="checkbox"] {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .remote-quick,
-  .teleo-popover {
-    animation: none;
-  }
-}
-
-.remote-v06.quick-open {
-  padding-bottom: calc(210px + env(safe-area-inset-bottom));
-}
-.remote-v06.quick-open > .remote-paragraphs,
-.remote-v06.quick-open > .remote-quick-trigger {
-  display: none;
 }
 .remote-v06 .remote-advanced .check {
   flex-direction: row;
@@ -2744,17 +2620,6 @@ input[type="checkbox"] {
   color: #111;
 }
 @media (orientation: landscape) and (max-height: 600px) {
-  .remote-v06.quick-open {
-    padding-bottom: 8px;
-  }
-  .remote-v06.quick-open > .remote-paragraphs,
-  .remote-v06.quick-open > .remote-quick-trigger {
-    display: grid;
-  }
-  .remote-quick {
-    left: 12px;
-    right: auto;
-  }
 }
 
 .icon-button.has-connection:after {
@@ -2766,4 +2631,549 @@ input[type="checkbox"] {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+}
+
+/* Approved four-state remote and shared website controls. */
+.brand,
+.remote-v06 .brand {
+  letter-spacing: -0.04em;
+}
+.empty-mark {
+  letter-spacing: -0.065em;
+}
+.intro-wordmark {
+  letter-spacing: -0.06em;
+}
+.editor input[aria-label],
+.editor textarea {
+  border-radius: var(--radius-base) !important;
+  padding-left: 14px !important;
+  padding-right: 14px !important;
+}
+.editor input:focus-visible,
+.editor textarea:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--muted);
+}
+.reader-controls {
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: calc(100% - 24px);
+  border-radius: var(--radius-base);
+  gap: 6px;
+  padding: 8px;
+}
+.app-shell > .reader-controls {
+  background: var(--surface);
+  color: var(--ink);
+  border-color: var(--line);
+  margin: 0 auto;
+}
+.reader-controls .dock-group {
+  display: flex;
+}
+.reader-controls .text-group {
+  display: flex;
+}
+.reader-controls .typography-group {
+  gap: 12px;
+}
+.dock-adjustment {
+  width: 82px;
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  align-items: center;
+  gap: 2px 4px;
+  margin: 0;
+}
+.dock-adjustment output {
+  padding: 0;
+  text-align: right;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.dock-adjustment input[type="range"] {
+  grid-column: 1/-1;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  height: 24px;
+  accent-color: currentColor;
+}
+.reader-controls .dock-timer .picker-trigger {
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  border-radius: var(--radius-pill);
+}
+.reader-controls .dock-alignment {
+  width: 110px;
+}
+.reader-controls .dock-alignment .picker-trigger {
+  background: transparent;
+  color: inherit;
+  border-color: #8885;
+}
+.vertical-mirror svg {
+  transform: rotate(90deg);
+}
+.pairing-sheet {
+  width: min(760px, calc(100vw - 32px));
+}
+.pairing-composition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 30px;
+  padding: 24px;
+  overflow: auto;
+  min-height: 0;
+}
+.pairing-composition .pair-panel {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  background: transparent;
+  color: var(--ink);
+}
+.pairing-composition .pair-panel p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.pairing-composition .pair-panel [role="status"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.pairing-composition .pair-panel img {
+  width: 260px;
+  height: 260px;
+  align-self: flex-start;
+}
+.pairing-warning {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-base);
+}
+.phone-illustration {
+  border: 5px solid #383839;
+  border-radius: 36px;
+  background: #090a0a;
+  color: #f4f4f2;
+  padding: 20px 14px;
+  height: 456px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  user-select: none;
+  pointer-events: none;
+}
+.illustration-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.illustration-header .brand {
+  font-size: 22px;
+  color: inherit;
+  margin-right: auto;
+}
+.illustration-header svg {
+  width: 14px;
+}
+.illustration-text {
+  font-size: 16px;
+  line-height: 1.45;
+  flex: 1;
+  overflow: hidden;
+}
+.illustration-text p + p {
+  color: #999;
+}
+.illustration-track {
+  height: 4px;
+  background: #777;
+  border-radius: var(--radius-pill);
+}
+.illustration-play,
+.illustration-paragraphs {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.illustration-play span {
+  border-radius: 50%;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: #242525;
+}
+.illustration-play span:nth-child(2) {
+  background: #eee;
+  color: #080909;
+  width: 58px;
+  height: 58px;
+}
+.illustration-speed {
+  font-size: 12px;
+  text-align: center;
+}
+.illustration-paragraphs span {
+  border-radius: var(--radius-pill);
+  background: #242525;
+  display: grid;
+  place-items: center;
+  height: 40px;
+  flex: 1;
+}
+.illustration-quick {
+  align-self: center;
+  padding: 8px;
+  background: #242525;
+  border-radius: 50%;
+}
+.remote-v06 .remote-paragraphs button {
+  border-radius: var(--radius-pill);
+}
+.remote-quick-menu,
+.remote-settings-page {
+  --surface: #202122;
+  --ink: #f3f3f1;
+  --muted: #a7a8a9;
+  --line: #363738;
+  --subtle: #292a2b;
+  background: #0a0b0b;
+  color: var(--ink);
+  border: 0;
+}
+.remote-quick-menu {
+  width: min(560px, 100vw);
+  inset: auto 0 var(--visual-bottom, 0px);
+  margin: 0 auto;
+  height: auto;
+  max-height: min(80dvh, calc(var(--visual-height, 100dvh) - 32px));
+  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  background: #202122;
+  padding: 12px 16px max(20px, env(safe-area-inset-bottom));
+}
+.remote-quick-menu .sheet-heading {
+  padding: 12px 8px;
+  min-height: 48px;
+  background: transparent;
+}
+.remote-quick-menu .eyebrow {
+  display: none;
+}
+.remote-quick-menu .sheet-heading h2 {
+  font-size: 24px;
+  font-weight: 500;
+}
+.remote-quick-menu > .sheet-handle {
+  order: -1;
+  align-self: center;
+}
+.remote-list {
+  background: #202122;
+  border-radius: var(--radius-base);
+  overflow: hidden;
+}
+.remote-list > button,
+.remote-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 60px;
+  padding: 12px 16px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+}
+.remote-list > button + *,
+.remote-list > label + * {
+  border-top: 1px solid #ffffff0c;
+}
+.remote-list > button > span:first-of-type,
+.remote-toggle > span {
+  flex: 1;
+}
+.remote-list > button > svg:last-child {
+  width: 16px;
+  color: #aaa;
+  transform: rotate(-90deg);
+  flex-shrink: 0;
+}
+.remote-list button > svg:first-child,
+.remote-toggle > svg {
+  flex: 0 0 24px;
+}
+.remote-list output {
+  background: #ffffff08;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
+  font-size: 12px;
+}
+.remote-list small {
+  display: block;
+  color: #aaa;
+  margin-top: 4px;
+  font-size: 12px;
+}
+.remote-toggle input[type="checkbox"] {
+  appearance: none;
+  flex: 0 0 46px;
+  width: 46px;
+  height: 28px;
+  min-height: 28px;
+  border: 0;
+  padding: 3px;
+  margin: 0;
+  border-radius: var(--radius-pill);
+  background: #444;
+  cursor: pointer;
+}
+.remote-toggle input[type="checkbox"]::before {
+  content: "";
+  display: block;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #ddd;
+  transition: transform 120ms;
+}
+.remote-toggle input[type="checkbox"]:checked {
+  background: #717371;
+}
+.remote-toggle input[type="checkbox"]:checked::before {
+  transform: translateX(18px);
+  background: #fff;
+}
+.remote-settings-page {
+  inset: var(--visual-top, 0px) 0 auto;
+  margin: 0 auto;
+  width: min(560px, 100vw);
+  height: var(--visual-height, 100dvh);
+  max-height: var(--visual-height, 100dvh);
+  border-radius: 0;
+  padding: max(12px, env(safe-area-inset-top)) 0
+    max(12px, env(safe-area-inset-bottom));
+}
+.remote-settings-page .sheet-heading {
+  padding: 0 12px 12px;
+  background: transparent;
+  border: 0;
+  min-height: 54px;
+}
+.sheet-heading.with-back {
+  display: grid;
+  grid-template-columns: 44px 1fr 44px;
+  align-items: center;
+  gap: 4px;
+}
+.sheet-heading.with-back h2 {
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+.sheet-heading.with-back .icon-button {
+  background: transparent;
+  border: 0;
+}
+.remote-settings-page .remote-settings-content > section {
+  padding: 10px 18px 8px;
+  border: 0;
+}
+.remote-settings-page h3 {
+  text-transform: uppercase;
+  color: #aaa;
+  font-size: 12px;
+  font-weight: 400;
+  margin: 8px 4px;
+}
+.remote-settings-page p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #aaa;
+}
+.remote-settings-page .remote-extras {
+  display: grid;
+  gap: 12px;
+}
+.remote-settings-page .quick-slider {
+  padding: 14px;
+}
+.remote-settings-page .timer-options button {
+  min-height: 64px;
+  justify-content: space-between;
+}
+.remote-settings-page .timer-options button[aria-pressed="true"] {
+  background: transparent;
+}
+.remote-settings-page :focus-visible,
+.remote-quick-menu :focus-visible {
+  outline: 2px solid #eee;
+  outline-offset: -3px;
+}
+@media (max-width: 760px) {
+  .pairing-composition {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 20px;
+  }
+  .phone-illustration {
+    display: none;
+  }
+  .reader-controls {
+    border-radius: var(--radius-base);
+    gap: 4px;
+  }
+  .reader-controls .typography-group {
+    gap: 10px;
+    padding-left: 0;
+    border: 0;
+  }
+  .reader-controls .icon-button {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+  .reader-controls .dock-alignment {
+    width: 100px;
+  }
+}
+.pairing-sheet {
+  --surface: #1c1d20;
+  --ink: #f3f3f1;
+  --muted: #b8b9bf;
+  --line: #45474d;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+.pairing-sheet > .sheet-heading {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.pairing-sheet > .sheet-heading > div {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.pairing-sheet > .sheet-heading > .icon-button {
+  position: absolute;
+  right: 12px;
+  top: 12px;
+  z-index: 1;
+  width: 44px;
+  height: 44px;
+  color: var(--ink);
+  background: #ffffff0a;
+}
+.pairing-sheet .pairing-composition {
+  padding: 42px;
+  gap: 32px;
+}
+.pairing-brand {
+  color: inherit;
+  font-size: 42px;
+  line-height: 1;
+  margin: 0 0 12px;
+}
+.pair-panel h3 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 500;
+  letter-spacing: -0.035em;
+}
+.pair-panel > a {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 16px;
+  background: #ffffff06;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
+}
+.pairing-composition .phone-illustration {
+  align-self: center;
+  height: 470px;
+}
+.pairing-sheet::backdrop {
+  background: #0009;
+  backdrop-filter: blur(6px);
+}
+@media (max-width: 760px) {
+  .pairing-sheet .pairing-composition {
+    padding: 38px 22px 22px;
+  }
+}
+
+.remote-settings-page .remote-list > button,
+.remote-settings-page .remote-toggle {
+  min-height: 54px;
+}
+.remote-settings-page .remote-settings-content > section {
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+.remote-settings-page .remote-list label:nth-child(2) svg {
+  flex-shrink: 0;
+}
+
+.app-shell > .reader-controls .speed-group output {
+  color: var(--ink);
+}
+.pairing-composition .pair-panel {
+  animation: none;
+}
+.pair-panel h3 {
+  text-transform: none;
+}
+/* Viewport fallback cannot hide iOS Safari chrome; it fills the available visual viewport. */
+.remote-v06.viewport-fill {
+  position: fixed;
+  inset: var(--visual-top, 0px) 0 auto;
+  z-index: 40;
+  width: 100vw;
+  max-width: none;
+  height: var(--visual-height, 100dvh);
+}
+.remote-quick-menu .remote-list {
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.pair-panel h3 {
+  color: var(--ink);
+}
+
+.app-shell > .reader-controls .dock-play {
+  background: var(--ink);
+  color: var(--surface);
+}
+.sheet-heading .eyebrow {
+  text-transform: none;
+  letter-spacing: -0.04em;
+  font-weight: 650;
 }

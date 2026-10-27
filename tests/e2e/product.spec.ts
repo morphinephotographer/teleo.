@@ -246,7 +246,9 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
     page.locator(".reader").getByRole("button", { name: "Pause", exact: true }),
   ).toBeVisible();
   await page.keyboard.press("b");
-  await expect(page.locator(".reader-controls output")).toHaveText("1.25×");
+  await expect(page.locator(".reader-controls .speed-group output")).toHaveText(
+    "1.25×",
+  );
   await page.keyboard.press("a");
   await expect(
     page.locator(".reader").getByRole("button", { name: "Play", exact: true }),

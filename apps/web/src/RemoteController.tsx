@@ -123,6 +123,16 @@ export function RemoteController({
 }) {
   const [quick, setQuick] = useState(false),
     [advanced, setAdvanced] = useState(false),
+    [detail, setDetail] = useState<
+      | "timer"
+      | "fontSize"
+      | "lineHeight"
+      | "textWidth"
+      | "mirror"
+      | "focus"
+      | "connection"
+      | null
+    >(null),
     [expanded, setExpanded] = useState(false),
     [visibleText, setVisibleText] = useState(true);
   const [haptics, setHaptics] = useState(feedbackEnabled),
@@ -140,6 +150,11 @@ export function RemoteController({
     quickTrigger = useRef<HTMLButtonElement>(null);
   const lastSession = useRef("");
   useEffect(() => {
+    const changed = () => setFilling(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", changed);
+    return () => document.removeEventListener("fullscreenchange", changed);
+  }, []);
+  useEffect(() => {
     if (!connected) setScrub(null);
   }, [connected]);
   useEffect(() => {
@@ -156,10 +171,21 @@ export function RemoteController({
   useEffect(() => {
     if (!quick) return;
     const id = requestAnimationFrame(() =>
-      quickRef.current?.querySelector<HTMLInputElement>("input")?.focus(),
+      quickRef.current?.querySelector<HTMLButtonElement>("button")?.focus(),
     );
     return () => cancelAnimationFrame(id);
   }, [quick]);
+  useEffect(() => {
+    if (!advanced) return;
+    const id = requestAnimationFrame(() =>
+      document
+        .querySelector<HTMLButtonElement>(
+          ".remote-settings-page[open] .sheet-heading button",
+        )
+        ?.focus(),
+    );
+    return () => cancelAnimationFrame(id);
+  }, [advanced, detail]);
   const closeQuick = () => {
     setQuick(false);
     requestAnimationFrame(() => quickTrigger.current?.focus());
@@ -251,10 +277,43 @@ export function RemoteController({
       }
     } else setFilling((v) => !v);
   }
+  function displayToggles(only?: "mirror" | "focus") {
+    return (
+      [
+        ["mirrorHorizontal", "mirror"],
+        ["mirrorVertical", "mirror"],
+        ["focusLine", "align"],
+        ["focusDimming", "focus"],
+      ] as const
+    )
+      .filter(
+        ([key]) =>
+          !only ||
+          (only === "mirror"
+            ? key.startsWith("mirror")
+            : !key.startsWith("mirror")),
+      )
+      .map(([key, icon]) => (
+        <label
+          className={
+            "remote-toggle" +
+            (key === "mirrorVertical" ? " vertical-mirror" : "")
+          }
+          key={key}
+        >
+          <Icon name={icon} />
+          <span>{t(key === "focusDimming" ? "focus" : key)}</span>
+          <input
+            type="checkbox"
+            checked={!!c?.[key]}
+            disabled={!connected || !c}
+            onChange={(e) => pref(key, e.target.checked)}
+          />
+        </label>
+      ));
+  }
   return (
-    <main
-      className={`controller remote-v06${quick ? " quick-open" : ""}${filling ? " viewport-fill" : ""}`}
-    >
+    <main className={`controller remote-v06${filling ? " viewport-fill" : ""}`}>
       <header className="remote-header">
         <a
           href="/studio"
@@ -280,6 +339,7 @@ export function RemoteController({
           name="gear"
           label={t("advancedSettings")}
           onClick={() => {
+            setDetail(null);
             setAdvanced(true);
             setQuick(false);
           }}
@@ -382,145 +442,230 @@ export function RemoteController({
       <button
         ref={quickTrigger}
         className="remote-quick-trigger"
-        aria-label={t("quickTypography")}
+        aria-label={t("quickSettings")}
         aria-expanded={quick}
         aria-controls="remote-quick"
         onClick={() => (quick ? closeQuick() : setQuick(true))}
       >
         <Icon name="settings" />
       </button>
-      {quick && (
-        <div
-          id="remote-quick"
-          ref={quickRef}
-          className="remote-quick"
-          role="region"
-          aria-label={t("quickTypography")}
-        >
-          <div className="quick-heading">
-            <span className="sheet-handle" />
-            <button aria-label={t("close")} onClick={closeQuick}>
-              <Icon name="close" />
+      <Sheet
+        id="remote-quick"
+        open={quick}
+        className="remote-quick-menu"
+        title={t("quickSettings")}
+        closeLabel={t("close")}
+        onClose={closeQuick}
+      >
+        <div className="sheet-handle" aria-hidden="true" />
+        <div ref={quickRef} className="remote-list">
+          {(
+            [
+              ["timer", "timer"],
+              ["showText", "text"],
+              ["mirror", "mirror"],
+              ["focus", "focus"],
+              ["fullscreen", "fullscreen"],
+              ["connection", "monitor"],
+            ] as const
+          ).map(([key, icon]) => (
+            <button
+              key={key}
+              onClick={() => {
+                if (key === "fullscreen") {
+                  void fullscreen();
+                  closeQuick();
+                } else if (key === "showText") setVisibleText((v) => !v);
+                else {
+                  setQuick(false);
+                  setDetail(key);
+                  setAdvanced(true);
+                }
+              }}
+              aria-pressed={key === "showText" ? visibleText : undefined}
+            >
+              <Icon name={icon} />
+              <span>{t(key)}</span>
+              <Icon name="chevron" />
             </button>
-          </div>
+          ))}
+        </div>
+      </Sheet>
+      <Sheet
+        open={advanced}
+        className="remote-advanced remote-settings-page"
+        title={t(detail === "timer" ? "timer" : detail || "quickSettings")}
+        closeLabel={t("close")}
+        backLabel={t("back")}
+        onClose={() => (detail ? setDetail(null) : setAdvanced(false))}
+      >
+        <div className="remote-settings-content">
+          {!detail && (
+            <>
+              <section>
+                <h3>{t("textSettings")}</h3>
+                <div className="remote-list">
+                  {(
+                    [
+                      ["fontSize", "size"],
+                      ["lineHeight", "spacing"],
+                      ["textWidth", "width"],
+                    ] as const
+                  ).map(([key, icon]) => (
+                    <button key={key} onClick={() => setDetail(key)}>
+                      <Icon name={icon} />
+                      <span>{t(key)}</span>
+                      <output>{c?.[key] ?? "—"}</output>
+                      <Icon name="chevron" />
+                    </button>
+                  ))}
+                </div>
+              </section>
+              <section>
+                <h3>{t("playbackTab")}</h3>
+                <div className="remote-list">
+                  <button onClick={() => setDetail("timer")}>
+                    <Icon name="timer" />
+                    <span>{t("timer")}</span>
+                    <output>
+                      {c?.countdownSeconds
+                        ? `${c.countdownSeconds} ${t("seconds")}`
+                        : t("off")}
+                    </output>
+                    <Icon name="chevron" />
+                  </button>
+                  <label className="remote-toggle">
+                    <Icon name="text" />
+                    <span>{t("showText")}</span>
+                    <input
+                      type="checkbox"
+                      checked={visibleText}
+                      onChange={(e) => setVisibleText(e.target.checked)}
+                    />
+                  </label>
+                </div>
+              </section>
+              <section>
+                <h3>{t("displaySettings")}</h3>
+                <div className="remote-list">{displayToggles()}</div>
+              </section>
+              <section>
+                <h3>{t("connection")}</h3>
+                <div className="remote-list">
+                  <button onClick={() => setDetail("connection")}>
+                    <Icon name="monitor" />
+                    <span>
+                      {t("studio")}
+                      <small>{t(status || "pairHelp")}</small>
+                    </span>
+                    <Icon name="chevron" />
+                  </button>
+                </div>
+              </section>
+              <section className="remote-extras">
+                {language}
+                <button
+                  disabled={!preview.allowed || !connected}
+                  onClick={() => {
+                    setAdvanced(false);
+                    setExpanded(true);
+                    onRequest();
+                  }}
+                >
+                  {t("expandedText")}
+                </button>
+                <button onClick={() => void fullscreen()}>
+                  {t("fullscreen")}
+                </button>
+                {feedbackAvailable() ? (
+                  <label className="remote-toggle">
+                    <span>{t("haptics")}</span>
+                    <input
+                      type="checkbox"
+                      checked={haptics}
+                      onChange={(e) => {
+                        setHaptics(e.target.checked);
+                        setFeedback(e.target.checked);
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <p>{t("hapticsUnavailable")}</p>
+                )}
+              </section>
+            </>
+          )}
+          {detail === "timer" && (
+            <section>
+              <div className="remote-list timer-options">
+                {[0, 3, 5, 10].map((n) => (
+                  <button
+                    key={n}
+                    disabled={!connected || !c}
+                    aria-pressed={c?.countdownSeconds === n}
+                    onClick={() => pref("countdownSeconds", n)}
+                  >
+                    <span>{n ? `${n} ${t("seconds")}` : t("off")}</span>
+                    <span aria-hidden="true">
+                      {c?.countdownSeconds === n ? "✓" : ""}
+                    </span>
+                  </button>
+                ))}
+              </div>
+              <p>{t("countdownHelp")}</p>
+            </section>
+          )}
           {(
             [
               ["fontSize", "size", 16, 100, 1],
               ["lineHeight", "spacing", 1, 3, 0.1],
               ["textWidth", "width", 280, 1600, 10],
             ] as const
-          ).map(([key, icon, min, max, step]) => (
-            <HostSlider
-              key={(c?.target || "none") + key}
-              name={t(key)}
-              icon={icon}
-              min={min}
-              max={max}
-              step={step}
-              value={c?.[key] || min}
-              disabled={!connected || !c}
-              onChange={(value) => pref(key, value)}
-            />
-          ))}
-        </div>
-      )}
-      <Sheet
-        open={advanced}
-        className="remote-advanced"
-        title={t("advancedSettings")}
-        closeLabel={t("close")}
-        onClose={() => setAdvanced(false)}
-      >
-        <div className="remote-settings-content">
-          <section>
-            <h3>{t("connection")}</h3>
-            <p role="status">{t(status || "pairHelp")}</p>
-            <p>
-              {t("remotePeer")}: {connected ? t("studio") : "—"}
-            </p>
-            {preview.allowed && preview.script && <p>{preview.script.title}</p>}
-            <p>{t(preview.allowed ? "previewAllowed" : "previewPrivate")}</p>
-            {!preview.allowed && <p>{t("previewConsentHelp")}</p>}
-            {connected ? (
-              <button
-                onClick={() => {
-                  onDisconnect();
-                  setAdvanced(false);
-                }}
-              >
-                {t("revoke")}
-              </button>
-            ) : (
-              <p>{t("newInviteRequired")}</p>
-            )}
-          </section>
-          <section>
-            <h3>{t("countdown")}</h3>
-            <p>{t("countdownHelp")}</p>
-            <HostSlider
-              name={t("countdown")}
-              icon="restart"
-              min={0}
-              max={10}
-              step={1}
-              value={c?.countdownSeconds || 0}
-              disabled={!connected || !c}
-              onChange={(value) => pref("countdownSeconds", value)}
-            />
-          </section>
-          <section>
-            <h3>{t("appearance")}</h3>
-            {(["mirrorHorizontal", "mirrorVertical", "focusLine"] as const).map(
-              (key) => (
-                <label className="check" key={key}>
-                  <span>{t(key)}</span>
-                  <input
-                    type="checkbox"
-                    checked={!!c?.[key]}
+          ).map(
+            ([key, icon, min, max, step]) =>
+              detail === key && (
+                <section key={key}>
+                  <HostSlider
+                    key={(c?.target || "none") + key}
+                    name={t(key)}
+                    icon={icon}
+                    min={min}
+                    max={max}
+                    step={step}
+                    value={c?.[key] || min}
                     disabled={!connected || !c}
-                    onChange={(e) => pref(key, e.target.checked)}
+                    onChange={(v) => pref(key, v)}
                   />
-                </label>
+                </section>
               ),
-            )}
-            <label className="check">
-              <span>{t("showText")}</span>
-              <input
-                type="checkbox"
-                checked={visibleText}
-                onChange={(e) => setVisibleText(e.target.checked)}
-              />
-            </label>
-            <button
-              disabled={!preview.allowed || !connected}
-              onClick={() => {
-                setAdvanced(false);
-                setExpanded(true);
-                onRequest();
-              }}
-            >
-              {t("expandedText")}
-            </button>
-            <button onClick={() => void fullscreen()}>{t("fullscreen")}</button>
-          </section>
-          <section>
-            {language}
-            {feedbackAvailable() ? (
-              <label className="check">
-                <span>{t("haptics")}</span>
-                <input
-                  type="checkbox"
-                  checked={haptics}
-                  onChange={(e) => {
-                    setHaptics(e.target.checked);
-                    setFeedback(e.target.checked);
+          )}
+          {(detail === "mirror" || detail === "focus") && (
+            <section>
+              <div className="remote-list">{displayToggles(detail)}</div>
+            </section>
+          )}
+          {detail === "connection" && (
+            <section className="remote-connection-detail">
+              <p role="status">{t(status || "pairHelp")}</p>
+              <p>
+                {t("remotePeer")}: {connected ? t("studio") : "—"}
+              </p>
+              <p>{t(preview.allowed ? "previewAllowed" : "previewPrivate")}</p>
+              {!preview.allowed && <p>{t("previewConsentHelp")}</p>}
+              {connected ? (
+                <button
+                  onClick={() => {
+                    onDisconnect();
+                    setAdvanced(false);
                   }}
-                />
-              </label>
-            ) : (
-              <p>{t("hapticsUnavailable")}</p>
-            )}
-          </section>
+                >
+                  {t("revoke")}
+                </button>
+              ) : (
+                <p>{t("newInviteRequired")}</p>
+              )}
+            </section>
+          )}
         </div>
       </Sheet>
       <Sheet

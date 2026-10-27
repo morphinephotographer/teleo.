@@ -16,7 +16,7 @@ npm run dev    # terminal 2: http://127.0.0.1:5173
 
 Both `/` and `/studio` open the workspace after a skippable, once-per-tab-session brand intro (bypassed with reduced motion). The library collapses; reading has a floating control dock; settings use an accessible modal sheet. TXT/JSON storage and remotes retain their existing contracts. [Design and UI verification](docs/audits/TELEO_UI_REDESIGN_REPORT.md).
 
-Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Local QR URLs use loopback; a physical phone needs an approved reachable HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
+Routes: `/`, `/studio`, `/remote`, `/help`, `/privacy`; `?lang=en|uk|ru`. Create a script, enter Read, Connect phone, open QR invitation in another browser context and approve on the host. Loopback pairing offers a same-Mac link and deliberately omits the phone QR. For a physical phone use the explicit trusted HTTPS LAN workflow below or the approved HTTPS/WSS staging deployment. Approved browser pairs automatically reconnect after short interruptions (25-second client budget / 30-second relay window), without replaying uncertain commands. Refreshing either page still requires new pairing. No automatic web↔native library synchronization. Back up via `.txt` / versioned JSON before clearing site data.
 
 ```sh
 npm run typecheck
@@ -85,3 +85,11 @@ The phone now follows the approved dark two-state reference: live permissioned t
 [Approved layout](docs/design/TELEO_REMOTE_APPROVED_V06.md) · [Pairing/sync](docs/engineering/TELEO_PAIRING_AND_SYNC_V06.md) · [Audit/results](docs/audits/TELEO_UI_AUDIT_V06.md).
 
 This iteration is local-only: no deployment or remote push is authorized. The existing public staging continues to run the preceding release until a separate authorized deployment.
+
+## Current approved four-screen UI and HTTPS LAN
+
+The latest approved remote reference is `design-references/02_APPROVED_REMOTE_FOUR_STATES.png`; it supersedes the v0.6 three-slider quick panel described above. The bottom button opens the approved six-item menu; the gear opens full-screen categorized settings and timer/typography details. Studio operational controls now live in the bottom toolbar, with an icon-only countdown immediately after text width. The obsolete three-dot navigation is removed; public routes remain.
+
+`npm run dev` remains loopback-only. `npm run dev:lan` explicitly binds a chosen private interface with a trusted certificate, an isolated loopback HTTPS relay and an exact-origin allowlist. It does not modify certificate trust, firewall, DNS or public deployments. See [connection diagnosis and LAN setup](docs/TELEO_REMOTE_CONNECTION_FIX.md) before testing an iPhone. This iteration's local LAN HTTPS/WSS clients ran on the Mac; physical iPhone scanning remains unverified.
+
+[Implementation](docs/TELEO_UI_IMPLEMENTATION.md) · [Visual/functional QA](docs/TELEO_VISUAL_QA.md) · [Individual test results](docs/TELEO_TEST_RESULTS.md).

@@ -2,6 +2,7 @@ import { test, expect, type Page, type Locator } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import {
   chooseSelect,
+  setTimer,
   openSettings,
   closeSettings,
   managePhone,
@@ -162,15 +163,11 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .getByRole("textbox", { name: t.body, exact: true })
         .inputValue(),
     ).toContain("First paragraph");
-    const settings = await openSettings(page, t, "playback");
-    await chooseSelect(
-      settings.getByRole("combobox", { name: t.countdown, exact: true }),
-      "3",
-    );
-    await chooseSelect(
-      settings.getByRole("combobox", { name: t.countdown, exact: true }),
-      "0",
-    );
+    await openSettings(page, t, "appearance");
+    await closeSettings(page, t);
+    await setTimer(page, t, 3);
+    await setTimer(page, t, 0);
+    const settings = await openSettings(page, t, "appearance");
     await settings.getByText(t.physical, { exact: true }).click();
     await popup(
       settings.getByRole("combobox", { name: t.profile, exact: true }),
@@ -218,13 +215,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       animations: "disabled",
       path: `docs/screenshots/v06-${info.project.name}-${locale}-actions.png`,
     });
-    const more = page.getByRole("button", { name: t.menu, exact: true });
-    menu = await popup(more);
-    await page.screenshot({
-      path: `docs/screenshots/v06-${info.project.name}-${locale}-navigation-open.png`,
-      animations: "disabled",
-    });
-    await menu.getByRole("menuitem", { name: t.help, exact: true }).click();
+    await expect(page.locator(".app-menu")).toHaveCount(0);
+    await page.goto("/help?lang=" + locale);
     await expect(
       page.getByRole("heading", { name: t.helpTitle, exact: true }),
     ).toBeVisible();
@@ -255,9 +247,10 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     );
     await page.mouse.click(2, 2);
     await expect(menu).not.toBeVisible();
-    const settings = await openSettings(page, t, "playback");
-    const countdown = settings.getByRole("combobox", {
-      name: t.countdown,
+    await openSettings(page, t, "appearance");
+    await closeSettings(page, t);
+    const countdown = page.locator(".reader-controls").getByRole("combobox", {
+      name: t.alignment,
       exact: true,
     });
     menu = await popup(countdown);
@@ -331,12 +324,11 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     .getByRole("group", { name: t.interfaceTheme, exact: true })
     .getByRole("button", { name: t.dark, exact: true })
     .click();
-  await darkSheet
-    .getByRole("group", { name: t.settings, exact: true })
-    .getByRole("button", { name: t.playbackTab, exact: true })
-    .click();
+  await closeSettings(page, t);
   const darkMenu = await popup(
-    darkSheet.getByRole("combobox", { name: t.countdown, exact: true }),
+    page
+      .locator(".reader-controls")
+      .getByRole("combobox", { name: t.alignment, exact: true }),
   );
   await expect(darkMenu).toHaveCSS("background-color", "rgb(36, 36, 38)");
   await page.screenshot({
@@ -353,8 +345,9 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     visualViewport!.dispatchEvent(new Event("resize"));
   });
   const keyboardSheet = await openSettings(page, t, "playback");
+  await keyboardSheet.getByText(t.physical, { exact: true }).click();
   const keyboardMenu = await popup(
-    keyboardSheet.getByRole("combobox", { name: t.countdown, exact: true }),
+    keyboardSheet.getByRole("combobox", { name: t.profile, exact: true }),
   );
   await page.keyboard.press("Escape");
   await expect(keyboardMenu).not.toBeVisible();
@@ -375,15 +368,15 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     .getByRole("combobox", { name: t.language, exact: true });
   expect(await nativeLanguage.evaluate((el) => el.tagName)).toBe("SELECT");
   await chooseSelect(nativeLanguage, "en");
-  await page.getByRole("button", { name: t.menu, exact: true }).click();
+  await page
+    .locator(".reader-controls")
+    .getByRole("button", { name: t.timer, exact: true })
+    .click();
   await expect(
-    page.getByRole("dialog", { name: t.menu, exact: true }),
+    page.getByRole("dialog", { name: t.timer, exact: true }),
   ).toBeVisible();
-  await page.screenshot({
-    animations: "disabled",
-    path: `docs/screenshots/v06-${info.project.name}-fallback-menu.png`,
-  });
-  await page.getByRole("menuitem", { name: t.help, exact: true }).click();
+  await page.getByRole("menuitem").filter({ hasText: t.off }).click();
+  await page.goto("/help?lang=en");
   await expect(
     page.getByRole("heading", { name: t.helpTitle, exact: true }),
   ).toBeVisible();
@@ -416,12 +409,18 @@ for (const locale of ["en", "uk", "ru"] as const) {
       }),
     );
     const transports: import("@playwright/test").WebSocketRoute[] = [];
+    let holdResumes = false;
+    let releaseResume: (() => void) | undefined;
     const received: Record<string, unknown>[] = [];
     const sent: { id: string; command: { action: string } }[] = [];
     // Observe the routed transport itself: routed WebSockets do not generate
     // native page websocket frame events. Forward every frame unchanged.
-    await phone.routeWebSocket("**/api/rooms/*", (client) => {
+    await phone.routeWebSocket("**/api/rooms/*", async (client) => {
       transports.push(client);
+      if (holdResumes)
+        await new Promise<void>((resolve) => {
+          releaseResume = resolve;
+        });
       const server = client.connectToServer();
       client.onMessage((message) => {
         try {
@@ -475,8 +474,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
     });
     await languagePopup.locator(`[data-value="${locale}"]`).click();
     await phone
-      .getByRole("dialog", { name: t.advancedSettings, exact: true })
-      .getByRole("button", { name: t.close, exact: true })
+      .getByRole("dialog", { name: t.quickSettings, exact: true })
+      .getByRole("button", { name: t.back, exact: true })
       .click();
     await phone.screenshot({
       animations: "disabled",
@@ -611,6 +610,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("dialog", { name: t.remoteConnection, exact: true })
       .getByRole("button", { name: t.close, exact: true })
       .click();
+    holdResumes = true;
     await transports[0].close({ code: 1012, reason: "QA interruption" });
     await expect(phone.locator(".remote-connection")).toContainText(
       t.reconnecting,
@@ -619,6 +619,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "Updated live words.",
     );
 
+    holdResumes = false;
+    releaseResume?.();
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await expect(phone.locator(".remote-text")).toContainText(
       "Updated live words.",
@@ -658,8 +660,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       phone.getByText(t.hapticsUnavailable, { exact: true }),
     ).toBeVisible();
     await phone
-      .getByRole("dialog", { name: t.advancedSettings, exact: true })
-      .getByRole("button", { name: t.close, exact: true })
+      .getByRole("dialog", { name: t.quickSettings, exact: true })
+      .getByRole("button", { name: t.back, exact: true })
       .click();
     await managePhone(page, t);
     await page.getByRole("button", { name: t.revoke, exact: true }).click();

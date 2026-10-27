@@ -1,4 +1,4 @@
-import { openSettings, closeSettings } from "./helpers";
+import { closeSettings } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 const en = dictionaries.en;
@@ -46,8 +46,7 @@ test("intro resolves, dismisses automatically and never replays during navigatio
   });
   await expect(intro).toHaveCount(0, { timeout: 2500 });
   await expect(page.locator(".workspace")).toBeVisible();
-  await page.getByRole("button", { name: en.menu, exact: true }).click();
-  await page.getByRole("menuitem", { name: en.help, exact: true }).click();
+  await page.goto("/help?lang=en");
   await page.getByRole("button", { name: en.launch, exact: true }).click();
   await expect(page.locator(".brand-intro")).toHaveCount(0);
   await page.reload();
@@ -106,8 +105,7 @@ test("session storage denial still permits skipping and internal navigation", as
   );
   await page.goto("/?lang=en");
   await page.getByRole("button", { name: en.skip, exact: true }).click();
-  await page.getByRole("button", { name: en.menu, exact: true }).click();
-  await page.getByRole("menuitem", { name: en.help, exact: true }).click();
+  await page.goto("/help?lang=en");
   await page.getByRole("button", { name: en.launch, exact: true }).click();
   await expect(page.locator(".brand-intro")).toHaveCount(0);
 });
@@ -162,9 +160,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
         ),
       ).toBeGreaterThan(0);
       await dock.getByRole("button", { name: t.pause, exact: true }).click();
-      await expect(dock.locator("output")).toHaveText("1.00×");
+      await expect(dock.locator(".speed-group output")).toHaveText("1.00×");
       await dock.getByRole("button", { name: t.speedUp, exact: true }).click();
-      await expect(dock.locator("output")).toContainText("1.25");
+      await expect(dock.locator(".speed-group output")).toContainText("1.25");
       await dock
         .getByRole("button", { name: t.mirrorHorizontal, exact: true })
         .click();
@@ -195,16 +193,11 @@ for (const locale of ["en", "uk", "ru"] as const) {
           path: `docs/screenshots/premium-${locale}-${size.width}-reader.png`,
         });
       await page.getByRole("button", { name: t.exit, exact: true }).click();
-      // Set portable preferences back before the next viewport iteration.
-      const sheet = await openSettings(page, t, "appearance");
-      await sheet
-        .getByRole("checkbox", { name: t.mirrorHorizontal, exact: true })
-        .uncheck();
-      await sheet
-        .getByRole("group", { name: t.settings, exact: true })
-        .getByRole("button", { name: t.playbackTab, exact: true })
+      // Restore speed; mirroring was already toggled back in the reader.
+      await page
+        .locator(".speed-group")
+        .getByRole("button", { name: t.speedDown, exact: true })
         .click();
-      await sheet.getByRole("slider", { name: t.speed, exact: true }).fill("1");
       await closeSettings(page, t);
       await expect(
         page.getByRole("status").filter({ hasText: t.saved }),
@@ -219,22 +212,15 @@ test("settings sheet traps focus, persists preferences and Escape preserves read
   await create(page);
   await page.getByRole("button", { name: en.read, exact: true }).click();
   await page
+    .locator(".reader-controls")
+    .getByRole("slider", { name: en.fontSize, exact: true })
+    .fill("52");
+  await page
     .locator("header")
     .getByRole("button", { name: en.settings, exact: true })
     .click();
   const sheet = page.getByRole("dialog");
   await expect(sheet).toBeVisible();
-  await sheet
-    .getByRole("group", { name: en.settings, exact: true })
-    .getByRole("button", { name: en.textSettings, exact: true })
-    .click();
-  await sheet
-    .getByRole("slider", { name: en.fontSize, exact: true })
-    .fill("52");
-  await sheet
-    .getByRole("group", { name: en.settings, exact: true })
-    .getByRole("button", { name: en.appearance, exact: true })
-    .click();
   await sheet
     .getByRole("slider", { name: en.focusPosition, exact: true })
     .fill("45");
@@ -266,7 +252,8 @@ test("settings sheet traps focus, persists preferences and Escape preserves read
   await page.getByRole("button", { name: en.exit, exact: true }).click();
   await page.reload();
   await expect(page.locator(".app-shell")).toHaveClass(/theme-dark/);
-  const reopened = await openSettings(page, en, "text");
+  await closeSettings(page, en);
+  const reopened = page.locator(".reader-controls");
   await expect(
     reopened.getByRole("slider", { name: en.fontSize, exact: true }),
   ).toHaveValue("52");

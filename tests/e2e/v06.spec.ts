@@ -1,6 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
-import { chooseSelect } from "./helpers";
+import { remoteValue, closeRemoteValue, chooseSelect } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
@@ -52,7 +52,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
     const invite = await pairing
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
-    await expect(pairing.locator("img")).toBeVisible();
+    await expect(pairing.locator("img")).toHaveCount(0);
+    await expect(pairing.getByText(t.localPairingOnly)).toBeVisible();
     await page.screenshot({
       path: `docs/screenshots/v06-${info.project.name}-${locale}-qr.png`,
       animations: "disabled",
@@ -147,7 +148,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .poll(() => phone.locator(".paragraph-markers i").count())
       .toBeGreaterThan(0);
     if (locale === "en")
-      await expect(phone).toHaveScreenshot("v06-approved-closed.png", {
+      await expect(phone).toHaveScreenshot("approved-remote-closed.png", {
         animations: "disabled",
       });
     await phone.screenshot({
@@ -185,10 +186,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
       phone.getByRole("button", { name: t.pause, exact: true }),
     ).toBeVisible();
     await phone
-      .getByRole("button", { name: t.quickTypography, exact: true })
+      .getByRole("button", { name: t.quickSettings, exact: true })
       .click();
     await phone
-      .getByRole("region", { name: t.quickTypography, exact: true })
+      .locator(".remote-quick-menu")
       .getByRole("button", { name: t.close, exact: true })
       .click();
     await expect(
@@ -250,64 +251,35 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .toBeGreaterThan(0);
     await ack("seek", () => timeline.press("Home"));
     await phone
-      .getByRole("button", { name: t.quickTypography, exact: true })
+      .getByRole("button", { name: t.quickSettings, exact: true })
       .click();
-    const quick = phone.getByRole("region", {
-      name: t.quickTypography,
-      exact: true,
+    const quick = phone.locator(".remote-quick-menu");
+    await expect(quick.locator(".remote-list > button")).toHaveCount(6);
+    await phone.screenshot({
+      path: `docs/screenshots/approved-${info.project.name}-${locale}-quick.png`,
     });
-    await expect(quick.getByRole("slider")).toHaveCount(3);
-    for (const [label, value] of [
-      [t.fontSize, "68"],
-      [t.lineHeight, "1.5"],
-      [t.textWidth, "1300"],
-    ]) {
-      const slider = quick.getByRole("slider", { name: label, exact: true });
+    await quick.getByRole("button", { name: t.close, exact: true }).click();
+    for (const [key, value] of [
+      ["fontSize", "68"],
+      ["lineHeight", "1.5"],
+      ["textWidth", "1300"],
+    ] as const) {
+      const slider = await remoteValue(phone, t, key);
       await ack("setPreference", async () => {
         await slider.fill(value);
         await slider.blur();
       });
-      await expect(
-        quick.locator("output").filter({ hasText: value }),
-      ).toHaveCount(1);
+      await expect(slider).toHaveValue(value);
+      await closeRemoteValue(phone, t);
     }
     await expect(page.locator(".reader article")).toHaveCSS(
       "font-size",
       "68px",
     );
-    await expect(phone.locator(".remote-connection")).toContainText(
-      t.connected,
-    );
-    const playBox = (await phone.locator(".remote-main-play").boundingBox())!,
-      sheetBox = (await quick.boundingBox())!;
-    expect(playBox.y + playBox.height).toBeLessThanOrEqual(sheetBox.y);
-    if (locale === "en")
-      await expect(phone).toHaveScreenshot("v06-approved-quick.png", {
-        animations: "disabled",
-      });
-    await phone.screenshot({
-      path: `docs/screenshots/v06-${info.project.name}-${locale}-remote-quick.png`,
-      animations: "disabled",
-    });
-    await phone.keyboard.press("Escape");
-    await expect(quick).not.toBeVisible();
-    await expect(
-      phone.getByRole("button", { name: t.quickTypography, exact: true }),
-    ).toBeFocused();
-    await phone
-      .getByRole("button", { name: t.quickTypography, exact: true })
-      .click();
-    await expect(
-      quick.getByRole("slider", { name: t.fontSize, exact: true }),
-    ).toHaveValue("68");
-    await quick.getByRole("button", { name: t.close, exact: true }).click();
     await phone
       .getByRole("button", { name: t.advancedSettings, exact: true })
       .click();
-    const settings = phone.getByRole("dialog", {
-      name: t.advancedSettings,
-      exact: true,
-    });
+    const settings = phone.locator(".remote-settings-page");
     await ack("setPreference", () =>
       settings
         .getByRole("checkbox", { name: t.mirrorHorizontal, exact: true })
@@ -321,11 +293,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "overflow-y",
       "auto",
     );
-    await settings.locator(".remote-settings-content").hover();
-    await phone.mouse.wheel(0, 1200);
-    await expect(
-      settings.getByRole("button", { name: t.close, exact: true }),
-    ).toBeInViewport();
     await settings
       .getByText(t.hapticsUnavailable, { exact: true })
       .scrollIntoViewIfNeeded();
@@ -333,16 +300,15 @@ for (const locale of ["en", "uk", "ru"] as const) {
       settings.getByText(t.hapticsUnavailable, { exact: true }),
     ).toBeInViewport();
     await expect(
-      settings.getByRole("button", { name: t.close, exact: true }),
+      settings.getByRole("button", { name: t.back, exact: true }),
     ).toBeInViewport();
     await settings.locator(".remote-settings-content").evaluate((el) => {
       el.scrollTop = 0;
     });
     await phone.screenshot({
-      path: `docs/screenshots/v06-${info.project.name}-${locale}-advanced.png`,
-      animations: "disabled",
+      path: `docs/screenshots/approved-${info.project.name}-${locale}-settings.png`,
     });
-    await settings.getByRole("button", { name: t.close, exact: true }).click();
+    await settings.getByRole("button", { name: t.back, exact: true }).click();
     for (const size of [
       { width: 375, height: 667 },
       { width: 390, height: 844 },
@@ -369,16 +335,17 @@ for (const locale of ["en", "uk", "ru"] as const) {
           animations: "disabled",
         });
         await phone
-          .getByRole("button", { name: t.quickTypography, exact: true })
+          .getByRole("button", { name: t.quickSettings, exact: true })
           .click();
-        const play = (await phone.locator(".remote-main-play").boundingBox())!,
-          sheet = (await quick.boundingBox())!;
-        expect(
-          play.x + play.width <= sheet.x ||
-            sheet.x + sheet.width <= play.x ||
-            play.y + play.height <= sheet.y ||
-            sheet.y + sheet.height <= play.y,
-        ).toBe(true);
+        await expect(quick).toBeInViewport();
+        await expect(quick.locator(".remote-list > button")).toHaveCount(6);
+        await quick
+          .locator(".remote-list > button")
+          .last()
+          .scrollIntoViewIfNeeded();
+        await expect(
+          quick.locator(".remote-list > button").last(),
+        ).toBeInViewport();
         await phone.screenshot({
           path: `docs/screenshots/v06-${info.project.name}-quick-${size.width}x${size.height}.png`,
           animations: "disabled",
@@ -403,13 +370,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await expect(phone.locator(".remote-text")).toContainText(
       "Here you can write",
     );
-    await phone
-      .getByRole("button", { name: t.quickTypography, exact: true })
-      .click();
-    await expect(
-      quick.getByRole("slider", { name: t.fontSize, exact: true }),
-    ).toHaveValue("68");
-    await quick.getByRole("button", { name: t.close, exact: true }).click();
+    const resumedFont = await remoteValue(phone, t, "fontSize");
+    await expect(resumedFont).toHaveValue("68");
+    await closeRemoteValue(phone, t);
     await page
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -618,21 +581,11 @@ test("empty/edited script, stale target, private control and persisted typograph
     }),
   );
   await expect.poll(() => acks.includes(id)).toBe(true);
-  await phone
-    .getByRole("button", { name: t.quickTypography, exact: true })
-    .click();
-  const quick = phone.getByRole("region", {
-    name: t.quickTypography,
-    exact: true,
-  });
-  await expect(
-    quick.getByRole("slider", { name: t.fontSize, exact: true }),
-  ).toHaveValue("40");
-  await quick.getByRole("slider", { name: t.fontSize, exact: true }).fill("68");
-  await quick.getByRole("slider", { name: t.fontSize, exact: true }).blur();
-  await expect(
-    quick.getByRole("slider", { name: t.fontSize, exact: true }),
-  ).toHaveValue("68");
+  const font = await remoteValue(phone, t, "fontSize");
+  await expect(font).toHaveValue("40");
+  await font.fill("68");
+  await font.blur();
+  await expect(font).toHaveValue("68");
   await expect(
     page.getByRole("textbox", { name: t.body, exact: true }),
   ).toBeVisible();

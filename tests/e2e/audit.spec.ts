@@ -1,5 +1,5 @@
 import { test, expect, type Page } from "@playwright/test";
-import { chooseSelect } from "./helpers";
+import { remoteValue, chooseSelect } from "./helpers";
 import { dictionaries } from "../../apps/web/src/i18n";
 const t = dictionaries.en;
 for (const locale of ["en", "uk", "ru"])
@@ -244,14 +244,8 @@ test("a queued typography frame cannot change a newly selected script playhead",
   await phone.goto(invite!);
   await pair.getByRole("button", { name: t.allow, exact: true }).click();
   await expect(phone.locator(".remote-connection")).toContainText(t.connected);
-  await phone
-    .getByRole("button", { name: t.quickTypography, exact: true })
-    .click();
-  await expect(
-    phone
-      .getByRole("region", { name: t.quickTypography, exact: true })
-      .getByRole("slider", { name: t.fontSize, exact: true }),
-  ).toBeEnabled();
+  const font = await remoteValue(phone, t, "fontSize");
+  await expect(font).toBeEnabled();
   await page.evaluate(() => {
     const request = window.requestAnimationFrame,
       cancel = window.cancelAnimationFrame,

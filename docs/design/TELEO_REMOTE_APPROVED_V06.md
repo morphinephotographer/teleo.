@@ -1,5 +1,7 @@
 # Approved teleo. remote v0.6
 
+Historical reference: the newer four-screen approved implementation supersedes this three-slider quick sheet. See [current implementation](../TELEO_UI_IMPLEMENTATION.md).
+
 ## Reference and precedence
 
 The two states in design-references/01_APPROVED_REMOTE_CLOSED_AND_QUICK_PANEL.png are authoritative. This is the owner's image supplied in chat on 2026-10-27. Earlier three-tab, crescent/wing, blue-accent and light-phone alternatives are superseded. The separate advanced-settings reference and five named bug-reference images were unavailable; no comparison against those missing files is claimed.

@@ -59,7 +59,12 @@ export class RemoteLink {
         throw Error("cancelled");
       this.creating = undefined;
       this.start(id, host);
-      return `${location.origin}/remote#pair=${id}.${invite}`;
+      const destination = new URL("/remote", location.origin);
+      const lang = new URLSearchParams(location.search).get("lang");
+      if (lang && ["en", "uk", "ru"].includes(lang))
+        destination.searchParams.set("lang", lang);
+      destination.hash = `pair=${id}.${invite}`;
+      return destination.href;
     } finally {
       clearTimeout(timer);
       if (this.creating === request) this.creating = undefined;
@@ -191,7 +196,13 @@ export class RemoteLink {
       this.ready = false;
       this.uncertain();
       if ([1008, 4000, 4001].includes(e.code) || !this.wasConnected) {
-        this.finish(this.wasConnected ? "disconnected" : "unavailable");
+        this.finish(
+          this.wasConnected
+            ? "disconnected"
+            : e.code === 1008 || e.code === 4001
+              ? "expired"
+              : "serverUnreachable",
+        );
         return;
       }
       this.beginRecovery();

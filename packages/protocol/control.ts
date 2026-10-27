@@ -10,7 +10,7 @@ export type ControlValues = Pick<
   | "mirrorVertical"
   | "focusLine"
   | "countdownSeconds"
->;
+> & { focusDimming?: boolean };
 export type ControlState = ControlValues & {
   version: 1;
   target: string;
@@ -37,7 +37,8 @@ const bounds = {
 const bools = ["mirrorHorizontal", "mirrorVertical", "focusLine"];
 export function validControlValue(key: unknown, value: unknown) {
   if (typeof key !== "string") return false;
-  if (bools.includes(key)) return typeof value === "boolean";
+  if (key === "focusDimming" || bools.includes(key))
+    return typeof value === "boolean";
   const range = bounds[key as keyof typeof bounds];
   return (
     !!range &&
@@ -71,7 +72,7 @@ export function validControlState(v: unknown): v is ControlState {
   const m = v as Record<string, unknown>;
   return (
     Object.keys(m)
-      .filter((k) => k !== "marks")
+      .filter((k) => k !== "marks" && k !== "focusDimming")
       .sort()
       .join(",") ===
       "countdownSeconds,focusLine,fontSize,lineHeight,maximum,mirrorHorizontal,mirrorVertical,target,textWidth,version" &&
@@ -82,6 +83,7 @@ export function validControlState(v: unknown): v is ControlState {
           (n) =>
             typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1,
         ))) &&
+    (m.focusDimming === undefined || typeof m.focusDimming === "boolean") &&
     m.version === 1 &&
     uuid(m.target) &&
     typeof m.maximum === "number" &&

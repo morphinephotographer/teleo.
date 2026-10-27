@@ -15,7 +15,10 @@
     "build:staging": "npm run typecheck && node scripts/build-staging.mjs",
     "staging:local": "WRANGLER_SEND_METRICS=false wrangler dev --config services/staging/wrangler.jsonc --port 8788",
     "staging:check": "npm run build:staging && WRANGLER_SEND_METRICS=false wrangler deploy --config services/staging/wrangler.jsonc --dry-run --outdir .staging-dry-run",
-    "test:staging": "playwright test --config playwright.staging.config.ts"
+    "test:staging": "playwright test --config playwright.staging.config.ts",
+    "dev:lan": "node scripts/dev-lan.mjs",
+    "check:lan": "node scripts/check-lan.mjs",
+    "check:lan:pairing": "node scripts/check-lan-pairing.mjs"
   },
   "dependencies": {
     "idb": "^8.0.3",

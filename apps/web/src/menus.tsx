@@ -120,7 +120,7 @@ export function Popover({
           }
         }}
       >
-        {trigger || (kind === "menu" ? <Icon name="more" /> : label)}
+        {trigger || (kind === "menu" ? label : label)}
         {kind === "listbox" && (
           <span className="picker-chevron" aria-hidden="true">
             <Icon name="chevron" />
@@ -282,7 +282,7 @@ function FallbackMenu({
         aria-expanded={open}
         onClick={() => setOpen(true)}
       >
-        {trigger || <Icon name="more" />}
+        {trigger || label}
       </button>
       <Sheet
         className="menu-fallback-sheet"

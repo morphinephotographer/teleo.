@@ -37,7 +37,7 @@ These are WebKit automation screenshots, not physical iPhone or real Safari cert
 
 ## Release gate
 
-Pending final local/staging verification and normal PR merge. Do not interpret this section as publication evidence until concrete commit/version IDs and public test results are recorded.
+Local verification and public staging validation are complete. Production is pending normal PR merge and the existing interactive release workflow; see concrete staging evidence below.
 
 Rollback to preceding production version (only if needed):
 
@@ -126,3 +126,25 @@ Includes the previously local Welcome commit and the audit fixes; historical gen
 - `tests/welcome.test.ts`
 
 Screenshots: 25 selected `docs/screenshots/full-audit-*.png` files covering the required viewport matrix, approved remote states, conflict preservation and preview privacy. Public evidence screenshots will be added after deployment.
+
+
+## Public staging — VERIFIED
+
+- Source: `b4f570814814af1d0f5b241542dfa1d4717ee62e`, branch `codex/full-code-audit`; includes Welcome parent `1327b306e0f4782823dce9890a19effbe071d148`.
+- URL: https://teleo-staging.your-subdomain.workers.dev/studio
+- Worker: `teleo-staging`; version **cf12781b-af35-4793-adba-b3b36c38b589**; deployment **798c4f60-dc56-4014-b1c9-c536e8587600**, 100%, confirmed through Cloudflare API.
+- Built JS asset: `index-dxGFA6mX.js`; no architecture/namespace/domain/DNS change. Production remained on the preceding 6b4a7ee8 version during this validation.
+- **10/10** audit functional cases (Chromium + WebKit): real two-/three-tab preservation, navigation/fullscreen denial, seven viewport layouts, real paired preview failure/clearing. The separately measured extreme 2MB stress case was excluded from the public smoke cohort; it already passes locally.
+- **22/22** QR/locale cases (Chromium + WebKit): final branded image decoding, approval/ACK, device locale/manual override, revoke, real expiry and failure recovery.
+- **18/18** Welcome cases (Chromium + iPhone-profile WebKit), including returning legacy libraries and no unwanted recreation.
+- **50/50 public staging scenarios PASS**. Room-creating cohorts stayed within the ordinary 10/minute/IP quota; no forged Cloudflare client headers were used publicly. Libraries are fresh isolated browser contexts, never the owner's browser profile.
+
+Reproduce with `TELEO_AUDIT_URL`, `TELEO_V07_URL` and `TELEO_WELCOME_URL` set to that staging origin, using the committed configs. Restrict audit and v07 cohorts to their Chromium/WebKit projects; use `--grep-invert 'large local TXT'` for the public audit cohort. Do not add more room-creating cohorts to the same quota window.
+
+Inspected actual public screenshots:
+
+![Staging QR](../screenshots/full-audit-staging-qr.png)
+![Staging Welcome](../screenshots/full-audit-staging-welcome.png)
+![Staging remote](../screenshots/full-audit-staging-remote.png)
+
+Git housekeeping: an empty stale `.git/index.lock` blocked the first commit attempt. `lsof` and process inspection found no owner; after checking age/size/unchanged timestamp it was preserved in `/private/tmp/teleo-audit-index.lock.stale`. The verified source was then committed normally. No index contents, branch history or user files were discarded.

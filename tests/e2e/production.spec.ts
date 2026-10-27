@@ -1,3 +1,6 @@
+import https from "node:https";
+import dns from "node:dns";
+import type { TLSSocket } from "node:tls";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import { chooseSelect } from "./helpers";
@@ -8,55 +11,133 @@ test.beforeEach(async ({ page }) => {
   );
 });
 test("production routes, security headers, Origin and release identity", async ({
-  request,
+  browser,
   baseURL,
+  request,
 }) => {
-  for (const route of [
-    "/",
-    "/studio",
-    "/remote",
-    "/help",
-    "/privacy",
-    "/sw.js",
-  ]) {
-    const r = await request.get(route);
-    expect(r.status()).toBe(200);
-    expect(r.headers()["x-robots-tag"]).toBeUndefined();
-    expect(r.headers()["content-security-policy"]).toContain(
-      "connect-src 'self';",
-    );
-    expect(r.headers()["content-security-policy"]).not.toMatch(
-      /localhost|127\.0\.0\.1|api\.teleo/,
-    );
-    expect(r.headers()["referrer-policy"]).toBe("no-referrer");
-    if (production) {
-      expect(r.headers()["x-teleo-commit"]).toBe(
-        process.env.TELEO_EXPECTED_COMMIT,
+  // Exercise the same normal browser network/TLS stack as the app. No DNS overrides.
+  const context = await browser.newContext({
+    serviceWorkers: "block",
+    baseURL,
+  });
+  const page = await context.newPage();
+  try {
+    for (const route of [
+      "/",
+      "/studio",
+      "/remote",
+      "/help",
+      "/privacy",
+      "/sw.js",
+    ]) {
+      const response = (await page.goto(route))!;
+      const headers = await response.allHeaders();
+      expect(response.status()).toBe(200);
+      expect(headers["x-robots-tag"]).toBeUndefined();
+      expect(headers["content-security-policy"]).toContain(
+        "connect-src 'self';",
       );
-      expect(r.headers()["x-teleo-deployment"]).toMatch(/^[a-f0-9-]{36}$/);
+      expect(headers["content-security-policy"]).not.toMatch(
+        /localhost|127\.0\.0\.1|api\.teleo/,
+      );
+      expect(headers["referrer-policy"]).toBe("no-referrer");
+      if (production) {
+        expect(headers["x-teleo-commit"]).toBe(
+          process.env.TELEO_EXPECTED_COMMIT,
+        );
+        expect(headers["x-teleo-deployment"]).toMatch(/^[a-f0-9-]{36}$/);
+        if (process.env.TELEO_EXPECTED_VERSION)
+          expect(headers["x-teleo-deployment"]).toBe(
+            process.env.TELEO_EXPECTED_VERSION,
+          );
+      }
     }
-  }
-  const invalid = await request.post("/api/rooms", {
-    headers: { Origin: "https://evil.example", "X-Forwarded-Host": "teleo.cc" },
-  });
-  expect(invalid.status()).toBe(403);
-  expect(
-    (
-      await request.get("/api/unknown", { headers: { Origin: baseURL! } })
-    ).status(),
-  ).toBe(404);
-  const allowed = await request.fetch("/api/rooms", {
-    method: "OPTIONS",
-    headers: { Origin: baseURL! },
-  });
-  expect(allowed.status()).toBe(204);
-  expect(allowed.headers()["access-control-allow-origin"]).toBe(baseURL);
-  if (production) {
-    const redirect = await request.get("https://www.teleo.cc/studio?lang=ru", {
-      maxRedirects: 0,
+    // Raw transport is necessary: browsers protect the Origin header from forgery.
+    // Use the configured DNS resolver's actual answers, with strict hostname/TLS validation.
+    // This neither pins an IP nor changes DNS servers or the OS/browser DNS settings.
+    async function probe(
+      path: string,
+      method: string,
+      headers: Record<string, string>,
+    ) {
+      if (!production) {
+        const response = await request.fetch(path, { method, headers });
+        return {
+          status: response.status(),
+          origin: response.headers()["access-control-allow-origin"],
+          secure: false,
+        };
+      }
+      return new Promise<{
+        status: number;
+        origin: string | string[] | undefined;
+        secure: boolean;
+      }>((resolve, reject) => {
+        const req = https.request(
+          new URL(path, baseURL),
+          {
+            method,
+            headers,
+            rejectUnauthorized: true,
+            lookup: (hostname, options, callback) =>
+              dns.resolve4(hostname, (error, addresses) => {
+                if (error) callback(error, "", 4);
+                else
+                  callback(
+                    null,
+                    options.all
+                      ? addresses.map((address) => ({ address, family: 4 }))
+                      : addresses[0],
+                    4,
+                  );
+              }),
+          },
+          (response) => {
+            const secure = (response.socket as TLSSocket).authorized;
+            response.resume();
+            response.on("end", () =>
+              resolve({
+                status: response.statusCode!,
+                origin: response.headers["access-control-allow-origin"],
+                secure,
+              }),
+            );
+          },
+        );
+        req.setTimeout(15000, () =>
+          req.destroy(new Error("HTTPS probe timeout")),
+        );
+        req.on("error", reject);
+        req.end();
+      });
+    }
+    const invalid = await probe("/api/rooms", "POST", {
+      Origin: "https://evil.example",
+      "X-Forwarded-Host": "evil.example",
     });
-    expect(redirect.status()).toBe(308);
-    expect(redirect.headers().location).toBe("https://teleo.cc/studio?lang=ru");
+    const unknown = await probe("/api/unknown", "GET", { Origin: baseURL! });
+    const allowed = await probe("/api/rooms", "OPTIONS", { Origin: baseURL! });
+    expect(invalid.status).toBe(403);
+    expect(unknown.status).toBe(404);
+    expect(allowed.status).toBe(204);
+    expect(allowed.origin).toBe(baseURL);
+    if (production)
+      expect([invalid.secure, unknown.secure, allowed.secure]).toEqual([
+        true,
+        true,
+        true,
+      ]);
+    if (production) {
+      const final = (await page.goto("https://www.teleo.cc/studio?lang=ru"))!;
+      const redirect = await final.request().redirectedFrom()!.response();
+      expect(redirect!.status()).toBe(308);
+      expect(await redirect!.headerValue("location")).toBe(
+        "https://teleo.cc/studio?lang=ru",
+      );
+      await expect(page).toHaveURL("https://teleo.cc/studio?lang=ru");
+    }
+  } finally {
+    await context.close();
   }
 });
 for (const locale of ["en", "uk", "ru"] as const) {

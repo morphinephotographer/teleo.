@@ -102,7 +102,9 @@ Pairing always generates a real QR from the current one-use invitation, with loa
 
 [Implementation, QA, screenshots and limitations](docs/audits/TELEO_V061_ALIGNMENT_QR_FIX.md). v0.6.1 source commit `3896ec2` was published to the existing staging Worker with owner approval on 2026-10-27; six public HTTPS/WSS checks passed in Chromium/WebKit. No remote push was performed. [Publication and physical iPhone checklist](docs/audits/TELEO_V061_STAGING_DEPLOYMENT.md).
 
-## Production web release
+## Production web release — LIVE
+
+Open [teleo.cc](https://teleo.cc). Web release `v1.0.0`, source `1c3d9f3`, is published and verified by 24 public HTTPS/WSS smoke checks across Chromium, WebKit and iPhone/iPad viewports. Physical device verification of this production domain remains separate. `www` redirects to the canonical domain; staging is unchanged.
 
 The production target is the existing root `wrangler.jsonc` / `teleo-web`, with same-origin assets and relay, an isolated ROOMS namespace, canonical `https://teleo.cc`, and a www redirect. Production validation: `npm run production:check`. After critical checks, use a clean checkout and an interactive terminal for `npm run deploy:production`; the build clears external relay overrides. Runtime response headers identify the deployed commit and Worker version.
 

@@ -1,6 +1,13 @@
 # TELEO — production launch на teleo.cc
 
-Дата: 27 октября 2026. Версия: `v1.0.0` (первая production-метка; соответствует существующему `package.json` версии 1.0.0). Репозиторий и утверждённый интерфейс сохранены.
+Дата: 27 октября 2026. Статус: **LIVE**. Адрес: **https://teleo.cc**. Версия: `v1.0.0` (первая production-метка; соответствует существующему `package.json` версии 1.0.0). Репозиторий и утверждённый интерфейс сохранены.
+
+- Опубликованный merge-коммит: `1c3d9f3608b95b129de5015afc6491b96acd18c3`.
+- Кандидат с идентичным tree: `6355d5335939b4bdfaa0b51fd1776f5bda193182`.
+- [Production PR #1](https://github.com/morphinephotographer/Teleo./pull/1) объединён обычным merge в существующую главную ветку `codex/teleo-native-web-v1`.
+- Аннотированная release-метка `v1.0.0` указывает на опубликованный merge-коммит.
+- Worker: `teleo-web`, Cloudflare version **`31201bd5-0a8a-437c-8079-781a3b144e54`**, deployment **`271d26c0-6fe7-49a0-90de-cb9c4d3d0ae9`** (100%).
+- В публичных ответах `X-Teleo-Commit` и `X-Teleo-Deployment` совпадают с этими значениями. Проверены реальные HTTPS-ответы и normal-browser навигация, а не только deploy output.
 
 ## Разрешение и исходное состояние
 
@@ -25,7 +32,7 @@ Wrangler в неинтерактивном режиме автоматическ
 
 ## Проверки и состояние публикации
 
-Документ подготовлен перед публикацией. Итоговые идентификаторы и фактические публичные проверки будут внесены после выполнения. До внешней HTTPS-проверки статус LIVE не заявляется.
+Production опубликован только после проверок ниже; затем статус LIVE подтверждён внешними браузерными HTTPS/WSS сценариями.
 
 Проверенный кандидат готов к публикации:
 
@@ -45,6 +52,30 @@ Wrangler в неинтерактивном режиме автоматическ
 
 Локальные проверки включают полный unit/relay набор, существующую browser regression, отдельную production-сборку, четыре профиля браузера (desktop Chromium, desktop WebKit, iPhone и iPad viewport), CSP/Origin/redirect tests и dry-run конфигурации.
 
+## Фактическая публикация и публичный smoke
+
+Из чистой главной ветки выполнен `npm run deploy:production`. Повторная сборка прошла; Wrangler создал только `teleo-web` и его собственный SQLite Room namespace, загрузил четыре статических ресурса и добавил custom domains `teleo.cc`/`www.teleo.cc`. Конфликтов DNS и запросов на перезапись существующего origin не было.
+
+| Публичная проверка | Результат |
+| --- | --- |
+| Chromium: редактор/языки, сохранение, playback, QR, alignment, reconnect, QR error/renewal | 7/7 |
+| Chromium: HTTPS routes/assets, exact commit/version, CSP/Origin, www redirect | 1/1 |
+| Desktop WebKit: routes/security + EN/UK/RU + реальная пара | 5/5 |
+| iPhone WebKit viewport: routes/security + EN/UK/RU + реальная пара | 5/5 |
+| iPad WebKit viewport: routes/security + EN/UK/RU + реальная пара | 5/5 |
+| Отдельный реальный production pair + Play/Pause + явный revoke | 1/1 |
+| Итого public smoke | **24/24** |
+
+Использованы отдельные disposable browser contexts и синтетические тексты. Проверены актуальный production URL в QR, его точное декодирование нативным macOS Core Image, ожидание разрешения хоста, ручное закрытие приглашения, автоматическое закрытие после approval, три кнопки выравнивания в обоих направлениях, playback/position, разрешённый preview, быстрые нажатия, отклонение stale target, reconnect и прекращение доступа после revoke. Явный отзыв не вернул пульт автоматически.
+
+Оба hostname имеют валидный сертификат Google Trust Services, TLSv1.3, `authorized=true`, срок до **25 января 2027**. `www` возвращает 308 на HTTPS apex с сохранением `/studio?lang=ru`. Внешние браузерные тесты не использовали `ignoreHTTPSErrors`, fixed IP overrides или изменение DNS.
+
+После создания записей Cloudflare DNS и Google DNS уже возвращали публичные A-ответы, но системный путь Node `getaddrinfo` на этом Mac ещё выдавал ENOTFOUND. Первая APIRequestContext-проба поэтому завершилась ошибкой, несмотря на успешную обычную браузерную навигацию. Для заголовков/маршрутов используется настоящий browser network stack; raw Origin-пробы используют свежие реальные ответы настроенного DNS-резолвера через `dns.resolve4` с обязательной проверкой hostname/сертификата. DNS servers и системные настройки не менялись, IP не фиксировались. Отрицательный Origin проверяется raw HTTPS: браузеры защищают этот заголовок от подделки. Первоначальная попытка его browser-инъекции была исправлена в тестовой fixture, а не принята за проверку отказа. Локальная ветка обновлённой fixture также перепроверена. Код опубликованного приложения при этом не менялся.
+
+Staging после запуска сохранил версию `0deb1e24-1e6d-49c1-a7dd-9fd28987f422`. Production ROOMS namespace — `6bbbae7f3b4446c783842c0a886d8903`; staging — `b64d90b57f2d4161a4c75f4e6c8dd879`. Они различаются; Workers.dev/previews production отключены. Другие custom domains аккаунта не менялись. Все окончательные функциональные наборы прошли; начальные сбои QA-инфраструктуры перечислены выше.
+
+Просмотренные production-снимки: [desktop](screenshots/live-studio-desktop.png), [iPad](screenshots/live-studio-ipad.png), [QR](screenshots/live-pairing-desktop.png), [пульт iPhone](screenshots/live-remote-iphone.png). Снимки QR содержат использованные/короткоживущие тестовые приглашения. Сырые traces, credentials и личные тексты не включены в репозиторий.
+
 ## Порядок выпуска
 
 1. `npm run typecheck`, `npm run lint`, `npm test`, `npm run production:check`.
@@ -60,6 +91,8 @@ Wrangler в неинтерактивном режиме автоматическ
 Для следующих релизов, когда существует предыдущая production-версия, записать её ID и выполнить `npx wrangler rollback <previous-version-id> --config wrangler.jsonc`, затем повторить внешние проверки. Не удалять namespace, Room-класс или данные.
 
 Для первого запуска предыдущего production-приложения нет. Если критические smoke-проверки не проходят после завершения DNS/TLS provisioning, снять только две newly-created Workers custom-domain привязки `teleo.cc`/`www.teleo.cc` у `teleo-web` (по записанным после публикации ID), восстановив исходное отсутствие веб-маршрута. Сохранить Worker и ROOMS namespace; не выполнять blanket Worker/DO/DNS deletion. Не менять staging и посторонние DNS-записи. Отдельно проверить, что Cloudflare managed-записи этих двух доменов сняты. Сертификаты при удалении custom domain могут остаться; не удалять посторонние сертификаты.
+
+ID созданных привязок: apex `485f0b2de60c9d7d10a0f39f7629bb64eff41879`, www `555b2c949f8d7349f8addc9df157f92fd8d967aa`. Удалять их только в рамках согласованного rollback, проверив service `teleo-web` и hostname. Откат в этом запуске **не потребовался**. Для следующего релиза текущая проверенная версия `31201bd5-0a8a-437c-8079-781a3b144e54` является известной working rollback target.
 
 ## Ограничения и данные
 

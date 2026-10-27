@@ -10,6 +10,7 @@ import {
   type ControlValues,
 } from "../../../packages/protocol/control";
 import { type Key } from "./i18n";
+import { Wordmark } from "./Wordmark";
 import { AlignmentControl, type Alignment } from "./AlignmentControl";
 import { Icon, IconButton, Sheet, type IconName } from "./ui";
 import {
@@ -340,16 +341,7 @@ export function RemoteController({
   return (
     <main className={`controller remote-v06${filling ? " viewport-fill" : ""}`}>
       <header className="remote-header">
-        <a
-          href="/studio"
-          className="brand"
-          onClick={(e) => {
-            e.preventDefault();
-            onStudio();
-          }}
-        >
-          teleo.
-        </a>
+        <Wordmark />
         <span
           className={"remote-connection " + (connected ? "online" : "")}
           role="status"
@@ -369,6 +361,7 @@ export function RemoteController({
             setQuick(false);
           }}
         />
+        {!advanced && language}
       </header>
       <div
         className="remote-text"
@@ -519,6 +512,7 @@ export function RemoteController({
         title={t(detail === "timer" ? "timer" : detail || "quickSettings")}
         closeLabel={t("close")}
         backLabel={t("back")}
+        headerControl={advanced ? language : undefined}
         onClose={() => (detail ? setDetail(null) : setAdvanced(false))}
       >
         <div className="remote-settings-content">
@@ -585,7 +579,7 @@ export function RemoteController({
                 </div>
               </section>
               <section className="remote-extras">
-                {language}
+                <button onClick={onStudio}>{t("launch")}</button>
                 <button
                   disabled={!preview.allowed || !connected}
                   onClick={() => {

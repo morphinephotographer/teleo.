@@ -9,6 +9,10 @@ test("production assets: all locales and scripts work offline", async ({
   page,
   context,
 }) => {
+  await page.addInitScript(() => {
+    if (!localStorage.getItem("teleo.locale"))
+      localStorage.setItem("teleo.locale", "uk");
+  });
   await page.goto("http://127.0.0.1:5174/studio?lang=uk");
   await page.evaluate(async () => {
     await navigator.serviceWorker.ready;

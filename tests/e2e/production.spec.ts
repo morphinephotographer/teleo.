@@ -239,3 +239,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
     expect(errors).toEqual([]);
   });
 }
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
+});

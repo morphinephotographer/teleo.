@@ -366,7 +366,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   const nativeLanguage = page
     .locator("header")
     .getByRole("combobox", { name: t.language, exact: true });
-  expect(await nativeLanguage.evaluate((el) => el.tagName)).toBe("SELECT");
+  expect(await nativeLanguage.evaluate((el) => el.tagName)).toBe("BUTTON");
   await chooseSelect(nativeLanguage, "en");
   await page
     .locator(".reader-controls")
@@ -674,3 +674,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await context.close();
   });
 }
+
+// Explicit fixture preference for legacy translated scenarios; v07.spec tests fresh autodetection.
+test.beforeEach(async ({ page }, info) => {
+  const locale = /^(en|uk|ru):/.exec(info.title)?.[1];
+  if (locale)
+    await page.addInitScript((value) => {
+      if (!localStorage.getItem("teleo.locale"))
+        localStorage.setItem("teleo.locale", value);
+    }, locale);
+});

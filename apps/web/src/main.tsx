@@ -9,7 +9,9 @@ import { createRoot } from "react-dom/client";
 import { makeInvitationQR } from "./qr";
 import { AlignmentControl } from "./AlignmentControl";
 import { phonePairingIssue } from "./pairing-origin";
-import { RemoteIllustration } from "./RemoteIllustration";
+import { Wordmark } from "./Wordmark";
+import { LanguageControl } from "./LanguageControl";
+import { useLocale } from "./useLocale";
 import {
   Playback,
   createScript,
@@ -30,7 +32,6 @@ import {
   detectLocale,
   localGet,
   localSet,
-  type Locale,
   type Key,
 } from "./i18n";
 import { storage } from "./storage";
@@ -63,13 +64,7 @@ function download(name: string, text: string, type = "text/plain") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function App() {
-  const [locale, setLocale] = useState<Locale>(() =>
-    detectLocale(
-      navigator.languages,
-      new URLSearchParams(location.search).get("lang") ||
-        localGet("teleo.locale"),
-    ),
-  );
+  const [locale, setLocale] = useLocale();
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
@@ -83,6 +78,7 @@ function App() {
   const [, refreshPreview] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
+  const [connectionOpen, setConnectionOpen] = useState(false);
   const pairingIssue = phonePairingIssue(location.origin);
   const [inviteDeadline, setInviteDeadline] = useState(0);
   const [qrState, setQRState] = useState<
@@ -108,7 +104,9 @@ function App() {
   const finishIntro = useCallback(() => {
     setIntro(false);
     requestAnimationFrame(() =>
-      document.querySelector<HTMLElement>("header .brand")?.focus(),
+      document
+        .querySelector<HTMLElement>("header button:not([disabled])")
+        ?.focus(),
     );
   }, []);
   const [panel, setPanel] = useState<"library" | "editor" | "settings">(
@@ -561,6 +559,15 @@ function App() {
         expired: "expired",
       };
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
+      if (
+        [
+          "disconnected",
+          "unavailable",
+          "serverUnreachable",
+          "expired",
+        ].includes(e.type)
+      )
+        setApproval(false);
       if (e.type === "connected") {
         pairGeneration.current++;
         setQRState("idle");
@@ -812,6 +819,7 @@ function App() {
     setReading(false);
     endRemote();
     setRemoteStatus(null);
+    setConnectionOpen(false);
     history.pushState({}, "", path);
     setSettingsOpen(false);
     setRoute(path === "/" ? "/studio" : path);
@@ -856,13 +864,20 @@ function App() {
     setReading(true);
   }
   async function showConnection() {
-    if (remoteStatus !== null) setPairOpen(true);
+    if (
+      remoteStatus === "connected" ||
+      remoteStatus === "reconnecting" ||
+      remoteStatus === "disconnected"
+    )
+      setConnectionOpen(true);
+    else if (remoteStatus !== null) setPairOpen(true);
     else await connect();
   }
   async function connect() {
     endRemote();
     const generation = pairGeneration.current;
     setPairOpen(true);
+    setConnectionOpen(false);
     setSettingsOpen(false);
     setApproval(false);
     setInvite("");
@@ -881,6 +896,7 @@ function App() {
         setQRState("idle");
         remote.current.close();
         setRemoteStatus("expired");
+        setApproval(false);
         setInvite("");
         setQR("");
         setInviteDeadline(0);
@@ -959,23 +975,11 @@ function App() {
     </label>
   );
   const lang = (
-    <TeleoSelect
-      label={t("language")}
+    <LanguageControl
       value={locale}
-      onChange={(value) => {
-        const l = value as Locale;
-        setLocale(l);
-        localSet("teleo.locale", l);
-        const url = new URL(location.href);
-        url.searchParams.set("lang", l);
-        history.replaceState({}, "", url);
-      }}
-      options={[
-        { value: "en", label: "English" },
-        { value: "uk", label: "Українська" },
-        { value: "ru", label: "Русский" },
-      ]}
-      className="language-picker"
+      onChange={setLocale}
+      label={t("language")}
+      closeLabel={t("close")}
     />
   );
   const previewConsent = (
@@ -1281,16 +1285,7 @@ function App() {
       >
         {route !== "/remote" && (
           <header>
-            <a
-              className="brand"
-              href="/"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate("/");
-              }}
-            >
-              teleo.
-            </a>
+            <Wordmark />
             {route === "/studio" && (
               <>
                 <IconButton
@@ -1357,7 +1352,7 @@ function App() {
                 />
               </>
             )}
-            {lang}
+            {!immersive && lang}
           </header>
         )}
         {!online && (
@@ -1654,7 +1649,7 @@ function App() {
                 remoteStatus === "connected" ? "connection" : "connect",
                 () => void showConnection(),
               )}
-              {lang}
+              {immersive && lang}
             </div>
             <div className="reader-stage">
               <div
@@ -1727,58 +1722,81 @@ function App() {
           >
             <div className="pairing-composition">
               <div className="pair-panel">
-                <span className="brand pairing-brand" aria-hidden="true">
-                  teleo.
-                </span>
+                <Wordmark className="pairing-brand" />
                 <h3>
                   {t(
                     pairingIssue === "localPairingOnly"
                       ? "localPairingTitle"
-                      : "connect",
+                      : "pairTitle",
                   )}
                 </h3>
-                <p role="status">
-                  {t(remoteStatus || "waiting")}
+                <p className="pair-helper">
+                  {t(
+                    pairingIssue
+                      ? pairingIssue === "localPairingOnly"
+                        ? "pairLocal"
+                        : pairingIssue
+                      : "pairHelper",
+                  )}
                 </p>
-                {remoteStatus === "connected" && previewConsent}
                 {invite &&
                   (remoteStatus === "waiting" ||
                     remoteStatus === "connecting") && (
                     <>
-                      {!pairingIssue && <p>{t("pairInstructions")}</p>}
-                      <p>{t("inviteLifetime")}</p>
-                      {pairingIssue && (
-                        <p className="pairing-warning" role="note">
-                          {t(pairingIssue)}
-                        </p>
-                      )}
                       {qrState === "ready" && (
-                        <img
-                          src={qr}
-                          alt={t("invite")}
-                          onError={() => setQRState("error")}
-                        />
+                        <div className="qr-surface">
+                          <img
+                            src={qr}
+                            alt={t("invite")}
+                            onError={() => setQRState("error")}
+                          />
+                        </div>
                       )}
-                      {inviteDeadline > 0 && (
-                        <span className="sr-only">{t("inviteLifetime")}</span>
+                      {qrState === "loading" && (
+                        <div className="qr-placeholder" aria-hidden="true">
+                          <span className="pair-spinner" />
+                        </div>
                       )}
-                      <a href={invite} target="_blank" rel="noreferrer">
-                        {t("invite")}
+                    </>
+                  )}
+                <p className="pair-status" role="status">
+                  {t(
+                    approval
+                      ? "pairApproval"
+                      : qrState === "loading"
+                        ? "qrLoading"
+                        : remoteStatus === "waiting"
+                          ? "pairWaiting"
+                          : remoteStatus || "connecting",
+                  )}
+                </p>
+                {inviteDeadline > 0 && (
+                  <span className="sr-only">{t("inviteLifetime")}</span>
+                )}
+                {invite &&
+                  (remoteStatus === "waiting" ||
+                    remoteStatus === "connecting") && (
+                    <div className="invite-row">
+                      <a
+                        href={invite}
+                        aria-label={t("invite")}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {new URL(invite).origin}/remote
                       </a>
-                      {pairingIssue && <small>{t("localLink")}</small>}
-                      <button
+                      <IconButton
+                        name="copy"
+                        label={t("copy")}
                         onClick={() => {
                           void navigator.clipboard
                             .writeText(invite)
                             .then(() => setNotice("copied"))
                             .catch(() => setNotice("unavailable"));
                         }}
-                      >
-                        {t("copy")}
-                      </button>
-                    </>
+                      />
+                    </div>
                   )}
-                {qrState === "loading" && <p role="status">{t("qrLoading")}</p>}
                 {qrState === "error" && (
                   <>
                     <p role="alert">{t("qrError")}</p>
@@ -1786,8 +1804,7 @@ function App() {
                   </>
                 )}
                 {approval && (
-                  <>
-                    <p>{t("approval")}</p>
+                  <div className="pair-approval-actions">
                     {button("allow", () => {
                       remote.current.send({ type: "allow" });
                       setApproval(false);
@@ -1800,21 +1817,36 @@ function App() {
                       setApproval(false);
                       setInvite("");
                     })}
-                  </>
+                  </div>
                 )}
-                {remoteStatus === "disconnected" ||
-                remoteStatus === "unavailable" ||
-                remoteStatus === "serverUnreachable" ||
-                remoteStatus === "expired"
-                  ? button("reconnect", () => void connect())
-                  : button("revoke", () => {
-                      endRemote();
-                      setRemoteStatus("disconnected");
-                      setInvite("");
-                      setApproval(false);
-                    })}
+                {(remoteStatus === "disconnected" ||
+                  remoteStatus === "unavailable" ||
+                  remoteStatus === "serverUnreachable" ||
+                  remoteStatus === "expired") &&
+                  button("reconnect", () => void connect())}
               </div>
-              <RemoteIllustration t={t} />
+            </div>
+          </Sheet>
+        )}
+        {connectionOpen && (
+          <Sheet
+            open={connectionOpen}
+            className="connection-sheet"
+            title={t("remoteConnection")}
+            closeLabel={t("close")}
+            onClose={() => setConnectionOpen(false)}
+          >
+            <div className="pair-panel">
+              <p role="status">{t(remoteStatus || "disconnected")}</p>
+              {remoteStatus === "connected" && previewConsent}
+              {remoteStatus === "connected" || remoteStatus === "reconnecting"
+                ? button("revoke", () => {
+                    endRemote();
+                    setRemoteStatus("disconnected");
+                    setInvite("");
+                    setApproval(false);
+                  })
+                : button("reconnect", () => void connect())}
             </div>
           </Sheet>
         )}
@@ -1934,7 +1966,14 @@ reactRoot.render(
     <main className="prose">
       <h1>teleo.</h1>
       <p>
-        {dictionaries[detectLocale(navigator.languages)].securePairingRequired}
+        {
+          dictionaries[
+            detectLocale(
+              [...(navigator.languages || []), navigator.language],
+              localGet("teleo.locale"),
+            )
+          ].securePairingRequired
+        }
       </p>
     </main>
   ),

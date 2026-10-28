@@ -156,7 +156,7 @@ if (!baseline) {
         ),
       ).toEqual({ KeyQ: "restart" });
     });
-  test("R400 actions preserve playback, timer, speed and script; held PageDown acts once", async ({
+  test("R400 context actions preserve playback, timer and script; running repeats act once", async ({
     page,
   }) => {
     await enable(page);
@@ -178,20 +178,17 @@ if (!baseline) {
     ).toBeVisible();
     expect(Number(await position.inputValue())).toBeGreaterThanOrEqual(500);
     await expect(dock.locator(".speed-group output")).toHaveText("1.0×");
-    await position.press("Home");
-    await dock
-      .getByRole("button", { name: en.nextParagraph, exact: true })
-      .click();
-    const next = Number(await position.inputValue());
-    await position.press("Home");
+    await key(page, "Period");
+    const start = Number(await position.inputValue());
     await key(page, "PageDown");
     for (let i = 0; i < 35; i++)
       expect(await key(page, "PageDown", { repeat: true })).toBe(true);
-    await expect
-      .poll(async () => Number(await position.inputValue()))
-      .toBeCloseTo(next, 0);
+    await expect(dock.locator(".speed-group output")).toHaveText("1.1×");
     await key(page, "PageUp");
-    expect(Number(await position.inputValue())).toBeLessThan(next);
+    await expect(dock.locator(".speed-group output")).toHaveText("1.0×");
+    expect(Number(await position.inputValue())).toBeGreaterThanOrEqual(start);
+    expect(Number(await position.inputValue()) - start).toBeLessThan(100);
+    await key(page, "Period");
     await dock.getByRole("button", { name: en.timer, exact: true }).click();
     await dock
       .getByRole("group", { name: en.timer, exact: true })
@@ -268,6 +265,111 @@ if (!baseline) {
     expect(await key(page, "PageDown")).toBe(false);
     await page.goto("/remote?lang=en");
     expect(await key(page, "F5")).toBe(false);
+  });
+  test("paused R400 line scrolling, bounded holds, lost keyup, focus and reflow preserve position", async ({
+    page,
+  }, info) => {
+    await enable(page);
+    await read(page);
+    const dock = page.locator(".reader-dock"),
+      position = dock.getByRole("slider", { name: en.position, exact: true });
+    await position.fill("500");
+    const line = await page
+      .locator(".reader article")
+      .evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    await key(page, "PageDown");
+    expect(Number(await position.inputValue())).toBeCloseTo(500 + line, 0);
+    for (let i = 0; i < 3; i++) {
+      await page.waitForTimeout(100);
+      await key(page, "PageDown", { repeat: true });
+    }
+    expect(Number(await position.inputValue())).toBeCloseTo(
+      500 + line * 2.5,
+      0,
+    );
+    await page.evaluate(() =>
+      window.dispatchEvent(new KeyboardEvent("keyup", { code: "PageDown" })),
+    );
+    const released = Number(await position.inputValue());
+    await page.waitForTimeout(100);
+    await key(page, "PageDown", { repeat: true });
+    expect(Number(await position.inputValue())).toBe(released);
+    await key(page, "PageUp");
+    expect(Number(await position.inputValue())).toBeCloseTo(released - line, 0);
+    for (const interruption of [
+      "blur",
+      "visibilitychange",
+      "focusin",
+      "pagehide",
+    ]) {
+      await key(page, "PageDown");
+      const before = Number(await position.inputValue());
+      await page.evaluate((type) => {
+        (["visibilitychange", "focusin"].includes(type)
+          ? document
+          : window
+        ).dispatchEvent(new Event(type));
+      }, interruption);
+      await page.waitForTimeout(100);
+      await key(page, "PageDown", { repeat: true });
+      expect(Number(await position.inputValue())).toBe(before);
+    }
+    const missed = Number(await position.inputValue());
+    await page.waitForTimeout(600);
+    expect(Number(await position.inputValue())).toBe(missed); // no autonomous scroll after a lost release
+    await key(page, "PageDown", { repeat: true });
+    expect(Number(await position.inputValue())).toBe(missed);
+    await expect(dock.locator(".speed-group output")).toHaveText("1.0×");
+    await key(page, "Period");
+    await expect(
+      dock.getByRole("button", { name: en.pause, exact: true }),
+    ).toBeVisible();
+    expect(Number(await position.inputValue())).toBeGreaterThanOrEqual(
+      missed - 1,
+    );
+    await key(page, "Period");
+    await dock.getByRole("button", { name: en.fontSize, exact: true }).click();
+    await page.waitForTimeout(150);
+    const marker = await page.locator(".reading-viewport").evaluate((view) => {
+      const guide = view.getBoundingClientRect().top + view.clientHeight * 0.35;
+      const all = Array.from(view.querySelectorAll("[data-paragraph]"));
+      const index = all.reduce(
+        (best, el, i) =>
+          Math.abs(el.getBoundingClientRect().top - guide) <
+          Math.abs(all[best].getBoundingClientRect().top - guide)
+            ? i
+            : best,
+        0,
+      );
+      return { index, delta: all[index].getBoundingClientRect().top - guide };
+    });
+    const beforeTypography = Number(await position.inputValue());
+    await dock
+      .getByRole("slider", { name: en.fontSize, exact: true })
+      .fill("68");
+    await expect(page.locator(".reader article")).toHaveCSS(
+      "font-size",
+      "68px",
+    );
+    await expect
+      .poll(async () => Number(await position.inputValue()))
+      .toBeGreaterThan(beforeTypography);
+    await expect
+      .poll(() =>
+        page.locator(".reading-viewport").evaluate((view, marker) => {
+          const p = view.querySelectorAll("[data-paragraph]")[marker.index];
+          return Math.abs(
+            p.getBoundingClientRect().top -
+              view.getBoundingClientRect().top -
+              view.clientHeight * 0.35 -
+              marker.delta,
+          );
+        }, marker),
+      )
+      .toBeLessThan(110);
+    await page.screenshot({
+      path: `docs/screenshots/context-${info.project.name}-paused-reflow.png`,
+    });
   });
   test("fullscreen events and errors keep Reader and playback without Escape delivery", async ({
     page,
@@ -374,15 +476,13 @@ if (!baseline) {
       info.project.name +
         ": fullscreen geometry " +
         JSON.stringify(
-          await page
-            .locator(".reader")
-            .evaluate((el) => ({
-              rect: el.getBoundingClientRect().toJSON(),
-              height: innerHeight,
-              width: innerWidth,
-              position: getComputedStyle(el).position,
-              selector: el.matches(":fullscreen"),
-            })),
+          await page.locator(".reader").evaluate((el) => ({
+            rect: el.getBoundingClientRect().toJSON(),
+            height: innerHeight,
+            width: innerWidth,
+            position: getComputedStyle(el).position,
+            selector: el.matches(":fullscreen"),
+          })),
         ),
     );
     const pause = await page.locator(".reader-dock .dock-play").boundingBox();

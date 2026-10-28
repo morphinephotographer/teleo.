@@ -66,7 +66,7 @@ import {
   type ReadingAnchor,
 } from "./reading-anchor";
 import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
-import { r400Keys, r400Shortcut, bindReaderKeyboard } from "./r400";
+import { r400Keys, r400Shortcut, bindReaderKeyboard, R400Hold } from "./r400";
 import {
   createReaderFullscreen,
   type FullscreenFailure,
@@ -102,14 +102,18 @@ function App() {
   const libraryBeforeReading = useRef(libraryOpen);
   const [wide, setWide] = useState(innerWidth >= 1180);
   const [settingsCollapsed, setSettingsCollapsed] = useState(false);
-  const [previewAllowed, setPreviewAllowed] = useState(false);
+  const [previewAllowed, setPreviewAllowed] = useState(
+    () => localGet("teleo.previewAllowed") === "true",
+  );
+  // The saved choice is distinct from the relay's existing session/epoch authorization.
+  const previewChoice = useRef(previewAllowed);
+  const previewInitializing = useRef(false);
   const [previewPending, setPreviewPending] = useState(false);
   const receiver = useRef(new PreviewReceiver());
   const lastPreviewPosition = useRef({ paragraph: 0, offset: 0 });
   const [, refreshPreview] = useState(0);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pairOpen, setPairOpen] = useState(false);
-  const [connectionOpen, setConnectionOpen] = useState(false);
   const pairingIssue = phonePairingIssue(location.origin);
   const [inviteDeadline, setInviteDeadline] = useState(0);
   const [qrState, setQRState] = useState<
@@ -131,6 +135,7 @@ function App() {
     typeof createReaderFullscreen
   > | null>(null);
   const readerKey = useRef<(event: KeyboardEvent) => void>(() => {});
+  const r400Hold = useRef(new R400Hold());
   const readerRoot = useRef<HTMLElement>(null);
   const [focusPosition, setFocusPosition] = useState(
     () => Number(localGet("teleo.focusPosition")) || 35,
@@ -391,7 +396,9 @@ function App() {
               version: 1 as const,
               target: controlTargetRef.current,
               maximum: currentRef.current?.body.trim() ? engine.maximum : 0,
-              ...(previewAllowed && viewport.current && engine.maximum > 0
+              ...(previewChoice.current &&
+              viewport.current &&
+              engine.maximum > 0
                 ? {
                     marks: paragraphs()
                       .filter(
@@ -422,6 +429,14 @@ function App() {
           }
         : {}),
     };
+  }
+  function publishHostState() {
+    const state = hostState(),
+      signature = JSON.stringify(state);
+    if (signature !== lastHostState.current) {
+      remote.current.state(state);
+      lastHostState.current = signature;
+    }
   }
   const previewOffsets = useMemo(
     () => previewParagraphs(current?.body || ""),
@@ -791,11 +806,14 @@ function App() {
     return () => clearTimeout(timer);
   }, [learn, testing]);
   readerKey.current = (e: KeyboardEvent) => {
-    if ((intro || settingsOpen) && !learn && !testing) return;
-    if (e.defaultPrevented) return;
+    if (!["PageUp", "PageDown"].includes(e.code)) r400Hold.current.stop();
+    if (((intro || settingsOpen) && !learn && !testing) || e.defaultPrevented) {
+      r400Hold.current.stop();
+      return;
+    }
     const target = e.target instanceof Element ? e.target : document.body;
     const editable = !!target.closest(
-      "input,textarea,select,[contenteditable=true],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
+      "input,textarea,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=searchbox],[role=slider],[role=spinbutton],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
     );
     if (learn || testing) {
       if (!keyboardSafe(e, editable, reading || !!learn || testing)) return;
@@ -821,15 +839,47 @@ function App() {
     if (enabled && profile === "r400" && hostReader) {
       // Never turn the R400's alternate Escape into app exit or playback.
       if (e.code === "Escape" || e.key === "Escape") return;
-      const result = r400Shortcut(e, { enabled, reader: hostReader, blocked });
+      const result = r400Shortcut(e, {
+        enabled,
+        reader: hostReader,
+        blocked,
+        playing: engine.playing,
+      });
       if (result) {
         e.preventDefault();
         if (result.action === "enterFullscreen")
           fullscreenControl.current?.enter(readerRoot.current);
-        else if (result.action) command({ action: result.action });
-      }
+        else if (
+          result.action === "scrollBack" ||
+          result.action === "scrollForward"
+        ) {
+          const lines = r400Hold.current.step(e.code, e.repeat);
+          const view = viewport.current,
+            article = content.current;
+          if (lines && view && article) {
+            geometryHeld.current = false;
+            geometry.current = null;
+            const line = parseFloat(getComputedStyle(article).lineHeight) || 64;
+            engine.position = Math.max(
+              0,
+              Math.min(
+                engine.maximum,
+                engine.position +
+                  (result.action === "scrollBack" ? -1 : 1) * line * lines,
+              ),
+            );
+            syncView(view);
+            // Preserve the new semantic anchor for immediate typography/reflow changes.
+            rememberGeometry();
+            showControls();
+            setFrame((x) => x + 1);
+          }
+        } else if (result.action) command({ action: result.action });
+        if (engine.playing) r400Hold.current.stop();
+      } else r400Hold.current.stop();
       return;
     }
+    r400Hold.current.stop();
     if (!keyboardSafe(e, blocked, hostReader)) return;
     if (e.key === "Escape") {
       exitReader();
@@ -854,7 +904,27 @@ function App() {
       });
     } else command({ action });
   };
-  useEffect(() => bindReaderKeyboard(window, (e) => readerKey.current(e)), []);
+  useEffect(
+    () =>
+      bindReaderKeyboard(
+        window,
+        (e) => readerKey.current(e),
+        (code) => r400Hold.current.stop(code),
+        document,
+      ),
+    [],
+  );
+  useEffect(() => {
+    r400Hold.current.stop();
+  }, [
+    reading,
+    selected,
+    enabled,
+    profile,
+    engine.playing,
+    pairOpen,
+    settingsOpen,
+  ]);
   useEffect(() => {
     remote.current.onEvent = (e) => {
       const statuses: Record<string, Key> = {
@@ -878,6 +948,7 @@ function App() {
       )
         setApproval(false);
       if (e.type === "connected") {
+        lastHostState.current = "";
         pairGeneration.current++;
         setQRState("idle");
         clearTimeout(inviteTimer.current);
@@ -886,6 +957,10 @@ function App() {
         setInvite("");
         setQR("");
         setApproval(false);
+        if (route !== "/remote") {
+          previewInitializing.current = true;
+          setPreviewPending(true);
+        }
       }
       if (
         [
@@ -899,7 +974,7 @@ function App() {
         ].includes(e.type)
       ) {
         sender.current?.disconnect();
-        setPreviewAllowed(false);
+        previewInitializing.current = false;
         setPreviewPending(false);
         receiver.current.allowed = false;
         receiver.current.clear();
@@ -911,7 +986,16 @@ function App() {
           receiver.current.permission(permission);
           refreshPreview((x) => x + 1);
         } else {
-          setPreviewAllowed(permission.allowed);
+          const initial = previewInitializing.current;
+          previewInitializing.current = false;
+          // Ignore an initial/stale grant that no longer matches the user's choice.
+          if (permission.allowed !== previewChoice.current) {
+            sender.current?.disconnect();
+            // Reconcile the saved choice once, rather than republishing matching grants on every reconnect.
+            if (initial)
+              remote.current.previewPermission(previewChoice.current);
+            return;
+          }
           setPreviewPending(false);
           sender.current?.permission(permission);
         }
@@ -935,7 +1019,7 @@ function App() {
         currentRef.current &&
         route === "/studio"
       )
-        remote.current.state(hostState());
+        publishHostState();
       if (e.type === "state" && e.state) setRemoteState(e.state);
       if (
         e.type === "command" &&
@@ -1023,15 +1107,7 @@ function App() {
   });
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
-    lastHostState.current = "";
-    const snapshot = () => {
-      const state = hostState(),
-        signature = JSON.stringify(state);
-      if (signature !== lastHostState.current) {
-        remote.current.state(state);
-        lastHostState.current = signature;
-      }
-    };
+    const snapshot = () => publishHostState();
     snapshot();
     const timer = setInterval(snapshot, 500);
     return () => clearInterval(timer);
@@ -1166,15 +1242,14 @@ function App() {
     setPairOpen(false);
     remote.current.close();
     sender.current?.disconnect();
+    previewInitializing.current = false;
     receiver.current.allowed = false;
     receiver.current.clear();
-    setPreviewAllowed(false);
     setPreviewPending(false);
     refreshPreview((x) => x + 1);
   }
   function dismissTransient() {
     setSettingsOpen(false);
-    setConnectionOpen(false);
     setActionDialog(null);
     setRevisions(null);
     setImmersive(false);
@@ -1186,7 +1261,6 @@ function App() {
     setReading(false);
     endRemote();
     setRemoteStatus(null);
-    setConnectionOpen(false);
     history.pushState({}, "", path);
     dismissTransient();
     setRoute(path === "/" ? "/studio" : path);
@@ -1238,20 +1312,14 @@ function App() {
     setReading(true);
   }
   async function showConnection() {
-    if (
-      remoteStatus === "connected" ||
-      remoteStatus === "reconnecting" ||
-      remoteStatus === "disconnected"
-    )
-      setConnectionOpen(true);
-    else if (remoteStatus !== null) setPairOpen(true);
+    setSettingsOpen(false);
+    if (remoteStatus !== null) setPairOpen(true);
     else await connect();
   }
   async function connect() {
     endRemote();
     const generation = pairGeneration.current;
     setPairOpen(true);
-    setConnectionOpen(false);
     setSettingsOpen(false);
     setApproval(false);
     setInvite("");
@@ -1364,10 +1432,15 @@ function App() {
         disabled={previewPending}
         aria-busy={previewPending}
         onChange={(e) => {
-          setPreviewAllowed(e.target.checked);
-          setPreviewPending(true);
-          if (!e.target.checked) sender.current?.disconnect();
-          remote.current.previewPermission(e.target.checked);
+          const allowed = e.target.checked;
+          previewChoice.current = allowed;
+          setPreviewAllowed(allowed);
+          localSet("teleo.previewAllowed", String(allowed));
+          if (!allowed) sender.current?.disconnect();
+          if (remoteStatus === "connected") {
+            setPreviewPending(true);
+            remote.current.previewPermission(allowed);
+          }
         }}
       />
       {t("allowPreview")}
@@ -1509,17 +1582,9 @@ function App() {
             )}
           </details>
           {remoteStatus === "connected" ? (
-            <>
-              {previewConsent}
-              {button("revoke", () => {
-                endRemote();
-                setRemoteStatus("disconnected");
-                setApproval(false);
-                setInvite("");
-              })}
-            </>
+            <>{button("remoteConnection", () => void showConnection())}</>
           ) : (
-            button("connect", () => void connect())
+            button("connect", () => void showConnection())
           )}
         </>
       )}
@@ -2191,18 +2256,24 @@ function App() {
                 <Wordmark className="pairing-brand" />
                 <h3>
                   {t(
-                    pairingIssue === "localPairingOnly"
-                      ? "localPairingTitle"
-                      : "pairTitle",
+                    remoteStatus === "connected" ||
+                      remoteStatus === "reconnecting"
+                      ? "remoteConnection"
+                      : pairingIssue === "localPairingOnly"
+                        ? "localPairingTitle"
+                        : "pairTitle",
                   )}
                 </h3>
                 <p className="pair-helper">
                   {t(
-                    pairingIssue
-                      ? pairingIssue === "localPairingOnly"
-                        ? "pairLocal"
-                        : pairingIssue
-                      : "pairHelper",
+                    remoteStatus === "connected" ||
+                      remoteStatus === "reconnecting"
+                      ? "previewSettingHelp"
+                      : pairingIssue
+                        ? pairingIssue === "localPairingOnly"
+                          ? "pairLocal"
+                          : pairingIssue
+                        : "pairHelper",
                   )}
                 </p>
                 {invite &&
@@ -2225,6 +2296,7 @@ function App() {
                       )}
                     </>
                   )}
+                {previewConsent}
                 <p className="pair-status" role="status">
                   {t(
                     approval
@@ -2290,29 +2362,15 @@ function App() {
                   remoteStatus === "serverUnreachable" ||
                   remoteStatus === "expired") &&
                   button("reconnect", () => void connect())}
-              </div>
-            </div>
-          </Sheet>
-        )}
-        {connectionOpen && (
-          <Sheet
-            open={connectionOpen}
-            className="connection-sheet"
-            title={t("remoteConnection")}
-            closeLabel={t("close")}
-            onClose={() => setConnectionOpen(false)}
-          >
-            <div className="pair-panel">
-              <p role="status">{t(remoteStatus || "disconnected")}</p>
-              {remoteStatus === "connected" && previewConsent}
-              {remoteStatus === "connected" || remoteStatus === "reconnecting"
-                ? button("revoke", () => {
+                {(remoteStatus === "connected" ||
+                  remoteStatus === "reconnecting") &&
+                  button("revoke", () => {
                     endRemote();
                     setRemoteStatus("disconnected");
                     setInvite("");
                     setApproval(false);
-                  })
-                : button("reconnect", () => void connect())}
+                  })}
+              </div>
             </div>
           </Sheet>
         )}

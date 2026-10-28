@@ -74,6 +74,8 @@ export const en = {
     "This browser has no supported vibration API. Buttons still respond visually.",
   scriptFolder: "Script folder",
   allowPreview: "Allow script preview on this remote",
+  previewSettingHelp:
+    "Share script text only with the authorized phone. Playback controls work with preview off.",
   previewTooLarge:
     "This script is too large for remote preview. Reading and control remain available.",
   skip: "Skip intro",
@@ -151,6 +153,8 @@ export const en = {
   settings: "Reading settings",
   physical: "Physical remote",
   r400: "Logitech R400 · keyboard preset",
+  r400Backward: "Playing: speed −0.1× · Paused: scroll up (hold to continue)",
+  r400Forward: "Playing: speed +0.1× · Paused: scroll down (hold to continue)",
   r400Help:
     "Connect the USB receiver. These shortcuts work only in the host Reader, using key codes in any layout. This preset cannot detect a connected device. Uncheck Enable keyboard remote to disable capture.",
   r400Escape: "Browser fullscreen exit (not intercepted)",
@@ -317,6 +321,8 @@ export const uk: Record<Key, string> = {
     "Цей браузер не підтримує стандартну вібрацію. Кнопки реагують візуально.",
   scriptFolder: "Папка тексту",
   allowPreview: "Дозволити перегляд тексту на цьому пульті",
+  previewSettingHelp:
+    "Текст доступний лише авторизованому телефону. Керування працює й без перегляду тексту.",
   previewTooLarge:
     "Цей текст завеликий для перегляду на пульті. Читання й керування доступні.",
   skip: "Пропустити",
@@ -394,6 +400,10 @@ export const uk: Record<Key, string> = {
   settings: "Налаштування читання",
   physical: "Фізичний пульт",
   r400: "Logitech R400 · клавіатурний профіль",
+  r400Backward:
+    "Відтворення: швидкість −0,1× · Пауза: вгору (утримуйте для прокручування)",
+  r400Forward:
+    "Відтворення: швидкість +0,1× · Пауза: вниз (утримуйте для прокручування)",
   r400Help:
     "Підключіть USB-приймач. Команди працюють лише в режимі читання на головному пристрої за кодами клавіш, незалежно від розкладки. Профіль не визначає підключення пульта. Вимкніть клавіатурний пульт, щоб припинити перехоплення.",
   r400Escape: "Вихід із повноекранного режиму браузера (без перехоплення)",
@@ -560,6 +570,8 @@ export const ru: Record<Key, string> = {
     "Этот браузер не поддерживает стандартную вибрацию. Кнопки реагируют визуально.",
   scriptFolder: "Папка текста",
   allowPreview: "Разрешить просмотр текста на этом пульте",
+  previewSettingHelp:
+    "Текст доступен только авторизованному телефону. Управление работает и без просмотра текста.",
   previewTooLarge:
     "Этот текст слишком большой для просмотра на пульте. Чтение и управление доступны.",
   skip: "Пропустить",
@@ -638,6 +650,10 @@ export const ru: Record<Key, string> = {
   settings: "Настройки чтения",
   physical: "Физический пульт",
   r400: "Logitech R400 · клавиатурный профиль",
+  r400Backward:
+    "Воспроизведение: скорость −0,1× · Пауза: вверх (удерживайте для прокрутки)",
+  r400Forward:
+    "Воспроизведение: скорость +0,1× · Пауза: вниз (удерживайте для прокрутки)",
   r400Help:
     "Подключите USB-приёмник. Команды работают только в режиме чтения на ведущем устройстве по кодам клавиш, независимо от раскладки. Профиль не определяет подключение пульта. Отключите клавиатурный пульт, чтобы прекратить перехват.",
   r400Escape: "Выход из полноэкранного режима браузера (без перехвата)",

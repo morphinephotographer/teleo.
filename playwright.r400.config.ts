@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 export default defineConfig({
   ...base,
-  testMatch: "r400.spec.ts",
+  testMatch: ["r400.spec.ts", "remote-permissions.spec.ts"],
   outputDir: "test-results/r400",
   workers: 1,
   use: {

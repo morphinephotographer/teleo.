@@ -154,3 +154,7 @@ Published on [Teleo.cc](https://teleo.cc/studio) on 2026-10-28 from source `9494
 ## Logitech R400 keyboard preset
 
 Reading settings → Physical remote → Profile → Logitech R400. The USB presenter uses Period for Play/Pause, PageUp/PageDown for paragraphs and F5 to enter Reader DOM fullscreen; native Escape exit is never converted to playback or Reader exit in this preset. Enable/disable and selection use existing local settings. No USB discovery, driver or Bluetooth requirement. [Behavior and physical checklist](docs/LOGITECH_R400_SUPPORT.md) · [Verification and release record](docs/audits/LOGITECH_R400_VERIFICATION.md).
+
+## Local update — phone preview permission and context-aware R400 arrows
+
+This branch moves the existing preview permission into the QR/connection dialog, with a saved privacy-safe choice, immediate revocation and reuse of the relay's session/epoch authorization. Reopening connection settings preserves the active remote. R400 arrows change speed while playing and scroll by rendered lines on pause, with bounded native repeats and interruption cleanup. Approved v1.2 screens and user scripts are preserved. This update is **not deployed**; the published 1.2.0 mapping above is historical to that release. [Implementation, verification and screenshots](docs/audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md).

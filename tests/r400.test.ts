@@ -1,5 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
-import { r400Shortcut, bindReaderKeyboard } from "../apps/web/src/r400";
+import {
+  r400Shortcut,
+  bindReaderKeyboard,
+  R400Hold,
+} from "../apps/web/src/r400";
 import { createReaderFullscreen } from "../apps/web/src/reader-fullscreen";
 import { Playback } from "../packages/protocol/domain";
 const event = {
@@ -11,12 +15,12 @@ const event = {
   ctrlKey: false,
   altKey: false,
 };
-const scope = { enabled: true, reader: true, blocked: false };
+const scope = { enabled: true, reader: true, blocked: false, playing: true };
 describe("R400 scoped keyboard preset", () => {
   it.each([
     ["Period", "togglePlay"],
-    ["PageUp", "previousParagraph"],
-    ["PageDown", "nextParagraph"],
+    ["PageUp", "speedDown"],
+    ["PageDown", "speedUp"],
     ["F5", "enterFullscreen"],
   ] as const)("%s maps to %s", (code, action) =>
     expect(r400Shortcut({ ...event, code }, scope)).toEqual({ action }),
@@ -42,22 +46,22 @@ describe("R400 scoped keyboard preset", () => {
   ])("ignores inactive/editable/modal scope %j", (s) =>
     expect(r400Shortcut(event, s)).toBeNull(),
   );
-  it("captures repeats without dispatching or allowing native PageDown/F5 fallback", () => {
+  it("running arrows step speed once, suppress 35 repeats and never seek", () => {
     const p = new Playback();
     p.maximum = 1000;
     p.position = 100;
     p.playing = true;
-    p.speed = 1.25;
+    p.speed = 1.2;
     for (let i = 0; i < 36; i++) {
       const result = r400Shortcut(
         { ...event, code: "PageDown", repeat: i > 0 },
         scope,
       );
       expect(result).not.toBeNull();
-      if (result?.action === "nextParagraph")
+      if (result?.action === "speedUp")
         p.command({ action: result.action }, [0, 200, 400, 600]);
     }
-    expect([p.position, p.speed, p.playing]).toEqual([200, 1.25, true]);
+    expect([p.position, p.speed, p.playing]).toEqual([100, 1.3, true]);
     expect(r400Shortcut({ ...event, code: "F5", repeat: true }, scope)).toEqual(
       { action: null },
     );
@@ -78,6 +82,72 @@ describe("R400 scoped keyboard preset", () => {
       1.25,
       2,
     ]);
+  });
+  it("paused arrows map to scrolling, including repeats, without using speed commands", () => {
+    for (const repeat of [false, true]) {
+      expect(
+        r400Shortcut(
+          { ...event, code: "PageUp", repeat },
+          { ...scope, playing: false },
+        ),
+      ).toEqual({ action: "scrollBack" });
+      expect(
+        r400Shortcut(
+          { ...event, code: "PageDown", repeat },
+          { ...scope, playing: false },
+        ),
+      ).toEqual({ action: "scrollForward" });
+    }
+  });
+  it("bounds paused hold steps, rejects orphan/stale repeats and stops on release", () => {
+    let now = 0;
+    const hold = new R400Hold(() => now);
+    expect(hold.step("PageDown", true)).toBe(0);
+    expect(hold.step("PageDown", false)).toBe(1);
+    now = 400;
+    expect(hold.step("PageDown", true)).toBe(0.5);
+    for (let i = 0; i < 35; i++) expect(hold.step("PageDown", true)).toBe(0);
+    now += 80;
+    expect(hold.step("PageDown", true)).toBe(0.5);
+    hold.stop("PageUp");
+    now += 80;
+    expect(hold.step("PageDown", true)).toBe(0.5);
+    hold.stop("PageDown");
+    now += 80;
+    expect(hold.step("PageDown", true)).toBe(0);
+    hold.step("PageUp", false);
+    now += 1600;
+    expect(hold.step("PageUp", true)).toBe(0);
+  });
+  it.each(["blur", "pagehide", "visibilitychange", "focusin"])(
+    "cancels holds on %s and removes lifecycle listeners",
+    (type) => {
+      const windowTarget = new EventTarget(),
+        doc = new EventTarget(),
+        release = vi.fn();
+      const stop = bindReaderKeyboard(windowTarget, vi.fn(), release, doc);
+      const target = ["visibilitychange", "focusin"].includes(type)
+        ? doc
+        : windowTarget;
+      target.dispatchEvent(new Event(type));
+      expect(release).toHaveBeenCalledOnce();
+      stop();
+      release.mockClear();
+      target.dispatchEvent(new Event(type));
+      expect(release).not.toHaveBeenCalled();
+    },
+  );
+  it("keyup cancels the matching hold without suppressing native Escape", () => {
+    const target = new EventTarget(),
+      release = vi.fn();
+    const stop = bindReaderKeyboard(target, vi.fn(), release);
+    const keyup = Object.assign(new Event("keyup", { cancelable: true }), {
+      code: "PageDown",
+    });
+    target.dispatchEvent(keyup);
+    expect(release).toHaveBeenLastCalledWith("PageDown");
+    expect(keyup.defaultPrevented).toBe(false);
+    stop();
   });
   it("binds one live listener, reads the latest handler, and cleans up across mounts", () => {
     const target = new EventTarget(),

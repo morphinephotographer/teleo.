@@ -212,7 +212,9 @@ export function ReaderDock({
               onClick={() => command({ action: "speedDown" })}
             />
           )}
-          <output aria-label={t("speed")}>{formatSpeed(engine.speed)}×</output>
+          <output aria-label={t("speed")} aria-live="polite" aria-atomic="true">
+            {formatSpeed(engine.speed)}×
+          </output>
           {open && (
             <IconButton
               name="plus"

@@ -1,0 +1,107 @@
+{
+  "chromium": [
+    {
+      "width": 1440,
+      "height": 900,
+      "rect": {
+        "x": 1264,
+        "y": 15,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 834,
+      "height": 1112,
+      "rect": {
+        "x": 678,
+        "y": 13,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "rect": {
+        "x": 236,
+        "y": 5,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    }
+  ],
+  "webkit": [
+    {
+      "width": 1440,
+      "height": 900,
+      "rect": {
+        "x": 1264,
+        "y": 15,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 834,
+      "height": 1112,
+      "rect": {
+        "x": 678,
+        "y": 13,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "rect": {
+        "x": 236,
+        "y": 5,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    }
+  ],
+  "firefox": [
+    {
+      "width": 1440,
+      "height": 900,
+      "rect": {
+        "x": 1264,
+        "y": 15,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 834,
+      "height": 1112,
+      "rect": {
+        "x": 678,
+        "y": 13,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    },
+    {
+      "width": 390,
+      "height": 844,
+      "rect": {
+        "x": 236,
+        "y": 5,
+        "width": 44,
+        "height": 44
+      },
+      "svg": "<svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"7\" y=\"2\" width=\"10\" height=\"20\" rx=\"3\"></rect><path d=\"M10 18h4M10 6h4M12 4v4\"></path></svg>"
+    }
+  ]
+}

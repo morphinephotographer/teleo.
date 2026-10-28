@@ -8,6 +8,7 @@ import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
 import { type Key } from "./i18n";
 import { Icon, IconButton } from "./ui";
 import { AlignmentControl } from "./AlignmentControl";
+import { Popover, TeleoMenu } from "./menus";
 type Typography = "fontSize" | "lineHeight" | "textWidth";
 export function ReaderDock({
   engine,
@@ -17,6 +18,11 @@ export function ReaderDock({
   preference,
   beforeLayout,
   seek,
+  dimming,
+  setDimming,
+  focusPosition,
+  setFocusPosition,
+  fullscreen,
 }: {
   engine: Playback;
   preferences: Preferences;
@@ -25,6 +31,11 @@ export function ReaderDock({
   preference: (patch: Partial<Preferences>) => void;
   beforeLayout: () => void;
   seek: (position: number) => void;
+  dimming: boolean;
+  setDimming: (value: boolean) => void;
+  focusPosition: number;
+  setFocusPosition: (value: number) => void;
+  fullscreen: () => void;
 }) {
   const [compact, setCompact] = useState(
       () =>
@@ -67,6 +78,175 @@ export function ReaderDock({
       : pane === "lineHeight"
         ? [1, 3, 0.1]
         : [280, 1600, 20];
+  if (!compact) {
+    const slider = (
+      key: Typography | "speed",
+      icon: "size" | "spacing" | "width" | "timer",
+      min: number,
+      max: number,
+      step: number,
+    ) => {
+      const value = key === "speed" ? engine.speed : p[key];
+      return (
+        <Popover
+          kind="dialog"
+          width={260}
+          className="approved-pill"
+          label={t(key)}
+          trigger={
+            <>
+              <Icon name={icon} />
+              <span>{key === "speed" ? formatSpeed(value) + "×" : value}</span>
+              <Icon name="chevron" />
+            </>
+          }
+        >
+          <label className="toolbar-slider">
+            {t(key)}
+            <output>{value}</output>
+            <input
+              aria-label={t(key)}
+              type="range"
+              min={min}
+              max={max}
+              step={step}
+              value={value}
+              onChange={(e) =>
+                key === "speed"
+                  ? command({
+                      action: "setSpeed",
+                      value: Number(e.target.value),
+                    })
+                  : preference({ [key]: Number(e.target.value) })
+              }
+            />
+          </label>
+          {key === "speed" && (
+            <div className="toolbar-speed-steps">
+              <button
+                onClick={() => command({ action: "speedDown" })}
+                disabled={stepSpeed(value, -1) === value}
+                aria-label={t("speedDown")}
+              >
+                −
+              </button>
+              <button
+                onClick={() => command({ action: "speedUp" })}
+                disabled={stepSpeed(value, 1) === value}
+                aria-label={t("speedUp")}
+              >
+                +
+              </button>
+            </div>
+          )}
+        </Popover>
+      );
+    };
+    return (
+      <div
+        className="reader-controls approved-reader-toolbar"
+        role="toolbar"
+        aria-label={t("playbackSettings")}
+      >
+        <IconButton
+          name="restart"
+          label={t("restart")}
+          onClick={() => command({ action: "restart" })}
+        />
+        <IconButton
+          name="sun"
+          label={t("focusDimming")}
+          active={dimming}
+          onClick={() => setDimming(!dimming)}
+        />
+        <Popover
+          kind="dialog"
+          className="approved-circle"
+          label={t("focusLine")}
+          trigger={<Icon name="focus" />}
+          triggerClassName="icon-button"
+          selected={p.focusLine}
+        >
+          <label className="check">
+            <input
+              type="checkbox"
+              checked={p.focusLine}
+              onChange={(e) => preference({ focusLine: e.target.checked })}
+            />
+            {t("focusLine")}
+          </label>
+          <label className="toolbar-slider">
+            {t("focusPosition")}
+            <output>{focusPosition}%</output>
+            <input
+              aria-label={t("focusPosition")}
+              type="range"
+              min={20}
+              max={70}
+              value={focusPosition}
+              onChange={(e) => {
+                beforeLayout();
+                setFocusPosition(Number(e.target.value));
+              }}
+            />
+          </label>
+        </Popover>
+        <TeleoMenu
+          className="approved-pill"
+          label={t("timer")}
+          closeLabel={t("close")}
+          trigger={
+            <>
+              <Icon name="timer" />
+              <span>
+                {p.countdownSeconds ? p.countdownSeconds + "s" : t("off")}
+              </span>
+              <Icon name="chevron" />
+            </>
+          }
+          items={[0, 3, 5, 10].map((n) => ({
+            label: n ? `${n} ${t("seconds")}` : t("off"),
+            action: () => preference({ countdownSeconds: n }),
+          }))}
+        />
+        {slider("textWidth", "width", 280, 1600, 20)}
+        {slider("fontSize", "size", 16, 100, 1)}
+        <IconButton
+          name={engine.playing ? "pause" : "play"}
+          className="dock-play primary"
+          label={t(engine.playing ? "pause" : "play")}
+          onClick={() => command({ action: engine.playing ? "pause" : "play" })}
+        />
+        {slider("speed", "timer", 0.5, 3, 0.1)}
+        {slider("lineHeight", "spacing", 1, 3, 0.1)}
+        <div className="approved-pill approved-alignment">
+          <AlignmentControl
+            t={t}
+            value={p.alignment}
+            onChange={(alignment) => preference({ alignment })}
+          />
+        </div>
+        <IconButton
+          name="mirror"
+          label={t("mirrorHorizontal")}
+          active={p.mirrorHorizontal}
+          onClick={() => preference({ mirrorHorizontal: !p.mirrorHorizontal })}
+        />
+        <IconButton
+          name="mirror"
+          className="vertical-mirror"
+          label={t("mirrorVertical")}
+          active={p.mirrorVertical}
+          onClick={() => preference({ mirrorVertical: !p.mirrorVertical })}
+        />
+        <IconButton
+          name="fullscreen"
+          label={t("fullscreen")}
+          onClick={fullscreen}
+        />
+      </div>
+    );
+  }
   return (
     <div
       ref={dock}

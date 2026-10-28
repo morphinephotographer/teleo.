@@ -17,6 +17,11 @@ import {
   type ControlValues,
 } from "../../../packages/protocol/control";
 import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
+import {
+  SeekQueue,
+  scrollToTextOffset,
+  textOffsetAtView,
+} from "./text-position";
 import { type Key } from "./i18n";
 import { Wordmark } from "./Wordmark";
 import { AlignmentControl, type Alignment } from "./AlignmentControl";
@@ -167,6 +172,122 @@ export function RemoteController({
     quickRef = useRef<HTMLDivElement>(null),
     quickTrigger = useRef<HTMLButtonElement>(null);
   const lastSession = useRef("");
+  const [scrollVersion, setScrollVersion] = useState(0);
+  const gesture = useRef<"timeline" | "text" | null>(null);
+  const gestureTarget = useRef("");
+  const fingerDown = useRef(false);
+  const programmatic = useRef(false);
+  const pendingSeek = useRef<{ value: number; anchor?: number } | null>(null);
+  const gestureTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const liveSeek = useRef({ connected, c, onCommand });
+  liveSeek.current = { connected, c, onCommand };
+  const seekQueue = useRef<SeekQueue | null>(null);
+  if (!seekQueue.current)
+    seekQueue.current = new SeekQueue((value, anchor) => {
+      const live = liveSeek.current;
+      if (!live.connected || !live.c || live.c.target !== gestureTarget.current)
+        return;
+      pendingSeek.current = { value, anchor };
+      live.onCommand({
+        action: "seek",
+        target: live.c.target,
+        value,
+        ...(anchor === undefined ? {} : { anchor }),
+      });
+      clearTimeout(settleTimer.current);
+      settleTimer.current = setTimeout(() => {
+        pendingSeek.current = null;
+        setScrub(null);
+        setScrollVersion((v) => v + 1);
+      }, 5000);
+    });
+  const cancelScroll = () => {
+    fingerDown.current = false;
+    seekQueue.current?.cancel();
+    gesture.current = null;
+    pendingSeek.current = null;
+    clearTimeout(gestureTimer.current);
+    clearTimeout(settleTimer.current);
+    setScrub(null);
+  };
+  useEffect(() => {
+    cancelScroll();
+  }, [c?.target, connected, preview.allowed, preview.script?.revision]);
+  useEffect(() => {
+    const stop = () => {
+      cancelScroll();
+      setScrollVersion((v) => v + 1);
+    };
+    window.addEventListener("blur", stop);
+    document.addEventListener("visibilitychange", stop);
+    return () => {
+      window.removeEventListener("blur", stop);
+      document.removeEventListener("visibilitychange", stop);
+      seekQueue.current?.cancel();
+      clearTimeout(gestureTimer.current);
+      clearTimeout(settleTimer.current);
+    };
+  }, []);
+  useEffect(() => {
+    const pending = pendingSeek.current;
+    if (gesture.current || seekQueue.current?.pending || !pending || !c) return;
+    const matches =
+      pending.anchor === undefined
+        ? Math.abs(state.position - pending.value * c.maximum) <=
+          (state.playing ? 20 : 1)
+        : preview.position &&
+          Math.abs(preview.position.offset - pending.anchor) <= 1;
+    if (matches) {
+      pendingSeek.current = null;
+      clearTimeout(settleTimer.current);
+      setScrub(null);
+      setScrollVersion((v) => v + 1);
+    }
+  }, [state, preview.position, scrollVersion, c]);
+  const beginScroll = (kind: "timeline" | "text") => {
+    if (
+      !connected ||
+      !c ||
+      (kind === "text" && (!preview.allowed || !preview.body))
+    )
+      return;
+    if (gesture.current !== kind) {
+      seekQueue.current?.cancel();
+      pendingSeek.current = null;
+      clearTimeout(settleTimer.current);
+    }
+    gesture.current = kind;
+    gestureTarget.current = c.target;
+    programmatic.current = false;
+    clearTimeout(gestureTimer.current);
+  };
+  const finishScroll = () => {
+    gesture.current = null;
+    setScrollVersion((v) => v + 1);
+  };
+  const textScrolled = () => {
+    if (
+      gesture.current !== "text" ||
+      programmatic.current ||
+      !scroll.current ||
+      !c
+    )
+      return;
+    const focus =
+      (parseFloat(getComputedStyle(scroll.current).paddingTop) /
+        scroll.current.clientHeight) *
+      100;
+    const anchor = textOffsetAtView(scroll.current, content, focus);
+    seekQueue.current?.push(c.maximum ? state.position / c.maximum : 0, anchor);
+    clearTimeout(gestureTimer.current);
+    if (!fingerDown.current)
+      gestureTimer.current = setTimeout(finishScroll, 180);
+  };
   useEffect(() => {
     const changed = () => setFilling(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", changed);
@@ -227,20 +348,23 @@ export function RemoteController({
   }, [quick]);
   useLayoutEffect(() => {
     const follow = () => {
-      const active = scroll.current?.querySelector<HTMLElement>(
-        '[aria-current="true"]',
-      );
-      if (active && scroll.current) {
-        const a = active.getBoundingClientRect(),
-          r = scroll.current.getBoundingClientRect();
-        if (a.top < r.top || a.bottom > r.bottom) {
-          // Scroll only the preview, never the page or its fixed playback controls.
-          scroll.current.scrollTop +=
-            a.top -
-            r.top -
-            Math.max(0, (scroll.current.clientHeight - a.height) / 2);
-        }
-      }
+      if (
+        gesture.current ||
+        pendingSeek.current ||
+        !scroll.current ||
+        !preview.allowed ||
+        !preview.position
+      )
+        return;
+      const view = scroll.current;
+      const focus =
+        (parseFloat(getComputedStyle(view).paddingTop) / view.clientHeight) *
+        100;
+      programmatic.current = true;
+      scrollToTextOffset(view, content, preview.position.offset, focus);
+      requestAnimationFrame(() => {
+        programmatic.current = false;
+      });
     };
     follow();
     // Firefox can realize virtualized paragraphs after the first layout. Reconcile
@@ -258,6 +382,8 @@ export function RemoteController({
     visibleText,
     c?.fontSize,
     c?.lineHeight,
+    preview.position?.offset,
+    scrollVersion,
   ]);
   const act = (action: ControlCommand) => {
     if (!connected) return;
@@ -299,9 +425,7 @@ export function RemoteController({
       state.speed,
     );
   const seek = () => {
-    if (scrub !== null && c && connected)
-      act({ action: "seek", target: c.target, value: scrub });
-    setScrub(null);
+    if (gesture.current === "timeline") finishScroll();
   };
   const lost = !!status && !["connecting", "waiting"].includes(status);
   const text = !connected ? (
@@ -337,6 +461,7 @@ export function RemoteController({
       <p
         key={(preview.script?.revision || "") + n}
         data-preview-paragraph={n}
+        data-paragraph={n}
         aria-current={n === index ? "true" : undefined}
         dir="auto"
       >
@@ -435,10 +560,40 @@ export function RemoteController({
       <div
         className="remote-text"
         ref={scroll}
+        onPointerDown={() => {
+          fingerDown.current = true;
+          beginScroll("text");
+        }}
+        onTouchStart={() => {
+          fingerDown.current = true;
+          beginScroll("text");
+        }}
+        onWheel={() => beginScroll("text")}
+        onScroll={textScrolled}
+        onPointerUp={() => {
+          fingerDown.current = false;
+          if (gesture.current === "text") {
+            clearTimeout(gestureTimer.current);
+            gestureTimer.current = setTimeout(finishScroll, 180);
+          }
+        }}
+        onPointerCancel={(event) => {
+          if (event.pointerType !== "touch") {
+            fingerDown.current = false;
+            gestureTimer.current = setTimeout(finishScroll, 180);
+          }
+        }}
+        onTouchEnd={() => {
+          fingerDown.current = false;
+          clearTimeout(gestureTimer.current);
+          gestureTimer.current = setTimeout(finishScroll, 180);
+        }}
+        onTouchCancel={cancelScroll}
         aria-label={t("textSettings")}
         style={{
           fontSize: Math.max(22, Math.min(34, (c?.fontSize || 40) * 0.65)),
           lineHeight: c?.lineHeight || 1.6,
+          touchAction: "pan-y",
         }}
       >
         {text}
@@ -460,12 +615,18 @@ export function RemoteController({
             aria-valuetext={`${clockTime(time.elapsed)} / ${clockTime(time.elapsed + time.remaining)}`}
             min="0"
             max="1000"
-            step="1"
-            value={Math.round(shown * 1000)}
+            step="any"
+            value={shown * 1000}
             disabled={!connected || !c?.maximum}
-            onChange={(e) => setScrub(Number(e.target.value) / 1000)}
+            onPointerDown={() => beginScroll("timeline")}
+            onChange={(e) => {
+              if (gesture.current !== "timeline") beginScroll("timeline");
+              const value = Number(e.target.value) / 1000;
+              setScrub(value);
+              seekQueue.current?.push(value);
+            }}
             onPointerUp={seek}
-            onPointerCancel={() => setScrub(null)}
+            onPointerCancel={cancelScroll}
             onKeyUp={(e) => {
               if (
                 [

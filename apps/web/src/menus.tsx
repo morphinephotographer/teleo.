@@ -13,14 +13,20 @@ export function Popover({
   selected = false,
   className = "",
   showChevron = true,
+  width = 220,
+  onOpenChange,
+  triggerClassName = "",
 }: {
   label: string;
   children: ReactNode;
-  kind?: "menu" | "listbox";
+  kind?: "menu" | "listbox" | "dialog";
   trigger?: ReactNode;
   selected?: boolean;
   className?: string;
   showChevron?: boolean;
+  width?: number;
+  onOpenChange?: (open: boolean) => void;
+  triggerClassName?: string;
 }) {
   const id = useId();
   const anchor = useRef<HTMLButtonElement>(null),
@@ -38,7 +44,7 @@ export function Popover({
       y = v?.offsetTop || 0,
       w = Math.min(v?.width || innerWidth, innerWidth - x),
       h = Math.min(v?.height || innerHeight, innerHeight - y);
-    const width = Math.min(Math.max(r.width, 220), w - 24);
+    const popupWidth = Math.min(Math.max(r.width, width), w - 24);
     const availableBelow = y + h - r.bottom - 16,
       availableAbove = r.top - y - 16;
     const desired = Math.min(el.scrollHeight, 400, h - 32);
@@ -47,11 +53,11 @@ export function Popover({
       80,
       Math.min(400, above ? availableAbove : availableBelow, h - 32),
     );
-    el.style.width = width + "px";
+    el.style.width = popupWidth + "px";
     el.style.maxHeight = maxHeight + "px";
     const height = Math.min(el.scrollHeight, maxHeight);
     el.style.left =
-      Math.max(x + 12, Math.min(r.left, x + w - width - 12)) + "px";
+      Math.max(x + 12, Math.min(r.left, x + w - popupWidth - 12)) + "px";
     el.style.top =
       Math.max(
         y + 12,
@@ -90,7 +96,11 @@ export function Popover({
       <button
         ref={anchor}
         type="button"
-        className={"picker-trigger" + (selected ? " selected" : "")}
+        className={
+          "picker-trigger " +
+          triggerClassName +
+          (selected || (kind === "dialog" && open) ? " selected" : "")
+        }
         role={kind === "listbox" ? "combobox" : undefined}
         aria-label={label}
         aria-haspopup={kind}
@@ -139,10 +149,18 @@ export function Popover({
         onToggle={(e) => {
           const now = (e.nativeEvent as ToggleEvent).newState === "open";
           setOpen(now);
+          onOpenChange?.(now);
           if (now) {
             position();
             requestAnimationFrame(() => {
-              const options = items();
+              const options =
+                kind === "dialog"
+                  ? Array.from(
+                      popup.current?.querySelectorAll<HTMLElement>(
+                        "summary,button:not([disabled]),input:not([disabled])",
+                      ) || [],
+                    ).filter((el) => el.getClientRects().length > 0)
+                  : items();
               (
                 options.find(
                   (el) => el.getAttribute("aria-selected") === "true",
@@ -154,6 +172,7 @@ export function Popover({
         }}
         onClick={(e) => {
           if (
+            kind !== "dialog" &&
             (e.target as HTMLElement).closest(
               '[role="option"],[role="menuitem"]',
             )
@@ -170,6 +189,7 @@ export function Popover({
             hide();
             return;
           }
+          if (kind === "dialog") return;
           if (e.key === "Tab") {
             hide();
             return;

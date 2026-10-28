@@ -3830,3 +3830,276 @@ input[type="checkbox"] {
   color: inherit;
   opacity: 0.75;
 }
+
+/* Approved v3: host controls only; the phone remote keeps its existing styles. */
+.top-settings,
+.top-appearance {
+  flex: 0 0 44px;
+  width: 44px;
+}
+.top-settings > .picker-trigger,
+.top-appearance > .picker-trigger {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  justify-content: center;
+}
+.top-settings > .picker-trigger.selected,
+.top-appearance > .picker-trigger.selected {
+  background: var(--ink);
+  color: var(--surface);
+}
+.top-settings .settings {
+  padding: 12px;
+  gap: 14px;
+  height: auto;
+}
+.top-settings .settings > h2 {
+  font-size: 16px;
+}
+.top-settings .welcome-preference {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.top-settings .welcome-preference p,
+.appearance-content p {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.45;
+  margin: 4px 0 12px;
+}
+.appearance-content {
+  padding: 12px;
+}
+.appearance-row + .appearance-row {
+  border-top: 1px solid var(--line);
+}
+.appearance-row > .picker-trigger {
+  width: 100%;
+  min-height: 72px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  display: grid;
+  grid-template-columns: 44px 1fr 16px;
+  gap: 12px;
+  padding: 8px 4px;
+  text-align: left;
+}
+.appearance-row strong,
+.appearance-row small {
+  display: block;
+}
+.appearance-row strong {
+  font-size: 14px;
+  font-weight: 500;
+}
+.appearance-row small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.appearance-symbol {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: var(--subtle);
+}
+.appearance-row > .picker-trigger > svg {
+  width: 16px;
+  transform: rotate(-90deg);
+}
+.appearance-content .segmented {
+  width: 100%;
+  margin-bottom: 14px;
+}
+.folder-option {
+  position: relative;
+  display: flex;
+  min-height: 44px;
+}
+.folder-option > [role="menuitem"]:not(.folder-trash) {
+  width: 100%;
+  text-align: left;
+  padding-right: 44px;
+  border: 0;
+  background: transparent;
+}
+.folder-option .folder-trash {
+  position: absolute;
+  right: 2px;
+  top: 2px;
+  width: 40px;
+  height: 40px;
+  opacity: 0;
+  pointer-events: none;
+  background: transparent;
+}
+.folder-option:hover .folder-trash,
+.folder-option:focus-within .folder-trash {
+  opacity: 1;
+  pointer-events: auto;
+}
+.folder-option .folder-trash svg {
+  stroke-width: 1.25;
+  width: 17px;
+  height: 17px;
+}
+.folder-picker > .picker-trigger {
+  width: 100%;
+  justify-content: space-between;
+}
+.approved-reader-toolbar {
+  --surface: #202122;
+  --ink: #f5f5f3;
+  --muted: #a7a8a9;
+  --subtle: #292a2b;
+  --line: #ffffff26;
+  position: relative;
+  inset: auto;
+  transform: none;
+  flex: 0 0 auto;
+  align-self: center;
+  width: calc(100% - 24px);
+  max-width: 1320px;
+  margin: 8px 12px 12px;
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(3px, 0.45vw, 8px);
+  padding: 10px;
+  overflow: visible;
+}
+.approved-reader-toolbar > .icon-button,
+.approved-reader-toolbar > .approved-circle {
+  flex: 0 0 clamp(30px, 3.3vw, 46px);
+  width: clamp(30px, 3.3vw, 46px);
+}
+.approved-reader-toolbar > .icon-button,
+.approved-reader-toolbar .approved-circle > .picker-trigger {
+  height: clamp(30px, 3.3vw, 46px);
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  padding: 0;
+}
+.approved-reader-toolbar .approved-circle > .picker-trigger {
+  width: 100%;
+  display: grid;
+  place-items: center;
+  justify-content: center;
+}
+.approved-reader-toolbar > .approved-pill {
+  min-width: 0;
+  flex: 1 1 100px;
+}
+.approved-reader-toolbar .approved-pill > .picker-trigger {
+  width: 100%;
+  min-height: 38px;
+  height: clamp(32px, 3.3vw, 46px);
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 12px;
+}
+.approved-reader-toolbar .approved-pill > .picker-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.approved-reader-toolbar .approved-pill > .picker-trigger svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+.approved-reader-toolbar > .dock-play {
+  flex: 0 0 clamp(48px, 5vw, 66px);
+  width: clamp(48px, 5vw, 66px);
+  height: clamp(48px, 5vw, 66px);
+  border: 0;
+}
+.approved-reader-toolbar .approved-alignment {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  padding: 2px;
+}
+.approved-reader-toolbar .alignment-control {
+  min-width: 0;
+  width: 100%;
+  padding: 0;
+  gap: 0;
+}
+.approved-reader-toolbar .alignment-control button {
+  min-width: 0;
+  padding: 0;
+  flex: 1;
+  height: clamp(30px, 3vw, 40px);
+  min-height: 30px;
+}
+.approved-reader-toolbar .alignment-control svg {
+  width: 16px;
+  height: 16px;
+}
+.toolbar-slider {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  font-size: 13px;
+}
+.toolbar-slider output {
+  margin-left: auto;
+}
+.toolbar-slider input {
+  width: 100%;
+}
+.toolbar-speed-steps {
+  display: flex;
+  justify-content: space-around;
+}
+.reader.light .approved-reader-toolbar {
+  --surface: #e9e9eb;
+  --ink: #111;
+  --muted: #656568;
+  --subtle: #dddde0;
+  --line: #d3d3d6;
+  background: var(--surface);
+  color: var(--ink);
+}
+.approved-reader-toolbar .picker-trigger {
+  color: var(--ink);
+  background: var(--surface);
+}
+.reader.light .approved-reader-toolbar > .dock-play {
+  background: #111;
+  color: #fff;
+}
+@media (max-width: 1000px) {
+  .approved-reader-toolbar .approved-pill > .picker-trigger {
+    padding: 0 6px;
+    gap: 3px;
+    font-size: 11px;
+  }
+  .approved-reader-toolbar .approved-pill > .picker-trigger svg {
+    flex-basis: 14px;
+    width: 14px;
+    height: 14px;
+  }
+  .approved-reader-toolbar .approved-pill > .picker-trigger svg:last-child {
+    flex-basis: 12px;
+    width: 12px;
+  }
+}

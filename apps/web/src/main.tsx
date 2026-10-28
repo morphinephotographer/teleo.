@@ -8,7 +8,6 @@ import React, {
 } from "react";
 import { createRoot } from "react-dom/client";
 import { makeInvitationQR } from "./qr";
-import { AlignmentControl } from "./AlignmentControl";
 import { phonePairingIssue } from "./pairing-origin";
 import { Wordmark } from "./Wordmark";
 import { LanguageControl } from "./LanguageControl";
@@ -50,7 +49,7 @@ import {
 import { ActionDialog } from "./ActionDialog";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet } from "./ui";
-import { TeleoSelect, TeleoMenu } from "./menus";
+import { TeleoSelect, Popover } from "./menus";
 import { RemoteController } from "./RemoteController";
 import { HostPreview } from "./host-preview";
 import {
@@ -65,7 +64,7 @@ import {
   restoreAnchor,
   type ReadingAnchor,
 } from "./reading-anchor";
-import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
+import { scrollToTextOffset, textOffsetAtView } from "./text-position";
 import { r400Keys, r400Shortcut, bindReaderKeyboard, R400Hold } from "./r400";
 import {
   createReaderFullscreen,
@@ -100,8 +99,6 @@ function App() {
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
   const libraryBeforeReading = useRef(libraryOpen);
-  const [wide, setWide] = useState(innerWidth >= 1180);
-  const [settingsCollapsed, setSettingsCollapsed] = useState(false);
   const [previewAllowed, setPreviewAllowed] = useState(
     () => localGet("teleo.previewAllowed") === "true",
   );
@@ -317,12 +314,6 @@ function App() {
     sender.current = new HostPreview(remote.current, () =>
       setNotice("unavailable"),
     );
-  useEffect(() => {
-    const mq = matchMedia("(min-width: 1180px)");
-    const resize = () => setWide(mq.matches);
-    mq.addEventListener("change", resize);
-    return () => mq.removeEventListener("change", resize);
-  }, []);
   useEffect(
     () => () => {
       sender.current?.dispose();
@@ -816,7 +807,10 @@ function App() {
       "input,textarea,select,[contenteditable]:not([contenteditable=false]),[role=textbox],[role=searchbox],[role=slider],[role=spinbutton],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
     );
     if (learn || testing) {
-      if (!keyboardSafe(e, editable, reading || !!learn || testing)) return;
+      const typing = !!target.closest(
+        "input,textarea,select,[contenteditable]:not([contenteditable=false])",
+      );
+      if (!keyboardSafe(e, typing, reading || !!learn || testing)) return;
       e.preventDefault();
       setKeyEvent(`${e.code} / ${e.key}`);
       if (learn) {
@@ -833,7 +827,9 @@ function App() {
     const blocked =
       editable ||
       Array.from(
-        document.querySelectorAll("dialog[open],[role=menu],[role=listbox]"),
+        document.querySelectorAll(
+          "dialog[open],[role=menu],[role=listbox],[popover]:popover-open",
+        ),
       ).some((el) => el.getClientRects().length > 0);
     const hostReader = reading && route === "/studio";
     if (enabled && profile === "r400" && hostReader) {
@@ -1083,8 +1079,24 @@ function App() {
             });
           } else {
             if (requested.action === "seek") {
-              engine.position = requested.value * engine.maximum;
-              if (viewport.current) syncView(viewport.current);
+              geometryHeld.current = false;
+              geometry.current = null;
+              if (
+                requested.anchor !== undefined &&
+                viewport.current &&
+                previewChoice.current
+              ) {
+                scrollToTextOffset(
+                  viewport.current,
+                  previewOffsets,
+                  requested.anchor,
+                  focusPosition,
+                );
+                engine.position = viewPosition(viewport.current);
+              } else {
+                engine.position = requested.value * engine.maximum;
+                if (viewport.current) syncView(viewport.current);
+              }
               setFrame((x) => x + 1);
             } else {
               command(requested);
@@ -1141,9 +1153,12 @@ function App() {
       }
       const anchor = captureAnchor(view, focusPosition);
       const index = anchor?.paragraph || 0;
+      const offset = Math.round(
+        textOffsetAtView(view, previewOffsets, focusPosition),
+      );
       lastPreviewPosition.current = {
         paragraph: index,
-        offset: previewOffsets[index]?.offset || 0,
+        offset,
       };
       sender.current?.position(
         {
@@ -1152,7 +1167,7 @@ function App() {
           position: engine.position,
         },
         index,
-        previewOffsets[index]?.offset || 0,
+        offset,
       );
     };
     update();
@@ -1379,43 +1394,6 @@ function App() {
       {t(key)}
     </button>
   );
-  const range = (
-    key: keyof Preferences,
-    min: number,
-    max: number,
-    step: number,
-  ) => (
-    <label className="dock-adjustment" title={t(key as Key)}>
-      <Icon
-        name={
-          key === "fontSize"
-            ? "size"
-            : key === "lineHeight"
-              ? "spacing"
-              : "width"
-        }
-      />
-      <span className="sr-only">{t(key as Key)}</span>
-      <output>
-        {new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(
-          Number(current?.preferences[key]),
-        )}
-      </output>
-      <input
-        aria-label={t(key as Key)}
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={Number(current?.preferences[key])}
-        onChange={(e) => {
-          const value = Number(e.target.value);
-          pref({ [key]: value });
-          if (key === "speed") engine.command({ action: "setSpeed", value });
-        }}
-      />
-    </label>
-  );
   const lang = (
     <LanguageControl
       value={locale}
@@ -1449,147 +1427,81 @@ function App() {
   const settingsContent = (
     <aside className="settings">
       <h2>{t("settings")}</h2>
-      {current && (
-        <>
-          <div className="settings-tab-content">
-            <h3>{t("appearance")}</h3>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={current.preferences.focusLine}
-                onChange={(e) => pref({ focusLine: e.target.checked })}
-              />
-              {t("focusLine")}
-            </label>
-            <label>
-              {t("focusPosition")}
-              <output>{focusPosition}%</output>
-              <input
-                aria-label={t("focusPosition")}
-                type="range"
-                min="20"
-                max="70"
-                value={focusPosition}
-                onChange={(e) => setFocusPosition(Number(e.target.value))}
-              />
-            </label>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={focusDimming}
-                onChange={(e) => setFocusDimming(e.target.checked)}
-              />
-              {t("focusDimming")}
-            </label>
-            <div className="setting-group">
-              <span>{t("appearance")}</span>
-              <Segmented
-                label={t("appearance")}
-                value={current.preferences.appearance}
-                onChange={(appearance) => pref({ appearance })}
-                options={[
-                  { value: "dark", label: t("dark") },
-                  { value: "light", label: t("light") },
-                ]}
-              />
-            </div>
-            <div className="setting-group">
-              <span>{t("interfaceTheme")}</span>
-              <Segmented
-                label={t("interfaceTheme")}
-                value={theme}
-                onChange={setTheme}
-                options={[
-                  { value: "light", label: t("light") },
-                  { value: "dark", label: t("dark") },
-                  { value: "system", label: t("system") },
-                ]}
-              />
-            </div>
-          </div>
-          <details>
-            <summary>{t("physical")}</summary>
-            <p>{t("keyHelp")}</p>
-            <label className="check">
-              <input
-                type="checkbox"
-                checked={enabled}
-                onChange={(e) => setEnabled(e.target.checked)}
-              />
-              {t("enabled")}
-            </label>
-            <label>
-              {t("profile")}
-              <TeleoSelect
-                label={t("profile")}
-                value={profile}
-                onChange={setProfile}
-                options={(
-                  ["standard", "twoButton", "custom", "r400"] as const
-                ).map((value) => ({ value, label: t(value) }))}
-              />
-            </label>
-            {profile === "twoButton" && (
-              <>
-                {button("learnA", () => setLearn("togglePlay"))}
-                {button("learnB", () => setLearn("preset"))}
-                <label>
-                  {t("presets")}
-                  <input
-                    value={presets}
-                    onChange={(e) => setPresets(e.target.value)}
-                  />
-                </label>
-              </>
-            )}
-            {profile === "custom" && (
-              <>
-                <TeleoSelect
-                  label={t("custom")}
-                  value={learnAction}
-                  onChange={(v) => setLearnAction(v as Action)}
-                  options={actions
-                    .filter((a) => a !== "setSpeed")
-                    .map((value) => ({ value, label: t(value as Key) }))}
-                />
-                {button("learn", () => setLearn(learnAction))}
-              </>
-            )}
-            {profile === "r400" && <p>{t("r400Help")}</p>}
-            {learn && <p role="status">{t("learning")}</p>}
-            {button("test", () => {
-              setTesting(true);
-              setKeyEvent("");
-            })}
-            <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
-            {Object.entries(
-              profile === "r400"
-                ? r400Keys
-                : profile === "standard"
-                  ? standardKeys
-                  : mapping,
-            ).map(([key, a]) => (
-              <p key={key}>
-                <kbd>{key}</kbd> → {t(a as Key)}
-              </p>
-            ))}
-            {profile === "r400" ? (
-              <p>
-                <kbd>Escape</kbd> → {t("r400Escape")}
-              </p>
-            ) : (
-              button("reset", () => setMapping({}))
-            )}
-          </details>
-          {remoteStatus === "connected" ? (
-            <>{button("remoteConnection", () => void showConnection())}</>
-          ) : (
-            button("connect", () => void showConnection())
-          )}
-        </>
-      )}
       <details>
-        <summary>{t("gettingStarted")}</summary>
+        <summary>{t("physical")}</summary>
+        <p>{t("keyHelp")}</p>
+        <label className="check">
+          <input
+            type="checkbox"
+            checked={enabled}
+            onChange={(e) => setEnabled(e.target.checked)}
+          />
+          {t("enabled")}
+        </label>
+        <label>
+          {t("profile")}
+          <TeleoSelect
+            label={t("profile")}
+            value={profile}
+            onChange={setProfile}
+            options={(["standard", "twoButton", "custom", "r400"] as const).map(
+              (value) => ({ value, label: t(value) }),
+            )}
+          />
+        </label>
+        {profile === "twoButton" && (
+          <>
+            {button("learnA", () => setLearn("togglePlay"))}
+            {button("learnB", () => setLearn("preset"))}
+            <label>
+              {t("presets")}
+              <input
+                value={presets}
+                onChange={(e) => setPresets(e.target.value)}
+              />
+            </label>
+          </>
+        )}
+        {profile === "custom" && (
+          <>
+            <TeleoSelect
+              label={t("custom")}
+              value={learnAction}
+              onChange={(v) => setLearnAction(v as Action)}
+              options={actions
+                .filter((a) => a !== "setSpeed")
+                .map((value) => ({ value, label: t(value as Key) }))}
+            />
+            {button("learn", () => setLearn(learnAction))}
+          </>
+        )}
+        {profile === "r400" && <p>{t("r400Help")}</p>}
+        {learn && <p role="status">{t("learning")}</p>}
+        {button("test", () => {
+          setTesting(true);
+          setKeyEvent("");
+        })}
+        <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
+        {Object.entries(
+          profile === "r400"
+            ? r400Keys
+            : profile === "standard"
+              ? standardKeys
+              : mapping,
+        ).map(([key, a]) => (
+          <p key={key}>
+            <kbd>{key}</kbd> → {t(a as Key)}
+          </p>
+        ))}
+        {profile === "r400" ? (
+          <p>
+            <kbd>Escape</kbd> → {t("r400Escape")}
+          </p>
+        ) : (
+          button("reset", () => setMapping({}))
+        )}
+      </details>
+      <section className="welcome-preference">
         <label className="check">
           <input
             type="checkbox"
@@ -1610,17 +1522,7 @@ function App() {
           {t("autoDemo")}
         </label>
         <p>{t("autoDemoHelp")}</p>
-        <button
-          disabled={!libraryLoaded || restoringWelcome}
-          onClick={() => void restoreWelcome()}
-        >
-          {t(
-            pristineWelcome(scripts, welcomeSettings)
-              ? "openDemo"
-              : "restoreDemo",
-          )}
-        </button>
-      </details>
+      </section>
     </aside>
   );
 
@@ -1656,117 +1558,6 @@ function App() {
     setImmersive(true);
     fullscreenControl.current?.enter(readerRoot.current);
   };
-  const controls = (
-    <div
-      className="reader-controls"
-      aria-label={t("playbackSettings")}
-      role="toolbar"
-      aria-hidden={reading && !controlsVisible}
-      inert={reading && !controlsVisible}
-    >
-      <IconButton
-        className="dock-play primary"
-        name={engine.playing ? "pause" : "play"}
-        label={t(engine.playing ? "pause" : "play")}
-        onClick={() => {
-          if (!reading)
-            void startReader().then(() =>
-              requestAnimationFrame(() => command({ action: "play" })),
-            );
-          else command({ action: engine.playing ? "pause" : "play" });
-        }}
-      />
-      <div className="dock-group speed-group">
-        <IconButton
-          name="minus"
-          label={t("speedDown")}
-          disabled={stepSpeed(engine.speed, -1) === engine.speed}
-          onClick={() => command({ action: "speedDown" })}
-        />
-        <output>{formatSpeed(engine.speed)}×</output>
-        <IconButton
-          name="plus"
-          label={t("speedUp")}
-          disabled={stepSpeed(engine.speed, 1) === engine.speed}
-          onClick={() => command({ action: "speedUp" })}
-        />
-      </div>
-      <div className="dock-group typography-group">
-        {range("fontSize", 16, 100, 1)}
-        {range("lineHeight", 1, 3, 0.1)}
-        {range("textWidth", 280, 1600, 20)}
-      </div>
-      <TeleoMenu
-        className="dock-timer"
-        label={t("timer")}
-        closeLabel={t("close")}
-        trigger={<Icon name="timer" />}
-        items={[0, 3, 5, 10].map((n) => ({
-          label:
-            (current?.preferences.countdownSeconds === n ? "\u2713 " : "") +
-            (n ? `${n} ${t("seconds")}` : t("off")),
-          action: () => pref({ countdownSeconds: n }),
-        }))}
-      />
-      <div className="dock-alignment">
-        <AlignmentControl
-          t={t}
-          value={current?.preferences.alignment}
-          onChange={(alignment) => pref({ alignment })}
-        />
-      </div>
-      <div className="dock-group text-group">
-        <IconButton
-          name="mirror"
-          label={t("mirrorHorizontal")}
-          active={current?.preferences.mirrorHorizontal}
-          onClick={() =>
-            pref({ mirrorHorizontal: !current?.preferences.mirrorHorizontal })
-          }
-        />
-        <IconButton
-          className="vertical-mirror"
-          name="mirror"
-          label={t("mirrorVertical")}
-          active={current?.preferences.mirrorVertical}
-          onClick={() =>
-            pref({ mirrorVertical: !current?.preferences.mirrorVertical })
-          }
-        />
-        <IconButton
-          name="focus"
-          label={t("focusLine")}
-          active={current?.preferences.focusLine}
-          onClick={() => pref({ focusLine: !current?.preferences.focusLine })}
-        />
-        <IconButton
-          name="fullscreen"
-          label={t("fullscreen")}
-          active={immersive}
-          onClick={toggleFullscreen}
-        />
-      </div>
-      <div className="dock-group">
-        <IconButton
-          name="restart"
-          label={t("restart")}
-          onClick={() => command({ action: "restart" })}
-        />
-      </div>
-      <div className="dock-group paragraph-group">
-        <IconButton
-          name="paragraphPrevious"
-          label={t("previousParagraph")}
-          onClick={() => command({ action: "previousParagraph" })}
-        />
-        <IconButton
-          name="paragraphNext"
-          label={t("nextParagraph")}
-          onClick={() => command({ action: "nextParagraph" })}
-        />
-      </div>
-    </div>
-  );
   return (
     <>
       <div
@@ -1829,6 +1620,98 @@ function App() {
                   ]}
                 />
                 <div className="toolbar-spacer" />
+                <Popover
+                  kind="dialog"
+                  width={310}
+                  className="top-appearance"
+                  label={t("appearanceMenu")}
+                  trigger={<Icon name="sun" />}
+                  triggerClassName="icon-button"
+                >
+                  <section className="appearance-content">
+                    <Popover
+                      kind="dialog"
+                      width={286}
+                      className="appearance-row"
+                      label={t("readingAppearance")}
+                      trigger={
+                        <>
+                          <span className="appearance-symbol">
+                            <Icon name="sun" />
+                          </span>
+                          <span>
+                            <strong>{t("readingAppearance")}</strong>
+                            <small>
+                              {t(
+                                current?.preferences.appearance === "light"
+                                  ? "light"
+                                  : "dark",
+                              )}
+                            </small>
+                          </span>
+                          <Icon name="chevron" />
+                        </>
+                      }
+                    >
+                      <p>{t("readingAppearanceHelp")}</p>
+                      <Segmented
+                        label={t("readingAppearance")}
+                        value={current?.preferences.appearance || "dark"}
+                        onChange={(appearance) => pref({ appearance })}
+                        options={[
+                          {
+                            value: "dark",
+                            label: t("dark"),
+                            disabled: !current,
+                          },
+                          {
+                            value: "light",
+                            label: t("light"),
+                            disabled: !current,
+                          },
+                        ]}
+                      />
+                    </Popover>
+                    <Popover
+                      kind="dialog"
+                      width={286}
+                      className="appearance-row"
+                      label={t("interfaceTheme")}
+                      trigger={
+                        <>
+                          <span className="appearance-symbol">
+                            <Icon name="monitor" />
+                          </span>
+                          <span>
+                            <strong>{t("interfaceTheme")}</strong>
+                            <small>
+                              {t(
+                                theme === "light"
+                                  ? "light"
+                                  : theme === "dark"
+                                    ? "dark"
+                                    : "system",
+                              )}
+                            </small>
+                          </span>
+                          <Icon name="chevron" />
+                        </>
+                      }
+                    >
+                      <p>{t("interfaceThemeHelp")}</p>
+                      <Segmented
+                        label={t("interfaceTheme")}
+                        value={theme}
+                        onChange={setTheme}
+                        options={[
+                          { value: "light", label: t("light") },
+                          { value: "dark", label: t("dark") },
+                          { value: "system", label: t("system") },
+                        ]}
+                      />
+                    </Popover>
+                  </section>
+                </Popover>
                 <IconButton
                   className={
                     remoteStatus === "connected" ? "has-connection" : ""
@@ -1838,20 +1721,23 @@ function App() {
                   disabled={!current}
                   onClick={() => void showConnection()}
                 />
-                <IconButton
-                  name="settings"
+                <Popover
+                  kind="dialog"
+                  width={320}
+                  className="top-settings"
                   label={t("settings")}
-                  active={
-                    wide && current && !reading
-                      ? !settingsCollapsed
-                      : settingsOpen
-                  }
-                  onClick={() =>
-                    wide && current && !reading
-                      ? setSettingsCollapsed((v) => !v)
-                      : setSettingsOpen(true)
-                  }
-                />
+                  trigger={<Icon name="settings" />}
+                  triggerClassName="icon-button"
+                  onOpenChange={(open) => {
+                    setSettingsOpen(open);
+                    if (!open) {
+                      setLearn(null);
+                      setTesting(false);
+                    }
+                  }}
+                >
+                  {settingsContent}
+                </Popover>
               </>
             )}
             {!immersive && lang}
@@ -1920,18 +1806,50 @@ function App() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
-              <TeleoSelect
+              <Popover
+                className="folder-picker"
                 label={t("folder")}
-                value={folder}
-                onChange={setFolder}
-                options={[
-                  { value: "", label: t("allFolders") },
-                  ...folders.map((f) => ({
-                    value: f.folderId,
-                    label: f.title,
-                  })),
-                ]}
-              />
+                trigger={
+                  <>
+                    <span>
+                      {folders.find((f) => f.folderId === folder)?.title ||
+                        t("allFolders")}
+                    </span>
+                    <span className="picker-chevron">
+                      <Icon name="chevron" />
+                    </span>
+                  </>
+                }
+              >
+                <button role="menuitem" onClick={() => setFolder("")}>
+                  {t("allFolders")}
+                </button>
+                {folders.map((f) => (
+                  <div className="folder-option" key={f.folderId}>
+                    <button
+                      role="menuitem"
+                      onClick={() => setFolder(f.folderId)}
+                    >
+                      {f.title}
+                    </button>
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="icon-button folder-trash"
+                      aria-label={`${t("deleteFolder")}: ${f.title}`}
+                      title={`${t("deleteFolder")}: ${f.title}`}
+                      onClick={() =>
+                        setActionDialog({
+                          kind: "deleteFolder",
+                          id: f.folderId,
+                        })
+                      }
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  </div>
+                ))}
+              </Popover>
               <div className="script-list">
                 {scripts
                   .filter(
@@ -1973,6 +1891,16 @@ function App() {
                   }}
                 />
               </label>
+              <button
+                disabled={!libraryLoaded || restoringWelcome}
+                onClick={() => void restoreWelcome()}
+              >
+                {t(
+                  pristineWelcome(scripts, welcomeSettings)
+                    ? "openDemo"
+                    : "restoreDemo",
+                )}
+              </button>
               {button("newFolder", () =>
                 setActionDialog({ kind: "newFolder" }),
               )}
@@ -2102,14 +2030,6 @@ function App() {
                     </section>
                   )}
                 </section>
-                {wide && !reading && !settingsCollapsed && (
-                  <aside
-                    className="integrated-settings"
-                    aria-label={t("settings")}
-                  >
-                    {settingsContent}
-                  </aside>
-                )}
               </>
             ) : (
               <section className="empty">
@@ -2128,7 +2048,6 @@ function App() {
             <h1>{t("notFound")}</h1>
           </main>
         )}
-        {!reading && current && route === "/studio" && controls}
         {reading && current && (
           <section
             ref={readerRoot}
@@ -2232,6 +2151,11 @@ function App() {
               command={command}
               preference={pref}
               beforeLayout={rememberGeometry}
+              dimming={focusDimming}
+              setDimming={setFocusDimming}
+              focusPosition={focusPosition}
+              setFocusPosition={setFocusPosition}
+              fullscreen={toggleFullscreen}
               seek={(position) => {
                 geometryHeld.current = false;
                 geometry.current = null;
@@ -2461,18 +2385,6 @@ function App() {
             }}
           />
         )}
-        <Sheet
-          open={settingsOpen && !intro && (!wide || reading || !current)}
-          title={t("settings")}
-          closeLabel={t("close")}
-          onClose={() => {
-            setSettingsOpen(false);
-            setLearn(null);
-            setTesting(false);
-          }}
-        >
-          {(!wide || reading || !current) && settingsContent}
-        </Sheet>
       </div>
       {intro && <Intro skipLabel={t("skip")} onDone={finishIntro} />}
     </>

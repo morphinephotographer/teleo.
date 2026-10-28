@@ -19,7 +19,7 @@ export type ControlState = ControlValues & {
 };
 export type ControlCommand =
   | Command
-  | { action: "seek"; target: string; value: number }
+  | { action: "seek"; target: string; value: number; anchor?: number }
   | {
       action: "setPreference";
       target: string;
@@ -57,7 +57,15 @@ export function validControlCommand(v: unknown): v is ControlCommand {
   if (!uuid(m.target)) return false;
   if (m.action === "seek")
     return (
-      Object.keys(m).sort().join(",") === "action,target,value" &&
+      Object.keys(m)
+        .filter((k) => k !== "anchor")
+        .sort()
+        .join(",") === "action,target,value" &&
+      (m.anchor === undefined ||
+        (typeof m.anchor === "number" &&
+          Number.isFinite(m.anchor) &&
+          m.anchor >= 0 &&
+          m.anchor <= 8192 * 256)) &&
       typeof m.value === "number" &&
       Number.isFinite(m.value) &&
       m.value >= 0 &&

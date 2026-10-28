@@ -30,8 +30,21 @@ export type IconName =
   | "fullscreen"
   | "previous"
   | "next"
-  | "text";
+  | "text"
+  | "sun"
+  | "trash";
 const paths: Record<IconName, ReactNode> = {
+  sun: (
+    <>
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5" />
+    </>
+  ),
+  trash: (
+    <>
+      <path d="M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7" />
+    </>
+  ),
   copy: (
     <>
       <rect x="8" y="8" width="12" height="13" rx="2" />

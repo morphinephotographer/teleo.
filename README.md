@@ -125,7 +125,7 @@ A genuine new, empty Studio library receives one localized **Welcome** script. R
 `npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature is included in the v1.0.2 audit release. Current deployment identity and public verification are recorded in the audit verification report.
 
 
-## v1.0.2 — Welcome and reliability audit — LIVE
+## v1.0.2 — Welcome and reliability audit — historical release
 
 Published on [teleo.cc](https://teleo.cc/studio), source `ed6df817f6f53dae6ad266ee62374357a61239ef`, release tag `v1.0.2`. Public validation: **50/50 staging** and **62/62 production** scenarios. The production Worker version is `29f1cd38-6f4e-4374-8993-c3b7bfab0c20`.
 
@@ -141,11 +141,15 @@ npx playwright test --config playwright.v07.config.ts
 
 Use separate browser cohorts when testing the public relay: room creation is limited to 10/minute/IP. Tests create isolated libraries and must never clear the owner's browser data. Production publication follows staging validation, a clean committed checkout and the existing interactive `npm run deploy:production` workflow. Native distribution, physical HID, native two-device LAN and CloudKit still require their separate device/signing checks.
 
-## Local Reader v1.2 work (not deployed)
+## Reader v1.2 (included in the 1.2.0 release)
 
 Reader typography now expands inside the playback dock and reserves space for the active text. On phones the minimal dock keeps Play/Pause visible; expand it for typography, timeline, paragraph controls, mirrors and countdown. Speed actions use exact 0.1× steps within 0.5–3.0×; valid legacy speeds and presets retain their actual values until explicitly adjusted. Paired remote typography and queued speed actions remain host-authoritative.
 
-Cross-engine local verification: `npx playwright test --config playwright.reader.config.ts` (installed Chromium, WebKit and Firefox). See [Reader verification and screenshots](docs/audits/TELEO_READER_UI_VERIFICATION.md). This feature work does not change the production release record above.
+Cross-engine verification: `npx playwright test --config playwright.reader.config.ts` (installed Chromium, WebKit and Firefox). See [original local Reader verification and screenshots](docs/audits/TELEO_READER_UI_VERIFICATION.md). The subsequent authorized 1.2.0 publication is recorded below.
+
+## v1.2.0 — Reader and Logitech R400 — LIVE
+
+Published on [Teleo.cc](https://teleo.cc/studio) on 2026-10-28 from source `9494aeafb766e352d3ffb54604860f66779d017f`. Production Worker version: `d32f4a4f-5ac8-4462-bf8c-cb9915697a9c`. Includes the Reader v1.2 improvements above and the R400 preset below. Scripts and existing preferences retain their storage; no migration or GitHub push. [Checks, screenshots, publication identity and hardware limitations](docs/audits/LOGITECH_R400_VERIFICATION.md).
 
 ## Logitech R400 keyboard preset
 

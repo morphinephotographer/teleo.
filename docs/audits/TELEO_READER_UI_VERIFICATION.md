@@ -2,6 +2,8 @@
 
 Local implementation, 2026-10-28. **Not a release or deployment authorization.**
 
+Historical local feature record. This work was subsequently included in the separately authorized Teleo 1.2.0 publication; see the [R400 verification and production release record](LOGITECH_R400_VERIFICATION.md) for current public validation and source identity. The baseline/publication statements below describe the time of this original audit.
+
 ## Baseline and scope
 
 - Baseline: `fd1c52b923ba413a8dc3a89314ff74cf6c0dd717`, branch `codex/teleo-native-web-v1`; working tree clean before this task.

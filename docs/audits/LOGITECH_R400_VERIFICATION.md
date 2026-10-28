@@ -36,8 +36,8 @@ This release also publishes the previously local v1.2 Reader/remote improvements
 | Typecheck/lint/build | PASS | production build and Wrangler dry-run; no bindings, Origin or routes changed |
 | R400 browser matrix | PASS | 24/24 in Chromium/WebKit/Firefox; real DOM fullscreen in all three, three locales, desktop/tablet/phone settings and paired remote |
 | Complete browser regression | PASS | 212/212 desktop + touch/mobile; additional production-Worker matrix 32/32 across Chromium/WebKit/iPhone/iPad |
-| Public staging | PENDING | existing `teleo-staging`, no infrastructure changes |
-| Production + public post-deploy checks | PENDING | only after local and staging gates |
+| Public staging | PASS | 24/24 R400 + 15/15 Reader; existing `teleo-staging`, no infrastructure changes |
+| Production + public post-deploy checks | PASS | 55/55: 16 routes/editor/security + 24 R400 + 15 Reader; Chromium/WebKit/Firefox plus iPhone/iPad profiles |
 | Physical R400 against integrated app | NOT RUN | manual steps in support doc; supplied diagnostic log is separate owner evidence |
 | Physical Safari/iPad/iPhone hardware certification | NOT RUN | automation is not hardware verification |
 
@@ -47,7 +47,24 @@ Headless real Fullscreen API entry/exit is tested separately from mocked denied/
 
 USB origin cannot be identified from KeyboardEvent. Safari may consume Escape; R400 F5/Escape alternation can be out of phase with the browser. Hidden/background-page pausing remains intentional. Unsupported/denied API can use CSS expansion but is not claimed to be DOM fullscreen. Physical acceptance of the integrated app remains manual.
 
-Publication identity, exact final pass counts, screenshot links and changed-file inventory will be recorded after gates complete.
+## Publication identity
+
+- Source commit: `9494aeafb766e352d3ffb54604860f66779d017f`; branch `codex/logitech-r400-release`, package **1.2.0**.
+- Staging: `https://teleo-staging.your-subdomain.workers.dev`, version `6912222a-d8aa-404f-86a4-c56c1680f9bb`; all 39 public scenarios passed before production publication.
+- Production: `https://teleo.cc/studio`, version `d32f4a4f-5ac8-4462-bf8c-cb9915697a9c`. Published with the existing interactive `npm run deploy:production` from the clean source commit. Cloudflare readback confirms this version receives 100% of traffic; public route tests verify both release headers.
+- All five build asset hashes match the staging-tested artifacts. Existing `teleo.cc` / `www.teleo.cc`, same-origin relay, bindings and migration retained. No DNS override or GitHub push. Previous version `29f1cd38-6f4e-4374-8993-c3b7bfab0c20` retained as rollback; no rollback performed.
+- The follow-up documentation commit records publication evidence only; it is not a different deployed application build.
+
+Public evidence: [staging publication](evidence/r400/staging-deploy.txt), [staging R400 24/24](evidence/r400/staging-r400.txt), [staging Reader 15/15](evidence/r400/staging-reader.txt), [production publication record](evidence/r400/production-deploy.txt), [100% active version readback](evidence/r400/production-deployments.txt), [matching asset hashes](evidence/r400/production-assets.json), [production routes/editor 16/16](evidence/r400/production-public-routes.txt), [production R400 24/24](evidence/r400/production-public-r400.txt), [production Reader 15/15](evidence/r400/production-public-reader.txt).
+
+Actual public screenshots opened and reviewed: staging [settings](../screenshots/r400-staging-settings.png), [remote](../screenshots/r400-staging-remote.png), [WebKit fullscreen](../screenshots/r400-staging-fullscreen.png); production [RU settings](../screenshots/r400-production-settings.png), [consented remote typography](../screenshots/r400-production-remote.png), [private text preserved](../screenshots/r400-production-paired-r400.png), [phone Reader](../screenshots/r400-production-reader-phone.png), [WebKit DOM fullscreen](../screenshots/r400-production-fullscreen.png). These are browser captures from the running sites, not design mockups. No failures remained in the automated release gates. Integrated physical R400/Safari acceptance remains the explicit manual limitation above.
+
+## Changed files
+
+- Runtime: `apps/web/src/r400.ts`, `reader-fullscreen.ts`, `main.tsx`, `ReaderDock.tsx`, `i18n.ts`, `style.css`.
+- Verification: `tests/r400.test.ts`, `tests/e2e/r400.spec.ts`, `tests/e2e/reader-v12.spec.ts`, `tests/e2e/production.spec.ts`, `playwright.r400.config.ts`, `playwright.reader.config.ts`, `tsconfig.json`.
+- Release metadata: `package.json`, `package-lock.json` (version only, no new dependencies).
+- Documentation: `README.md`, `docs/LOGITECH_R400_SUPPORT.md`, this audit, the historical Reader audit publication note, actual `docs/screenshots/r400-*.png` and `docs/audits/evidence/r400/*` records. Historical screenshots restored after generated test runs.
 
 
 ## Local evidence and reproduction
@@ -67,3 +84,18 @@ npx playwright test -c playwright.production.config.ts --workers=2
 Actual screenshots opened/reviewed: [before desktop](../screenshots/r400-before-r400-chromium-1440x900.png), [new RU settings](../screenshots/r400-after-r400-chromium-ru-1440x900.png), [small phone](../screenshots/r400-after-r400-chromium-ru-390x844.png), [WebKit DOM fullscreen](../screenshots/r400-r400-webkit-dom-fullscreen.png), [fallback](../screenshots/r400-r400-webkit-fullscreen-fallback.png). Real fullscreen geometry verified as origin (0,0), full inner viewport dimensions and visible Play/Pause; screenshots wait for measurable settled layout. No new design palette, overlay or competing settings screen.
 
 Known test-harness correction: locale URL hints do not override device language by design; locale cases now explicitly seed the existing manual preference. The initial EN-only harness expectation was corrected, with no change to app language semantics. Verification log trailing whitespace is normalized.
+
+## Public reproduction
+
+Run each cohort sequentially to respect the existing 10 room creations/minute/IP quota. Public tests never forge a Cloudflare client IP. The production route/editor cohort intentionally excludes the separate legacy local relay fixture.
+
+```sh
+TELEO_PRODUCTION_URL=https://teleo.cc \
+TELEO_EXPECTED_COMMIT=9494aeafb766e352d3ffb54604860f66779d017f \
+TELEO_EXPECTED_VERSION=d32f4a4f-5ac8-4462-bf8c-cb9915697a9c \
+npx playwright test -c playwright.production.config.ts --grep 'production routes|production editor' --workers=2
+TELEO_R400_URL=https://teleo.cc npx playwright test -c playwright.r400.config.ts
+TELEO_READER_URL=https://teleo.cc npx playwright test -c playwright.reader.config.ts
+```
+
+For staging, use its existing workers.dev origin in the R400/Reader variables. The final application source remains the published commit above; test artifacts and documentation are recorded separately.

@@ -462,6 +462,9 @@ if (!baseline) {
       );
       expect(Math.abs(await delta(page))).toBeLessThan(150);
       expect(changes - changeCount).toBeLessThan(10);
+      await expect(
+        phone.locator('.remote-text [aria-current="true"]'),
+      ).toHaveCSS("content-visibility", "visible");
       await expect
         .poll(() =>
           phone.locator(".remote-text").evaluate((view) => {

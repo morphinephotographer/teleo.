@@ -1,6 +1,6 @@
 # Teleo — phone preview permission and context-aware R400
 
-2026-10-28. Branch `codex/remote-permissions-r400-context`, clean baseline `2c37a9e20ec7841b50ee6e3ef4a58d73c35c6f3d`. Read the complete supplied task. No deployment, push, infrastructure, storage-schema or dependency changes. Existing production remains the verified 1.2.0 release.
+2026-10-28. Branch `codex/remote-permissions-r400-context`, clean baseline `2c37a9e20ec7841b50ee6e3ef4a58d73c35c6f3d`. Read the complete supplied task. Initially delivered as verified local commit `4e068b91ab5e8705c8e453a14488e2dc43b6b531`; the owner's subsequent **«опубликуй»** explicitly authorized staging and production publication, recorded below. No push, new infrastructure, storage-schema or dependency changes.
 
 ## Implementation and privacy
 
@@ -39,7 +39,7 @@ The paused-arrow case also tracks the same paragraph's position relative to the 
 
 The position-output assertion waits for the existing throttled Reader UI refresh after layout restoration; checking immediately after the CSS style commit read the preceding frame's displayed value. The actual paragraph/guide assertion remains separate and unchanged.
 
-The final implementation was rechecked with 147/147 unit/integration, 36/36 targeted browsers, 220/220 full browser regression and the 3/3 production stress repeat. No automated failures remain. The separate 15/15 Reader cohort and 32/32 local production matrix are also retained above. All application changes are local, with no production update or remote push.
+The final implementation was rechecked with 147/147 unit/integration, 36/36 targeted browsers, 220/220 full browser regression and the 3/3 production stress repeat. No automated failures remain. The separate 15/15 Reader cohort and 32/32 local production matrix are also retained above. These results preceded the separately authorized public publication; no remote Git push was performed.
 
 ```sh
 npm test
@@ -53,7 +53,7 @@ npx playwright test -c playwright.production.config.ts --workers=2
 npm run production:check
 ```
 
-All browser/relay verification for this update is local. The last command is a dry-run, not publication. Local fixtures use isolated synthetic development clients; no public relay limits or credentials are changed. Tests use fresh contexts and disposable libraries, never the owner's browser library.
+The commands above record local browser/relay verification. The last command is a dry-run, not publication. Local fixtures use isolated synthetic development clients; no public relay limits or credentials are changed. Tests use fresh contexts and disposable libraries, never the owner's browser library. Public checks are listed separately below.
 
 Evidence: [unit/integration](evidence/context-r400/unit.txt), [focused unit cases](evidence/context-r400/unit-focused.txt), [three-engine target matrix](evidence/context-r400/browsers.txt), [complete final regression](evidence/context-r400/regression.txt), [Reader](evidence/context-r400/reader.txt), [initial production failure](evidence/context-r400/production-initial-failure.txt), [production recheck](evidence/context-r400/production-verified.txt), [repeated Chromium stress](evidence/context-r400/production-stability.txt), [build](evidence/context-r400/build.txt), [final build/typecheck/dry-run](evidence/context-r400/production-dry-run.txt), [lint](evidence/context-r400/lint.txt), [input checksum](evidence/context-r400/input-sha256.txt).
 
@@ -61,7 +61,18 @@ Actual running-app captures opened and inspected: [RU desktop QR](../screenshots
 
 ## Remaining limitations
 
-Physical R400 on actual Mac Safari/iPhone has not been tested by the agent. Automated Chromium/WebKit/Firefox fullscreen entry/exit, interruption and remote tests are not hardware certification. Use the [manual acceptance checklist](../LOGITECH_R400_SUPPORT.md). Slow OS repeat settings beyond the documented safety window require a new press. Native Safari may consume Escape; existing hidden-page pausing remains intentional. Changes are local and require a separately authorized publication.
+Physical R400 on actual Mac Safari/iPhone has not been tested by the agent. Automated Chromium/WebKit/Firefox fullscreen entry/exit, interruption and remote tests are not hardware certification. Use the [manual acceptance checklist](../LOGITECH_R400_SUPPORT.md). Slow OS repeat settings beyond the documented safety window require a new press. Native Safari may consume Escape; existing hidden-page pausing remains intentional.
+
+## Authorized publication — 2026-10-28
+
+- Deployed application source: `4e068b91ab5e8705c8e453a14488e2dc43b6b531`, unchanged after local verification; package version remains 1.2.0.
+- Staging: `https://teleo-staging.your-subdomain.workers.dev`, version `94f7d72b-ade8-4a2c-8d40-647f700fc392`.
+- Production: `https://teleo.cc/studio`, version `72bc431a-6fc2-4a09-8643-f3449b37778e`, confirmed at 100% traffic. Existing interactive `npm run deploy:production` used from a clean committed checkout. Previous version `d32f4a4f-5ac8-4462-bf8c-cb9915697a9c` retained for rollback; no rollback performed.
+- Five build-file hashes match the staging-tested artifacts. Four served assets were also fetched and hashed on both public origins; production commit/version headers match. Existing bindings, origins, migration and domains retained; no DNS override, new infrastructure or GitHub push.
+- Public staging: **45/45 PASS** — 3 EN/UK/RU permission cases (Chromium/WebKit/Firefox respectively), 15 Reader and 27 R400 cases.
+- Initial production checks: 3/3 permission and 16/16 route/editor/security cases passed; Reader was 14/15 with a reproducible Firefox preview-follow failure. The original release was not declared fully verified. See the [follow-up correction and final publication record](TELEO_PREVIEW_FOLLOW_FIX.md).
+- Public permission cohorts create nine rooms. An interval longer than 60 seconds separates that cohort from further room creation; Reader and R400 suites run sequentially. No synthetic Cloudflare IP headers are sent publicly, and the 10/minute/IP server limit remains unchanged.
+- The follow-up documentation commit records publication only; the deployed application source remains the commit above.
 
 ## Changed files
 

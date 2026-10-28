@@ -147,14 +147,14 @@ Reader typography now expands inside the playback dock and reserves space for th
 
 Cross-engine verification: `npx playwright test --config playwright.reader.config.ts` (installed Chromium, WebKit and Firefox). See [original local Reader verification and screenshots](docs/audits/TELEO_READER_UI_VERIFICATION.md). The subsequent authorized 1.2.0 publication is recorded below.
 
-## v1.2.0 — Reader and Logitech R400 — LIVE
+## v1.2.0 — initial Reader and Logitech R400 publication
 
 Published on [Teleo.cc](https://teleo.cc/studio) on 2026-10-28 from source `9494aeafb766e352d3ffb54604860f66779d017f`. Production Worker version: `d32f4a4f-5ac8-4462-bf8c-cb9915697a9c`. Includes the Reader v1.2 improvements above and the R400 preset below. Scripts and existing preferences retain their storage; no migration or GitHub push. [Checks, screenshots, publication identity and hardware limitations](docs/audits/LOGITECH_R400_VERIFICATION.md).
 
 ## Logitech R400 keyboard preset
 
-Reading settings → Physical remote → Profile → Logitech R400. The USB presenter uses Period for Play/Pause, PageUp/PageDown for paragraphs and F5 to enter Reader DOM fullscreen; native Escape exit is never converted to playback or Reader exit in this preset. Enable/disable and selection use existing local settings. No USB discovery, driver or Bluetooth requirement. [Behavior and physical checklist](docs/LOGITECH_R400_SUPPORT.md) · [Verification and release record](docs/audits/LOGITECH_R400_VERIFICATION.md).
+Reading settings → Physical remote → Profile → Logitech R400. Period toggles Play/Pause. PageUp/PageDown step speed while playing and scroll by rendered lines while paused. F5 enters Reader DOM fullscreen; native Escape exit is never converted to playback or Reader exit. Enable/disable and selection use existing local settings. No USB discovery, driver or Bluetooth requirement. [Current behavior and physical checklist](docs/LOGITECH_R400_SUPPORT.md) · [Original release record](docs/audits/LOGITECH_R400_VERIFICATION.md).
 
-## Local update — phone preview permission and context-aware R400 arrows
+## LIVE update — phone preview permission and context-aware R400 arrows
 
-This branch moves the existing preview permission into the QR/connection dialog, with a saved privacy-safe choice, immediate revocation and reuse of the relay's session/epoch authorization. Reopening connection settings preserves the active remote. R400 arrows change speed while playing and scroll by rendered lines on pause, with bounded native repeats and interruption cleanup. Approved v1.2 screens and user scripts are preserved. This update is **not deployed**; the published 1.2.0 mapping above is historical to that release. [Implementation, verification and screenshots](docs/audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md).
+Published on [Teleo.cc](https://teleo.cc/studio) on 2026-10-28 from source `4e068b91ab5e8705c8e453a14488e2dc43b6b531`, Worker version `72bc431a-6fc2-4a09-8643-f3449b37778e`. The existing preview permission is in the QR/connection dialog, with a saved privacy-safe choice, immediate revocation and reuse of the relay's session/epoch authorization. Reopening connection settings preserves the active remote. R400 arrows change speed while playing and scroll by rendered lines on pause, with bounded native repeats and interruption cleanup. Approved v1.2 screens and user scripts are preserved. No GitHub push or storage migration. [Implementation, verification, public checks and screenshots](docs/audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md).

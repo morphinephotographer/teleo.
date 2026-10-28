@@ -2252,6 +2252,7 @@ input[type="checkbox"] {
   flex: 1;
   min-height: 80px;
   overflow: auto;
+  overflow-anchor: none;
   padding: 14px 0 8px;
   border-radius: 0;
   scrollbar-width: none;
@@ -2265,6 +2266,7 @@ input[type="checkbox"] {
   contain-intrinsic-size: auto 120px;
 }
 .remote-v06 .remote-text p[aria-current="true"] {
+  content-visibility: visible;
   color: #f1f1ef;
   background: none;
   border: 0;

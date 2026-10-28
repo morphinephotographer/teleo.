@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   paragraphs,
   type PreviewReceiver,
@@ -218,21 +225,31 @@ export function RemoteController({
     window.addEventListener("keydown", key);
     return () => window.removeEventListener("keydown", key);
   }, [quick]);
-  useEffect(() => {
-    const active = scroll.current?.querySelector<HTMLElement>(
-      '[aria-current="true"]',
-    );
-    if (active && scroll.current) {
-      const a = active.getBoundingClientRect(),
-        r = scroll.current.getBoundingClientRect();
-      if (a.top < r.top || a.bottom > r.bottom) {
-        // Scroll only the preview, never the page or its fixed playback controls.
-        scroll.current.scrollTop +=
-          a.top -
-          r.top -
-          Math.max(0, (scroll.current.clientHeight - a.height) / 2);
+  useLayoutEffect(() => {
+    const follow = () => {
+      const active = scroll.current?.querySelector<HTMLElement>(
+        '[aria-current="true"]',
+      );
+      if (active && scroll.current) {
+        const a = active.getBoundingClientRect(),
+          r = scroll.current.getBoundingClientRect();
+        if (a.top < r.top || a.bottom > r.bottom) {
+          // Scroll only the preview, never the page or its fixed playback controls.
+          scroll.current.scrollTop +=
+            a.top -
+            r.top -
+            Math.max(0, (scroll.current.clientHeight - a.height) / 2);
+        }
       }
-    }
+    };
+    follow();
+    // Firefox can realize virtualized paragraphs after the first layout. Reconcile
+    // the same active paragraph after paint without a permanent scroll loop.
+    let frame = requestAnimationFrame(() => {
+      follow();
+      frame = requestAnimationFrame(follow);
+    });
+    return () => cancelAnimationFrame(frame);
   }, [
     index,
     preview.script?.revision,

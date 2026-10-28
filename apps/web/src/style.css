@@ -4103,3 +4103,100 @@ input[type="checkbox"] {
     width: 12px;
   }
 }
+
+/* Playback stays measurable so hiding the dock never moves the reading guide. */
+.reader.is-playing .reader-controls {
+  visibility: hidden;
+  pointer-events: none;
+}
+.reader-top .reader-pause {
+  flex: 0 0 36px;
+  width: 36px;
+  border-radius: 50%;
+}
+.settings-language {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.top-settings .appearance-content {
+  padding: 0;
+}
+.script-row {
+  position: relative;
+}
+.script-row > button:first-child {
+  width: 100%;
+  padding-right: 44px;
+}
+.script-list .script-trash {
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 40px;
+  height: 40px;
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  opacity: 0;
+  pointer-events: none;
+}
+.script-row:hover .script-trash,
+.script-row:focus-within .script-trash {
+  opacity: 1;
+  pointer-events: auto;
+}
+.script-list .script-trash svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.25;
+}
+@media (hover: none) {
+  .script-list .script-trash {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+.remote-text-frame {
+  position: relative;
+  overflow: hidden;
+  flex: 1;
+  min-height: 40px;
+}
+.remote-v12 .remote-text {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  min-height: 0;
+  font-size: 18pt;
+  line-height: 1.6;
+  scroll-behavior: auto;
+}
+.remote-v12 .remote-text p {
+  /* Estimated offscreen heights cause guide jumps on long-distance seeks. */
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+}
+.remote-v12.current-text .remote-text {
+  font-size: 18pt !important;
+}
+.remote-v12.current-text .remote-text p {
+  padding: 12px;
+  border-radius: var(--radius-base);
+}
+.remote-position-guide {
+  position: absolute;
+  inset-inline: 0;
+  height: 1px;
+  background: #ffffff38;
+  pointer-events: none;
+}
+
+.app-shell > header > .top-settings {
+  margin-left: auto;
+}

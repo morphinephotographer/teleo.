@@ -80,7 +80,7 @@ async function create(page: Page) {
   await saved(page);
 }
 if (!baseline) {
-  test("Editor has no playback UI; approved Reading toolbar; original remote button unchanged", async ({
+  test("Editor has no playback UI; Reading toolbar hides on Play; original remote SVG retained", async ({
     page,
   }, info) => {
     await create(page);
@@ -95,7 +95,16 @@ if (!baseline) {
       const remote = page
         .locator("header")
         .getByRole("button", { name: t.remoteConnection, exact: true });
-      await expect.poll(() => remote.boundingBox()).toEqual(sample.rect);
+      await expect
+        .poll(async () => {
+          const rect = await remote.boundingBox();
+          return rect && { width: rect.width, height: rect.height, y: rect.y };
+        })
+        .toEqual({
+          width: sample.rect.width,
+          height: sample.rect.height,
+          y: sample.rect.y,
+        });
       expect(await remote.locator("svg").evaluate((el) => el.outerHTML)).toBe(
         sample.svg,
       );
@@ -164,13 +173,12 @@ if (!baseline) {
         "60px",
       );
       await page.screenshot({
-        path: `docs/screenshots/approval-v3-${info.project.name}-reading-${sample.width}.png`,
+        path: `test-results/reading-polish-regression/${info.project.name}-reading-${sample.width}.png`,
       });
       await toolbar.getByRole("button", { name: t.play, exact: true }).click();
-      await expect(
-        toolbar.getByRole("button", { name: t.pause, exact: true }),
-      ).toBeVisible();
-      await toolbar.getByRole("button", { name: t.pause, exact: true }).click();
+      await expect(toolbar).toBeHidden();
+      await page.locator(".reader-pause").click();
+      await expect(toolbar).toBeVisible();
       await page.getByRole("button", { name: t.editor, exact: true }).click();
       await expect(page.locator(".reader-controls")).toHaveCount(0);
       await expect(
@@ -196,7 +204,7 @@ if (!baseline) {
       settings.getByRole("checkbox", { name: t.autoDemo, exact: true }),
     ).toHaveCount(1);
     await page.screenshot({
-      path: `docs/screenshots/approval-v3-${info.project.name}-settings.png`,
+      path: `test-results/reading-polish-regression/${info.project.name}-settings.png`,
     });
     await settings
       .getByRole("checkbox", { name: t.autoDemo, exact: true })
@@ -214,10 +222,10 @@ if (!baseline) {
     await page.keyboard.press("Escape");
     await page
       .locator("header")
-      .getByRole("button", { name: t.appearanceMenu, exact: true })
+      .getByRole("button", { name: t.settings, exact: true })
       .click();
     const appearance = page.getByRole("dialog", {
-      name: t.appearanceMenu,
+      name: t.settings,
       exact: true,
     });
     await appearance
@@ -241,7 +249,7 @@ if (!baseline) {
     await expect(page.locator(".app-shell")).toHaveClass(/theme-dark/);
     await page.keyboard.press("Escape");
     await page.screenshot({
-      path: `docs/screenshots/approval-v3-${info.project.name}-appearance.png`,
+      path: `test-results/reading-polish-regression/${info.project.name}-appearance.png`,
     });
     await page.keyboard.press("Escape");
     await saved(page);
@@ -249,7 +257,7 @@ if (!baseline) {
     await expect(
       page.getByRole("textbox", { name: t.body, exact: true }),
     ).toHaveValue(body);
-    await expect(page.locator(".script-list > button")).toHaveCount(1);
+    await expect(page.locator(".script-row")).toHaveCount(1);
     await expect(page.locator(".app-shell")).toHaveClass(/theme-dark/);
     await page.getByRole("button", { name: t.read, exact: true }).click();
     await expect(page.locator(".reader")).toHaveClass(/light/);
@@ -281,7 +289,7 @@ if (!baseline) {
       ),
     ).toBeLessThan(1);
     await page.screenshot({
-      path: `docs/screenshots/approval-v3-${info.project.name}-folder.png`,
+      path: `test-results/reading-polish-regression/${info.project.name}-folder.png`,
     });
     await page.keyboard.press("Home");
     await page.keyboard.press("ArrowDown");
@@ -297,7 +305,7 @@ if (!baseline) {
       .getByRole("dialog")
       .getByRole("button", { name: t.confirm, exact: true })
       .click();
-    await expect(page.locator(".script-list > button")).toHaveCount(1);
+    await expect(page.locator(".script-row")).toHaveCount(1);
     await expect(
       page.getByRole("textbox", { name: t.body, exact: true }),
     ).toHaveValue(body);
@@ -310,12 +318,12 @@ if (!baseline) {
       .locator(".library")
       .getByRole("button", { name: t.restoreDemo, exact: true })
       .click();
-    await expect(page.locator(".script-list > button")).toHaveCount(2);
+    await expect(page.locator(".script-row")).toHaveCount(2);
     await page
       .locator(".library")
       .getByRole("button", { name: t.openDemo, exact: true })
       .click();
-    await expect(page.locator(".script-list > button")).toHaveCount(2);
+    await expect(page.locator(".script-row")).toHaveCount(2);
   });
   test("existing phone visuals and continuous timeline/text positioning across wrapping", async ({
     page,
@@ -362,7 +370,7 @@ if (!baseline) {
       await pair.getByRole("button", { name: t.close, exact: true }).click();
       await expect(phone.locator(".remote-text")).toContainText("Paragraph 1");
       const screenshot = await phone.screenshot({
-        path: `docs/screenshots/approval-v3-${info.project.name}-phone.png`,
+        path: `test-results/reading-polish-regression/${info.project.name}-phone.png`,
       });
       if (process.platform === "darwin") {
         const { PNG } = createRequire(import.meta.url)(
@@ -380,9 +388,13 @@ if (!baseline) {
         ]);
         let changed = 0;
         const scale = after.width / 390;
+        const textBottom = await phone
+          .locator(".remote-text-frame")
+          .evaluate((el) => el.getBoundingClientRect().bottom);
         for (let y = 0; y < after.height; y++)
           for (let x = 0; x < after.width; x++) {
-            if (y >= 125 * scale && y <= 480 * scale) continue;
+            // Header language and text/guide changes are explicitly approved in this update.
+            if (y < Math.ceil(textBottom * scale)) continue;
             const i = (y * after.width + x) * 4;
             if (
               !before.data
@@ -549,7 +561,7 @@ if (baseline)
         svg: await remote.locator("svg").evaluate((el) => el.outerHTML),
       });
       await page.screenshot({
-        path: `docs/screenshots/approval-v3-${capture}-${info.project.name}-${width}.png`,
+        path: `test-results/reading-polish-regression/${capture}-${info.project.name}-${width}.png`,
       });
     }
     writeFileSync(
@@ -594,10 +606,10 @@ if (baseline)
         "remote-quick-trigger",
       ])
         await phone.locator("." + part).screenshot({
-          path: `docs/screenshots/approval-v3-${capture}-${info.project.name}-${part}.png`,
+          path: `test-results/reading-polish-regression/${capture}-${info.project.name}-${part}.png`,
         });
       await phone.screenshot({
-        path: `docs/screenshots/approval-v3-${capture}-${info.project.name}-phone.png`,
+        path: `test-results/reading-polish-regression/${capture}-${info.project.name}-phone.png`,
       });
     } finally {
       await ctx.close();

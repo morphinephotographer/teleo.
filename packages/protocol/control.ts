@@ -16,6 +16,7 @@ export type ControlState = ControlValues & {
   target: string;
   maximum: number;
   marks?: number[];
+  focusPosition?: number;
 };
 export type ControlCommand =
   | Command
@@ -82,7 +83,13 @@ export function validControlState(v: unknown): v is ControlState {
   const m = v as Record<string, unknown>;
   return (
     Object.keys(m)
-      .filter((k) => k !== "marks" && k !== "focusDimming" && k !== "alignment")
+      .filter(
+        (k) =>
+          k !== "marks" &&
+          k !== "focusDimming" &&
+          k !== "alignment" &&
+          k !== "focusPosition",
+      )
       .sort()
       .join(",") ===
       "countdownSeconds,focusLine,fontSize,lineHeight,maximum,mirrorHorizontal,mirrorVertical,target,textWidth,version" &&
@@ -93,6 +100,11 @@ export function validControlState(v: unknown): v is ControlState {
           (n) =>
             typeof n === "number" && Number.isFinite(n) && n >= 0 && n <= 1,
         ))) &&
+    (m.focusPosition === undefined ||
+      (typeof m.focusPosition === "number" &&
+        Number.isFinite(m.focusPosition) &&
+        m.focusPosition >= 20 &&
+        m.focusPosition <= 70)) &&
     (m.focusDimming === undefined || typeof m.focusDimming === "boolean") &&
     (m.alignment === undefined ||
       validControlValue("alignment", m.alignment)) &&

@@ -147,3 +147,69 @@ describe("Welcome onboarding storage", () => {
     ).toBe(60);
   });
 });
+
+it("localizes only tracked pristine Welcome snapshots, retaining preferences and the original id", async () => {
+  const first = (await storage.welcome("en", { automatic: true })).selected!;
+  await storage.save({
+    ...first,
+    preferences: { ...first.preferences, fontSize: 68 },
+  });
+  const current = (await storage.list())[0];
+  const result = await storage.welcome("ru", { localize: [current] });
+  expect(result.localized).toHaveLength(1);
+  expect(result.scripts[0]).toMatchObject({
+    scriptId: first.scriptId,
+    title: "Welcome",
+    body: welcomeBodies.ru,
+    preferences: { fontSize: 68 },
+  });
+  expect(await storage.list()).toHaveLength(1);
+  const next = await storage.welcome("uk", { localize: result.scripts });
+  expect(next.scripts[0].body).toBe(welcomeBodies.uk);
+  expect(next.settings.records[0].locale).toBe("uk");
+  expect(
+    (await storage.welcome("uk", { localize: next.scripts })).localized,
+  ).toEqual([]);
+});
+it("never translates edits, stale snapshots, user-created Welcome or deleted demos", async () => {
+  const first = (await storage.welcome("en", { automatic: true })).selected!;
+  const edited = {
+    ...first,
+    body: first.body + "\nMy words",
+    updatedAt: "2026-10-29T00:00:00Z",
+  };
+  await storage.save(edited);
+  expect(
+    (await storage.welcome("ru", { localize: [first] })).localized,
+  ).toEqual([]);
+  expect(
+    (await storage.welcome("uk", { localize: [edited] })).localized,
+  ).toEqual([]);
+  const own = createScript("Welcome", welcomeBodies.en);
+  await storage.save(own);
+  expect((await storage.welcome("ru", { localize: [own] })).localized).toEqual(
+    [],
+  );
+  await storage.save({ ...edited, deletedAt: new Date().toISOString() });
+  expect(
+    (await storage.welcome("ru", { automatic: true, localize: [first] }))
+      .localized,
+  ).toEqual([]);
+  expect(await storage.list()).toEqual([own]);
+});
+
+it("skips a localization snapshot when another tab changed formatting without changing its timestamp", async () => {
+  const first = (await storage.welcome("en", { automatic: true })).selected!;
+  const formatted = {
+    ...first,
+    preferences: { ...first.preferences, fontSize: 72 },
+  };
+  await storage.save(formatted);
+  expect(
+    (await storage.welcome("ru", { localize: [first] })).localized,
+  ).toEqual([]);
+  expect(await storage.list()).toEqual([formatted]);
+  expect(
+    (await storage.welcome("ru", { localize: [formatted] })).scripts[0],
+  ).toMatchObject({ body: welcomeBodies.ru, preferences: { fontSize: 72 } });
+});

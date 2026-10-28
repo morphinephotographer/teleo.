@@ -78,6 +78,12 @@ export function ReaderDock({
       : pane === "lineHeight"
         ? [1, 3, 0.1]
         : [280, 1600, 20];
+  useEffect(() => {
+    if (engine.playing)
+      dock.current
+        ?.querySelectorAll<HTMLElement>("[popover]:popover-open")
+        .forEach((el) => el.hidePopover());
+  }, [engine.playing]);
   if (!compact) {
     const slider = (
       key: Typography | "speed",
@@ -144,6 +150,9 @@ export function ReaderDock({
     };
     return (
       <div
+        ref={dock}
+        inert={engine.playing}
+        aria-hidden={engine.playing || undefined}
         className="reader-controls approved-reader-toolbar"
         role="toolbar"
         aria-label={t("playbackSettings")}
@@ -250,6 +259,8 @@ export function ReaderDock({
   return (
     <div
       ref={dock}
+      inert={engine.playing}
+      aria-hidden={engine.playing || undefined}
       onKeyDown={(e) => {
         if (e.key === "Escape" && pane && !document.fullscreenElement) {
           e.preventDefault();

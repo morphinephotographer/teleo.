@@ -74,6 +74,10 @@ describe("v0.6 approved controls", () => {
   });
   it("transfers only allowlisted control metadata and preserves old state compatibility", () => {
     expect(validControlState(controls)).toBe(true);
+    for (const focusPosition of [20, 35, 60, 70])
+      expect(validControlState({ ...controls, focusPosition })).toBe(true);
+    for (const focusPosition of [0, 71, NaN, "35"])
+      expect(validControlState({ ...controls, focusPosition })).toBe(false);
     for (const alignment of ["left", "center", "right"])
       expect(validControlState({ ...controls, alignment })).toBe(true);
     for (const alignment of ["justify", "Left", null, 1])

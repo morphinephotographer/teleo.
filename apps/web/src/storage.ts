@@ -3,6 +3,7 @@ import { parseBundle } from "../../../packages/protocol/domain";
 import { localGet, localSet, type Locale } from "./i18n";
 import {
   createWelcome,
+  welcomeBodies,
   pristineWelcome,
   welcomeId,
   type WelcomeSettings,
@@ -70,6 +71,7 @@ export const storage = {
       returning?: boolean;
       recovered?: boolean;
       restore?: boolean;
+      localize?: Script[];
     } = {},
   ) {
     const db = await database();
@@ -113,14 +115,50 @@ export const storage = {
         locale,
       });
     }
+    // Translate only a tracked, unchanged demo and only the caller's exact saved snapshot.
+    const localized: { before: Script; after: Script }[] = [];
+    const candidates =
+      options.localize || (options.restore && selected ? [selected] : []);
+    for (const before of candidates) {
+      const index = scripts.findIndex(
+        (script) => script.scriptId === before.scriptId,
+      );
+      const saved = scripts[index];
+      const record = settings.records.find(
+        (record) => record.id === before.scriptId,
+      );
+      if (
+        !saved ||
+        saved.deletedAt ||
+        !record ||
+        record.locale === locale ||
+        !same(saved, before) ||
+        saved.body !== record.body ||
+        saved.title !== record.title
+      )
+        continue;
+      const after = {
+        ...saved,
+        body: welcomeBodies[locale],
+        updatedAt: new Date().toISOString(),
+      };
+      await tx.objectStore("scripts").put(after);
+      scripts[index] = after;
+      record.body = after.body;
+      record.locale = locale;
+      localized.push({ before: saved, after });
+      if (selected?.scriptId === after.scriptId) selected = after;
+    }
     if (options.restore) settings.handled = true;
     await tx.objectStore("onboarding").put(settings, "welcome");
     await tx.done;
     if (selected) remember(selected);
+    for (const change of localized) remember(change.after);
     return {
       scripts: scripts.filter((script) => !script.deletedAt),
       settings,
       selected,
+      localized,
     };
   },
   async autoWelcome(enabled: boolean) {

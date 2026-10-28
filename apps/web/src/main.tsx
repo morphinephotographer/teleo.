@@ -196,6 +196,9 @@ function App() {
       speed: 1,
       position: 0,
     });
+  const scriptsRef = useRef(scripts);
+  scriptsRef.current = scripts;
+  const welcomeLocaleQueue = useRef(Promise.resolve());
   const controlsTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
@@ -407,6 +410,7 @@ function App() {
                       ),
                   }
                 : {}),
+              focusPosition,
               alignment: p.alignment,
               fontSize: p.fontSize,
               lineHeight: p.lineHeight,
@@ -591,10 +595,15 @@ function App() {
         const initialized = await storage.welcome(localeRef.current, {
           automatic: ["/", "/studio"].includes(location.pathname),
           ...welcomeContext.current,
+          localize: list,
         });
-        for (const saved of initialized.scripts)
-          if (!list.some((item) => item.scriptId === saved.scriptId))
-            list.push(saved);
+        for (const saved of initialized.scripts) {
+          const index = list.findIndex(
+            (item) => item.scriptId === saved.scriptId,
+          );
+          if (index < 0) list.push(saved);
+          else list[index] = saved;
+        }
         const visible = list.filter((item) => !item.deletedAt);
         setScripts(visible);
         setWelcomeSettings(initialized.settings);
@@ -1097,6 +1106,24 @@ function App() {
                 engine.position = requested.value * engine.maximum;
                 if (viewport.current) syncView(viewport.current);
               }
+              if (viewport.current && previewChoice.current) {
+                const anchor = captureAnchor(viewport.current, focusPosition);
+                sender.current?.position(
+                  {
+                    playing: engine.playing,
+                    speed: engine.speed,
+                    position: engine.position,
+                  },
+                  anchor?.paragraph || 0,
+                  Math.round(
+                    textOffsetAtView(
+                      viewport.current,
+                      previewOffsets,
+                      focusPosition,
+                    ),
+                  ),
+                );
+              }
               setFrame((x) => x + 1);
             } else {
               command(requested);
@@ -1129,6 +1156,7 @@ function App() {
     previewAllowed,
     controlTarget,
     current?.preferences.alignment,
+    focusPosition,
   ]);
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
@@ -1220,6 +1248,39 @@ function App() {
       })
       .catch(() => setStatus("saveError"));
   }, [libraryLoaded, route]);
+  useEffect(() => {
+    if (!libraryLoaded || route !== "/studio") return;
+    welcomeLocaleQueue.current = welcomeLocaleQueue.current
+      .then(async () => {
+        if (localeRef.current !== locale) return;
+        // The existing writer protects drafts and other tabs; never translate an unsaved edit.
+        try {
+          await writer.current!.requireSaved();
+        } catch {
+          return;
+        }
+        if (localeRef.current !== locale) return;
+        const result = await storage.welcome(locale, {
+          localize: scriptsRef.current,
+        });
+        setWelcomeSettings((previous) => ({
+          ...result.settings,
+          autoCreate: previous.autoCreate,
+        }));
+        const apply = (previous: Script[]) =>
+          previous.map((script) => {
+            const change = result.localized.find(
+              (change) =>
+                change.before.scriptId === script.scriptId &&
+                JSON.stringify(change.before) === JSON.stringify(script),
+            );
+            return change?.after || script;
+          });
+        scriptsRef.current = apply(scriptsRef.current);
+        setScripts(apply);
+      })
+      .catch(() => setStatus("saveError"));
+  }, [locale, libraryLoaded, route]);
   async function restoreWelcome() {
     if (restoringWelcome) return;
     setRestoringWelcome(true);
@@ -1427,6 +1488,93 @@ function App() {
   const settingsContent = (
     <aside className="settings">
       <h2>{t("settings")}</h2>
+      <div className="settings-language">
+        <span>{t("language")}</span>
+        {lang}
+      </div>
+      <section className="appearance-content">
+        <Popover
+          kind="dialog"
+          width={286}
+          className="appearance-row"
+          label={t("readingAppearance")}
+          trigger={
+            <>
+              <span className="appearance-symbol">
+                <Icon name="sun" />
+              </span>
+              <span>
+                <strong>{t("readingAppearance")}</strong>
+                <small>
+                  {t(
+                    current?.preferences.appearance === "light"
+                      ? "light"
+                      : "dark",
+                  )}
+                </small>
+              </span>
+              <Icon name="chevron" />
+            </>
+          }
+        >
+          <p>{t("readingAppearanceHelp")}</p>
+          <Segmented
+            label={t("readingAppearance")}
+            value={current?.preferences.appearance || "dark"}
+            onChange={(appearance) => pref({ appearance })}
+            options={[
+              {
+                value: "dark",
+                label: t("dark"),
+                disabled: !current,
+              },
+              {
+                value: "light",
+                label: t("light"),
+                disabled: !current,
+              },
+            ]}
+          />
+        </Popover>
+        <Popover
+          kind="dialog"
+          width={286}
+          className="appearance-row"
+          label={t("interfaceTheme")}
+          trigger={
+            <>
+              <span className="appearance-symbol">
+                <Icon name="monitor" />
+              </span>
+              <span>
+                <strong>{t("interfaceTheme")}</strong>
+                <small>
+                  {t(
+                    theme === "light"
+                      ? "light"
+                      : theme === "dark"
+                        ? "dark"
+                        : "system",
+                  )}
+                </small>
+              </span>
+              <Icon name="chevron" />
+            </>
+          }
+        >
+          <p>{t("interfaceThemeHelp")}</p>
+          <Segmented
+            label={t("interfaceTheme")}
+            value={theme}
+            onChange={setTheme}
+            options={[
+              { value: "light", label: t("light") },
+              { value: "dark", label: t("dark") },
+              { value: "system", label: t("system") },
+            ]}
+          />
+        </Popover>
+      </section>
       <details>
         <summary>{t("physical")}</summary>
         <p>{t("keyHelp")}</p>
@@ -1620,98 +1768,7 @@ function App() {
                   ]}
                 />
                 <div className="toolbar-spacer" />
-                <Popover
-                  kind="dialog"
-                  width={310}
-                  className="top-appearance"
-                  label={t("appearanceMenu")}
-                  trigger={<Icon name="sun" />}
-                  triggerClassName="icon-button"
-                >
-                  <section className="appearance-content">
-                    <Popover
-                      kind="dialog"
-                      width={286}
-                      className="appearance-row"
-                      label={t("readingAppearance")}
-                      trigger={
-                        <>
-                          <span className="appearance-symbol">
-                            <Icon name="sun" />
-                          </span>
-                          <span>
-                            <strong>{t("readingAppearance")}</strong>
-                            <small>
-                              {t(
-                                current?.preferences.appearance === "light"
-                                  ? "light"
-                                  : "dark",
-                              )}
-                            </small>
-                          </span>
-                          <Icon name="chevron" />
-                        </>
-                      }
-                    >
-                      <p>{t("readingAppearanceHelp")}</p>
-                      <Segmented
-                        label={t("readingAppearance")}
-                        value={current?.preferences.appearance || "dark"}
-                        onChange={(appearance) => pref({ appearance })}
-                        options={[
-                          {
-                            value: "dark",
-                            label: t("dark"),
-                            disabled: !current,
-                          },
-                          {
-                            value: "light",
-                            label: t("light"),
-                            disabled: !current,
-                          },
-                        ]}
-                      />
-                    </Popover>
-                    <Popover
-                      kind="dialog"
-                      width={286}
-                      className="appearance-row"
-                      label={t("interfaceTheme")}
-                      trigger={
-                        <>
-                          <span className="appearance-symbol">
-                            <Icon name="monitor" />
-                          </span>
-                          <span>
-                            <strong>{t("interfaceTheme")}</strong>
-                            <small>
-                              {t(
-                                theme === "light"
-                                  ? "light"
-                                  : theme === "dark"
-                                    ? "dark"
-                                    : "system",
-                              )}
-                            </small>
-                          </span>
-                          <Icon name="chevron" />
-                        </>
-                      }
-                    >
-                      <p>{t("interfaceThemeHelp")}</p>
-                      <Segmented
-                        label={t("interfaceTheme")}
-                        value={theme}
-                        onChange={setTheme}
-                        options={[
-                          { value: "light", label: t("light") },
-                          { value: "dark", label: t("dark") },
-                          { value: "system", label: t("system") },
-                        ]}
-                      />
-                    </Popover>
-                  </section>
-                </Popover>
+
                 <IconButton
                   className={
                     remoteStatus === "connected" ? "has-connection" : ""
@@ -1721,26 +1778,25 @@ function App() {
                   disabled={!current}
                   onClick={() => void showConnection()}
                 />
-                <Popover
-                  kind="dialog"
-                  width={320}
-                  className="top-settings"
-                  label={t("settings")}
-                  trigger={<Icon name="settings" />}
-                  triggerClassName="icon-button"
-                  onOpenChange={(open) => {
-                    setSettingsOpen(open);
-                    if (!open) {
-                      setLearn(null);
-                      setTesting(false);
-                    }
-                  }}
-                >
-                  {settingsContent}
-                </Popover>
               </>
             )}
-            {!immersive && lang}
+            <Popover
+              kind="dialog"
+              width={320}
+              className="top-settings"
+              label={t("settings")}
+              trigger={<Icon name="settings" />}
+              triggerClassName="icon-button"
+              onOpenChange={(open) => {
+                setSettingsOpen(open);
+                if (!open) {
+                  setLearn(null);
+                  setTesting(false);
+                }
+              }}
+            >
+              {settingsContent}
+            </Popover>
           </header>
         )}
         {!online && (
@@ -1860,24 +1916,36 @@ function App() {
                         .includes(search.toLocaleLowerCase()),
                   )
                   .map((s) => (
-                    <button
-                      className={s.scriptId === selected ? "selected" : ""}
-                      key={s.scriptId}
-                      onClick={() => {
-                        void flush();
-                        setSelected(s.scriptId);
-                        setPanel("editor");
-                        if (innerWidth <= 900) setLibraryOpen(false);
-                        setRevisions(null);
-                      }}
-                    >
-                      <strong>{s.title || t("untitled")}</strong>
-                      <small>
-                        {new Intl.DateTimeFormat(locale, {
-                          dateStyle: "medium",
-                        }).format(new Date(s.updatedAt))}
-                      </small>
-                    </button>
+                    <div className="script-row" key={s.scriptId}>
+                      <button
+                        className={s.scriptId === selected ? "selected" : ""}
+                        onClick={() => {
+                          void flush();
+                          setSelected(s.scriptId);
+                          setPanel("editor");
+                          if (innerWidth <= 900) setLibraryOpen(false);
+                          setRevisions(null);
+                        }}
+                      >
+                        <strong>{s.title || t("untitled")}</strong>
+                        <small>
+                          {new Intl.DateTimeFormat(locale, {
+                            dateStyle: "medium",
+                          }).format(new Date(s.updatedAt))}
+                        </small>
+                      </button>
+                      <IconButton
+                        name="trash"
+                        className="script-trash"
+                        label={`${t("delete")}: ${s.title || t("untitled")}`}
+                        onClick={() =>
+                          setActionDialog({
+                            kind: "deleteScript",
+                            id: s.scriptId,
+                          })
+                        }
+                      />
+                    </div>
                   ))}
               </div>
               <label className="file-button">
@@ -2054,7 +2122,8 @@ function App() {
             className={
               "reader " +
               current.preferences.appearance +
-              (controlsVisible ? "" : " quiet")
+              (controlsVisible ? "" : " quiet") +
+              (engine.playing ? " is-playing" : "")
             }
             aria-label={t("read")}
             onPointerMove={showControls}
@@ -2065,6 +2134,14 @@ function App() {
               <span className="reader-script-title">
                 {current.title || t("untitled")}
               </span>
+              {engine.playing && (
+                <IconButton
+                  name="pause"
+                  label={t("pause")}
+                  className="reader-pause"
+                  onClick={() => command({ action: "pause" })}
+                />
+              )}
               <IconButton
                 name="fullscreen"
                 label={t("fullscreen")}
@@ -2075,7 +2152,25 @@ function App() {
                 remoteStatus === "connected" ? "connection" : "connect",
                 () => void showConnection(),
               )}
-              {immersive && lang}
+              {immersive && (
+                <Popover
+                  kind="dialog"
+                  width={320}
+                  className="top-settings"
+                  label={t("settings")}
+                  trigger={<Icon name="settings" />}
+                  triggerClassName="icon-button"
+                  onOpenChange={(open) => {
+                    setSettingsOpen(open);
+                    if (!open) {
+                      setLearn(null);
+                      setTesting(false);
+                    }
+                  }}
+                >
+                  {settingsContent}
+                </Popover>
+              )}
             </div>
             {fullscreenIssue && (
               <p className="reader-fullscreen-feedback" role="status">

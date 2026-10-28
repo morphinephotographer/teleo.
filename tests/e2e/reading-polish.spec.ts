@@ -20,10 +20,11 @@ test.beforeEach(async ({ page }) => {
 });
 async function settings(page: Page) {
   const trigger = page.locator(".app-shell > header > .top-settings > button");
-  if ((await trigger.getAttribute("aria-expanded")) !== "true")
-    await trigger.click();
   const id = await trigger.getAttribute("aria-controls");
-  return page.locator(`[id="${id}"]`);
+  const menu = page.locator(`[id="${id}"]`);
+  if (!(await menu.isVisible())) await trigger.click();
+  await expect(menu).toBeVisible();
+  return menu;
 }
 async function saved(page: Page) {
   await expect
@@ -324,16 +325,18 @@ test("phone seeks animate during drag; fixed 18pt text stays on the host guide t
     const slider = phone.getByRole("slider", { name: t.position, exact: true });
     await expect(slider).toBeEnabled();
     const positions: number[] = [];
+    const dragStarted = performance.now();
     await slider.dispatchEvent("pointerdown");
-    for (let i = 0; i < 12; i++) {
-      await slider.fill(String(100 + i * 5));
-      await phone.waitForTimeout(30);
+    for (let i = 0; i < 36; i++) {
+      await slider.fill(String(100 + i * 2));
+      await phone.waitForTimeout(40);
       positions.push(await text.evaluate((el) => el.scrollTop));
     }
     expect(new Set(positions.map((p) => Math.round(p))).size).toBeGreaterThan(
       3,
     );
     await slider.dispatchEvent("pointerup");
+    const dragDuration = performance.now() - dragStarted;
     await expect
       .poll(async () =>
         Math.abs(
@@ -486,7 +489,7 @@ test("phone seeks animate during drag; fixed 18pt text stays on the host guide t
         ),
       )
       .toBeLessThan(2);
-    expect(seeks).toBeLessThan(20);
+    expect(seeks).toBeLessThanOrEqual(Math.ceil(dragDuration / 200) + 8);
     await phone
       .getByRole("button", { name: t.advancedSettings, exact: true })
       .click();

@@ -123,6 +123,9 @@ export function scrollToTextOffset(
   );
 }
 
+// Leave room within the existing 20 messages/s budget for ACKs, preview chunks and host state.
+export const REMOTE_SEEK_INTERVAL = 200;
+
 /** Last gesture sample wins; final release never creates a burst. */
 export class SeekQueue {
   private timer?: ReturnType<typeof setTimeout>;

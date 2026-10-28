@@ -19,6 +19,7 @@ import {
 import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
 import {
   SeekQueue,
+  REMOTE_SEEK_INTERVAL,
   scrollToTextOffset,
   textOffsetAtView,
 } from "./text-position";
@@ -226,7 +227,7 @@ export function RemoteController({
         setScrub(null);
         setScrollVersion((v) => v + 1);
       }, 5000);
-    });
+    }, REMOTE_SEEK_INTERVAL);
   const cancelScroll = () => {
     fingerDown.current = false;
     seekQueue.current?.cancel();

@@ -1106,24 +1106,6 @@ function App() {
                 engine.position = requested.value * engine.maximum;
                 if (viewport.current) syncView(viewport.current);
               }
-              if (viewport.current && previewChoice.current) {
-                const anchor = captureAnchor(viewport.current, focusPosition);
-                sender.current?.position(
-                  {
-                    playing: engine.playing,
-                    speed: engine.speed,
-                    position: engine.position,
-                  },
-                  anchor?.paragraph || 0,
-                  Math.round(
-                    textOffsetAtView(
-                      viewport.current,
-                      previewOffsets,
-                      focusPosition,
-                    ),
-                  ),
-                );
-              }
               setFrame((x) => x + 1);
             } else {
               command(requested);

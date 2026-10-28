@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { SeekQueue } from "../apps/web/src/text-position";
+import { SeekQueue, REMOTE_SEEK_INTERVAL } from "../apps/web/src/text-position";
 import { validControlCommand } from "../packages/protocol/control";
 it("coalesces drag samples at 120ms, retains the final exact value and cancels stale work", () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
@@ -33,4 +33,29 @@ it("uses the existing target-scoped seek command with a bounded optional charact
     expect(validControlCommand({ ...c, anchor })).toBe(false);
   expect(validControlCommand({ ...c, anchor: 3, unknown: 1 })).toBe(false);
   expect(validControlCommand({ ...c, target: "wrong", anchor: 3 })).toBe(false);
+});
+
+it("keeps sustained phone seeks within the host's existing message budget", () => {
+  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "performance"] });
+  const sent: number[] = [];
+  const queue = new SeekQueue(
+    () => sent.push(performance.now()),
+    REMOTE_SEEK_INTERVAL,
+  );
+  try {
+    for (let i = 0; i < 200; i++) {
+      queue.push(i / 200);
+      vi.advanceTimersByTime(16);
+    }
+    for (const start of sent) {
+      const count = sent.filter(
+        (at) => at >= start && at < start + 1000,
+      ).length;
+      expect(count).toBeLessThanOrEqual(5);
+      expect(count + 7 + 4 + 2 + 1).toBeLessThanOrEqual(20);
+    }
+  } finally {
+    queue.cancel();
+    vi.useRealTimers();
+  }
 });

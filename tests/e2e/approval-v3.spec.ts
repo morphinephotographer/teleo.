@@ -445,6 +445,15 @@ if (!baseline) {
           phone.locator(".remote-text").evaluate((el) => el.scrollTop),
         )
         .not.toBe(before);
+      // Let the preceding animated seek settle before checking the direction of a new gesture.
+      await expect
+        .poll(async () =>
+          Math.abs(
+            (await coordinate(page, ".reading-viewport", 35)) -
+              (await coordinate(phone, ".remote-text")),
+          ),
+        )
+        .toBeLessThan(2);
       const hostBefore = await page
         .locator(".reading-viewport")
         .evaluate((el) => el.scrollTop);

@@ -1,6 +1,6 @@
 # Logitech R400 — browser keyboard preset
 
-The context-aware control update is published on Teleo.cc from `4e068b9` after separate owner authorization. [Current change, QA and publication record](audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md). The original 1.2.0 publication used paragraph arrows; its historical release record remains unchanged.
+The context-aware control update is published on Teleo.cc from corrected source `0396bba` after separate owner authorization. [Feature/QA record](audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md) · [Final publication and preview correction](audits/TELEO_PREVIEW_FOLLOW_FIX.md). The original 1.2.0 publication used paragraph arrows; its historical release record remains unchanged.
 
 In Studio, open **Reading settings → Physical remote → Profile → Logitech R400 · keyboard preset**. Keep **Enable keyboard remote** checked. The choice uses the existing device-local `teleo.profile` / `teleo.keys` preferences; it does not alter scripts, custom key mappings or another device's language.
 

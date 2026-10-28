@@ -72,7 +72,7 @@ Physical R400 on actual Mac Safari/iPhone has not been tested by the agent. Auto
 - Public staging: **45/45 PASS** — 3 EN/UK/RU permission cases (Chromium/WebKit/Firefox respectively), 15 Reader and 27 R400 cases.
 - Initial production checks: 3/3 permission and 16/16 route/editor/security cases passed; Reader was 14/15 with a reproducible Firefox preview-follow failure. The original release was not declared fully verified. See the [follow-up correction and final publication record](TELEO_PREVIEW_FOLLOW_FIX.md).
 - Public permission cohorts create nine rooms. An interval longer than 60 seconds separates that cohort from further room creation; Reader and R400 suites run sequentially. No synthetic Cloudflare IP headers are sent publicly, and the 10/minute/IP server limit remains unchanged.
-- The follow-up documentation commit records publication only; the deployed application source remains the commit above.
+- This section records the initial publication. Corrected source `0396bba0b01cf5dc743aecfc8fdece4e1d8063b4` is now deployed as Worker `ccdbbb4c-40e5-432a-89fe-62ab11645b85`; see the [final publication and checks](TELEO_PREVIEW_FOLLOW_FIX.md). Follow-up documentation commits do not alter the deployed application build.
 
 ## Changed files
 

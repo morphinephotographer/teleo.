@@ -150,6 +150,16 @@ export const en = {
   light: "Light",
   settings: "Reading settings",
   physical: "Physical remote",
+  r400: "Logitech R400 · keyboard preset",
+  r400Help:
+    "Connect the USB receiver. These shortcuts work only in the host Reader, using key codes in any layout. This preset cannot detect a connected device. Uncheck Enable keyboard remote to disable capture.",
+  r400Escape: "Browser fullscreen exit (not intercepted)",
+  enterFullscreen: "Enter browser fullscreen",
+  fullscreenUnavailable:
+    "Browser fullscreen is unavailable. Using the expanded reading view.",
+  fullscreenExitUnavailable:
+    "Could not leave browser fullscreen. Use Escape or the browser controls.",
+
   standard: "Standard",
   twoButton: "Two-button",
   custom: "Custom",
@@ -160,7 +170,7 @@ export const en = {
   learning: "Press a hardware key…",
   noKey: "No usable key event detected",
   keyHelp:
-    "Pair in system Bluetooth settings. Some buttons are reserved by the OS. Test here; this cannot identify a device.",
+    "Connect a USB receiver or pair in system Bluetooth settings. Some buttons are reserved by the OS. Test here; this cannot identify a device.",
   test: "Test input",
   reset: "Reset mappings",
   enabled: "Enable keyboard remote",
@@ -383,6 +393,16 @@ export const uk: Record<Key, string> = {
   light: "Світлий",
   settings: "Налаштування читання",
   physical: "Фізичний пульт",
+  r400: "Logitech R400 · клавіатурний профіль",
+  r400Help:
+    "Підключіть USB-приймач. Команди працюють лише в режимі читання на головному пристрої за кодами клавіш, незалежно від розкладки. Профіль не визначає підключення пульта. Вимкніть клавіатурний пульт, щоб припинити перехоплення.",
+  r400Escape: "Вихід із повноекранного режиму браузера (без перехоплення)",
+  enterFullscreen: "Повноекранний режим браузера",
+  fullscreenUnavailable:
+    "Повноекранний режим браузера недоступний. Відкрито розгорнутий режим читання.",
+  fullscreenExitUnavailable:
+    "Не вдалося вийти з повноекранного режиму. Скористайтеся Escape або керуванням браузера.",
+
   standard: "Стандартний",
   twoButton: "Дві кнопки",
   custom: "Власний",
@@ -393,7 +413,7 @@ export const uk: Record<Key, string> = {
   learning: "Натисніть апаратну клавішу…",
   noKey: "Придатної події клавіші не виявлено",
   keyHelp:
-    "Підключіть пульт у системних налаштуваннях Bluetooth. Деякі кнопки перехоплює ОС. Тут можна перевірити ввід, але не визначити пристрій.",
+    "Підключіть USB-приймач або пульт у системних налаштуваннях Bluetooth. Деякі кнопки перехоплює ОС. Тут можна перевірити ввід, але не визначити пристрій.",
   test: "Перевірити ввід",
   reset: "Скинути призначення",
   enabled: "Увімкнути клавіатурний пульт",
@@ -617,6 +637,16 @@ export const ru: Record<Key, string> = {
   light: "Светлое",
   settings: "Настройки чтения",
   physical: "Физический пульт",
+  r400: "Logitech R400 · клавиатурный профиль",
+  r400Help:
+    "Подключите USB-приёмник. Команды работают только в режиме чтения на ведущем устройстве по кодам клавиш, независимо от раскладки. Профиль не определяет подключение пульта. Отключите клавиатурный пульт, чтобы прекратить перехват.",
+  r400Escape: "Выход из полноэкранного режима браузера (без перехвата)",
+  enterFullscreen: "Полноэкранный режим браузера",
+  fullscreenUnavailable:
+    "Полноэкранный режим браузера недоступен. Открыт развёрнутый режим чтения.",
+  fullscreenExitUnavailable:
+    "Не удалось выйти из полноэкранного режима. Используйте Escape или управление браузера.",
+
   standard: "Стандартный",
   twoButton: "Две кнопки",
   custom: "Свой",
@@ -627,7 +657,7 @@ export const ru: Record<Key, string> = {
   learning: "Нажмите аппаратную клавишу…",
   noKey: "Подходящего события клавиши не обнаружено",
   keyHelp:
-    "Подключите пульт в системных настройках Bluetooth. Некоторые кнопки перехватывает ОС. Здесь можно проверить ввод, но нельзя определить устройство.",
+    "Подключите USB-приёмник или пульт в системных настройках Bluetooth. Некоторые кнопки перехватывает ОС. Здесь можно проверить ввод, но нельзя определить устройство.",
   test: "Проверить ввод",
   reset: "Сбросить назначения",
   enabled: "Включить клавиатурный пульт",

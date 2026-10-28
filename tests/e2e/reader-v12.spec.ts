@@ -19,7 +19,11 @@ test.beforeEach(async ({ page }) => {
     sessionStorage.setItem("teleo.intro.seen.v1", "true");
     localStorage.setItem("teleo.demo.auto", "false");
   });
-  await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
+  if (
+    !process.env.TELEO_READER_URL ||
+    new URL(process.env.TELEO_READER_URL).hostname === "127.0.0.1"
+  )
+    await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
   await page.emulateMedia({ reducedMotion: "reduce" });
 });
 async function create(page: Page) {

@@ -71,7 +71,7 @@ export function ReaderDock({
     <div
       ref={dock}
       onKeyDown={(e) => {
-        if (e.key === "Escape" && pane) {
+        if (e.key === "Escape" && pane && !document.fullscreenElement) {
           e.preventDefault();
           e.stopPropagation();
           closePane();

@@ -146,3 +146,7 @@ Use separate browser cohorts when testing the public relay: room creation is lim
 Reader typography now expands inside the playback dock and reserves space for the active text. On phones the minimal dock keeps Play/Pause visible; expand it for typography, timeline, paragraph controls, mirrors and countdown. Speed actions use exact 0.1× steps within 0.5–3.0×; valid legacy speeds and presets retain their actual values until explicitly adjusted. Paired remote typography and queued speed actions remain host-authoritative.
 
 Cross-engine local verification: `npx playwright test --config playwright.reader.config.ts` (installed Chromium, WebKit and Firefox). See [Reader verification and screenshots](docs/audits/TELEO_READER_UI_VERIFICATION.md). This feature work does not change the production release record above.
+
+## Logitech R400 keyboard preset
+
+Reading settings → Physical remote → Profile → Logitech R400. The USB presenter uses Period for Play/Pause, PageUp/PageDown for paragraphs and F5 to enter Reader DOM fullscreen; native Escape exit is never converted to playback or Reader exit in this preset. Enable/disable and selection use existing local settings. No USB discovery, driver or Bluetooth requirement. [Behavior and physical checklist](docs/LOGITECH_R400_SUPPORT.md) · [Verification and release record](docs/audits/LOGITECH_R400_VERIFICATION.md).

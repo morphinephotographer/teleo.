@@ -3,7 +3,7 @@ import dns from "node:dns";
 import type { TLSSocket } from "node:tls";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
-import { chooseSelect } from "./helpers";
+import { chooseSelect, prepareReader, readerTypography } from "./helpers";
 const production = process.env.TELEO_PRODUCTION_URL;
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>
@@ -199,6 +199,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       animations: "disabled",
     });
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await prepareReader(page, t);
     const dock = page.locator(".reader-controls");
     await dock.getByRole("button", { name: t.play, exact: true }).click();
     await expect
@@ -207,15 +208,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       )
       .toBeGreaterThan(0);
     await dock.getByRole("button", { name: t.pause, exact: true }).click();
-    await dock
-      .getByRole("slider", { name: t.fontSize, exact: true })
-      .fill("52");
-    await dock
-      .getByRole("slider", { name: t.lineHeight, exact: true })
-      .fill("1.5");
-    await dock
-      .getByRole("slider", { name: t.textWidth, exact: true })
-      .fill("900");
+    await (await readerTypography(page, t, "fontSize")).fill("52");
+    await (await readerTypography(page, t, "lineHeight")).fill("1.5");
+    await (await readerTypography(page, t, "textWidth")).fill("900");
     await dock.getByRole("button", { name: t.alignRight, exact: true }).click();
     await expect(page.locator(".reader article")).toHaveCSS(
       "font-size",
@@ -225,6 +220,12 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "text-align",
       "right",
     );
+    if (
+      !(await dock
+        .getByRole("button", { name: t.mirrorHorizontal, exact: true })
+        .isVisible())
+    )
+      await dock.getByRole("button", { name: t.timer, exact: true }).click();
     await dock
       .getByRole("button", { name: t.mirrorHorizontal, exact: true })
       .click();

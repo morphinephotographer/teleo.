@@ -66,6 +66,11 @@ import {
   type ReadingAnchor,
 } from "./reading-anchor";
 import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
+import { r400Keys, r400Shortcut, bindReaderKeyboard } from "./r400";
+import {
+  createReaderFullscreen,
+  type FullscreenFailure,
+} from "./reader-fullscreen";
 import "./style.css";
 const engine = new Playback();
 function download(name: string, text: string, type = "text/plain") {
@@ -120,6 +125,13 @@ function App() {
     initial?: string;
   } | null>(null);
   const [immersive, setImmersive] = useState(false);
+  const [fullscreenIssue, setFullscreenIssue] =
+    useState<FullscreenFailure | null>(null);
+  const fullscreenControl = useRef<ReturnType<
+    typeof createReaderFullscreen
+  > | null>(null);
+  const readerKey = useRef<(event: KeyboardEvent) => void>(() => {});
+  const readerRoot = useRef<HTMLElement>(null);
   const [focusPosition, setFocusPosition] = useState(
     () => Number(localGet("teleo.focusPosition")) || 35,
   );
@@ -476,7 +488,10 @@ function App() {
     ).map((el) => Math.max(0, el.offsetTop - root.offsetTop - 60));
   };
   const command = (c: Command) => {
-    if (c.action === "play" || (c.action === "togglePlay" && !engine.playing))
+    if (
+      (c.action === "play" || (c.action === "togglePlay" && !engine.playing)) &&
+      engine.countdown <= 0
+    )
       engine.countdown = currentRef.current?.preferences.countdownSeconds || 0;
     if (
       [
@@ -775,58 +790,71 @@ function App() {
     }, 10000);
     return () => clearTimeout(timer);
   }, [learn, testing]);
-  useEffect(() => {
-    const key = (e: KeyboardEvent) => {
-      if (intro || settingsOpen) {
-        if (!learn && !testing) return;
-      }
-      if (e.defaultPrevented) return;
-      const target = e.target as HTMLElement;
-      if (target.closest("dialog") && !learn && !testing) return;
-      const editable = !!target.closest(
-        "input,textarea,select,[contenteditable=true],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
-      );
-      if (e.key === "Escape" && reading && !settingsOpen) {
-        exitReader();
-        return;
-      }
+  readerKey.current = (e: KeyboardEvent) => {
+    if ((intro || settingsOpen) && !learn && !testing) return;
+    if (e.defaultPrevented) return;
+    const target = e.target instanceof Element ? e.target : document.body;
+    const editable = !!target.closest(
+      "input,textarea,select,[contenteditable=true],[role=dialog],[role=combobox],[role=listbox],[role=menu]",
+    );
+    if (learn || testing) {
       if (!keyboardSafe(e, editable, reading || !!learn || testing)) return;
-      if (learn || testing) {
-        e.preventDefault();
-        setKeyEvent(`${e.code} / ${e.key}`);
-        if (learn) {
-          if (mapping[e.code] && mapping[e.code] !== learn) {
-            setNotice("conflict");
-            return;
-          }
-          setMapping({ ...mapping, [e.code]: learn });
-          setLearn(null);
-        }
-        setTesting(false);
-        return;
-      }
-      if (!enabled) return;
-      const a = (profile === "standard" ? standardKeys : mapping)[e.code];
-      if (!a) return;
       e.preventDefault();
-      if (a === "mirror")
-        pref({
-          mirrorHorizontal: !currentRef.current?.preferences.mirrorHorizontal,
-        });
-      else if (a === "preset") {
-        const values = presets
-          .split(",")
-          .map(Number)
-          .filter((n) => n >= 0.5 && n <= 3);
-        command({
-          action: "setSpeed",
-          value: values.find((v) => v > engine.speed) ?? values[0] ?? 1,
-        });
-      } else command({ action: a });
-    };
-    window.addEventListener("keydown", key);
-    return () => window.removeEventListener("keydown", key);
-  });
+      setKeyEvent(`${e.code} / ${e.key}`);
+      if (learn) {
+        if (mapping[e.code] && mapping[e.code] !== learn) {
+          setNotice("conflict");
+          return;
+        }
+        setMapping({ ...mapping, [e.code]: learn });
+        setLearn(null);
+      }
+      setTesting(false);
+      return;
+    }
+    const blocked =
+      editable ||
+      Array.from(
+        document.querySelectorAll("dialog[open],[role=menu],[role=listbox]"),
+      ).some((el) => el.getClientRects().length > 0);
+    const hostReader = reading && route === "/studio";
+    if (enabled && profile === "r400" && hostReader) {
+      // Never turn the R400's alternate Escape into app exit or playback.
+      if (e.code === "Escape" || e.key === "Escape") return;
+      const result = r400Shortcut(e, { enabled, reader: hostReader, blocked });
+      if (result) {
+        e.preventDefault();
+        if (result.action === "enterFullscreen")
+          fullscreenControl.current?.enter(readerRoot.current);
+        else if (result.action) command({ action: result.action });
+      }
+      return;
+    }
+    if (!keyboardSafe(e, blocked, hostReader)) return;
+    if (e.key === "Escape") {
+      exitReader();
+      return;
+    }
+    if (!enabled) return;
+    const action = (profile === "standard" ? standardKeys : mapping)[e.code];
+    if (!action) return;
+    e.preventDefault();
+    if (action === "mirror")
+      pref({
+        mirrorHorizontal: !currentRef.current?.preferences.mirrorHorizontal,
+      });
+    else if (action === "preset") {
+      const values = presets
+        .split(",")
+        .map(Number)
+        .filter((n) => n >= 0.5 && n <= 3);
+      command({
+        action: "setSpeed",
+        value: values.find((n) => n > engine.speed) ?? values[0] ?? 1,
+      });
+    } else command({ action });
+  };
+  useEffect(() => bindReaderKeyboard(window, (e) => readerKey.current(e)), []);
   useEffect(() => {
     remote.current.onEvent = (e) => {
       const statuses: Record<string, Key> = {
@@ -1173,6 +1201,7 @@ function App() {
     await completed;
   }
   function editMode() {
+    setFullscreenIssue(null);
     engine.suspend();
     setReading(false);
     setImmersive(false);
@@ -1187,6 +1216,7 @@ function App() {
       void document.exitFullscreen().catch(() => {});
   }
   function exitReader() {
+    setFullscreenIssue(null);
     setLibraryOpen(libraryBeforeReading.current);
     localSet("teleo.position." + selected, String(engine.position));
     setReading(false);
@@ -1200,6 +1230,7 @@ function App() {
   }
   async function startReader() {
     await flush();
+    setFullscreenIssue(null);
     if (!reading) libraryBeforeReading.current = libraryOpen;
     setLibraryOpen(false);
     if (innerWidth <= 600 || (innerHeight <= 500 && innerWidth <= 1000))
@@ -1420,9 +1451,9 @@ function App() {
                 label={t("profile")}
                 value={profile}
                 onChange={setProfile}
-                options={(["standard", "twoButton", "custom"] as const).map(
-                  (value) => ({ value, label: t(value) }),
-                )}
+                options={(
+                  ["standard", "twoButton", "custom", "r400"] as const
+                ).map((value) => ({ value, label: t(value) }))}
               />
             </label>
             {profile === "twoButton" && (
@@ -1451,6 +1482,7 @@ function App() {
                 {button("learn", () => setLearn(learnAction))}
               </>
             )}
+            {profile === "r400" && <p>{t("r400Help")}</p>}
             {learn && <p role="status">{t("learning")}</p>}
             {button("test", () => {
               setTesting(true);
@@ -1458,13 +1490,23 @@ function App() {
             })}
             <output>{keyEvent || t(testing ? "learning" : "noKey")}</output>
             {Object.entries(
-              profile === "standard" ? standardKeys : mapping,
+              profile === "r400"
+                ? r400Keys
+                : profile === "standard"
+                  ? standardKeys
+                  : mapping,
             ).map(([key, a]) => (
               <p key={key}>
                 <kbd>{key}</kbd> → {t(a as Key)}
               </p>
             ))}
-            {button("reset", () => setMapping({}))}
+            {profile === "r400" ? (
+              <p>
+                <kbd>Escape</kbd> → {t("r400Escape")}
+              </p>
+            ) : (
+              button("reset", () => setMapping({}))
+            )}
           </details>
           {remoteStatus === "connected" ? (
             <>
@@ -1518,26 +1560,36 @@ function App() {
   );
 
   useEffect(() => {
-    const fullscreenChanged = () => {
-      if (!document.fullscreenElement) setImmersive(false);
+    const control = createReaderFullscreen(
+      document,
+      (active) => {
+        setImmersive(active);
+        setFullscreenIssue(null);
+      },
+      (operation) => {
+        setFullscreenIssue(operation);
+        if (operation === "enter" && !document.fullscreenElement)
+          setImmersive(true);
+      },
+    );
+    fullscreenControl.current = control;
+    return () => {
+      control.dispose();
+      fullscreenControl.current = null;
     };
-    document.addEventListener("fullscreenchange", fullscreenChanged);
-    return () =>
-      document.removeEventListener("fullscreenchange", fullscreenChanged);
   }, []);
   const toggleFullscreen = () => {
     if (document.fullscreenElement) {
-      void document.exitFullscreen().catch(() => {});
-      setImmersive(false);
+      fullscreenControl.current?.exit();
       return;
     }
     if (immersive) {
       setImmersive(false);
+      setFullscreenIssue(null);
       return;
     }
     setImmersive(true);
-    if (document.fullscreenEnabled)
-      void document.documentElement.requestFullscreen().catch(() => {});
+    fullscreenControl.current?.enter(readerRoot.current);
   };
   const controls = (
     <div
@@ -2014,6 +2066,7 @@ function App() {
         {!reading && current && route === "/studio" && controls}
         {reading && current && (
           <section
+            ref={readerRoot}
             className={
               "reader " +
               current.preferences.appearance +
@@ -2040,6 +2093,15 @@ function App() {
               )}
               {immersive && lang}
             </div>
+            {fullscreenIssue && (
+              <p className="reader-fullscreen-feedback" role="status">
+                {t(
+                  fullscreenIssue === "enter"
+                    ? "fullscreenUnavailable"
+                    : "fullscreenExitUnavailable",
+                )}
+              </p>
+            )}
             <div className="reader-stage">
               <div
                 className={

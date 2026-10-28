@@ -2,6 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 export default defineConfig({
   ...base,
+  use: {
+    ...base.use,
+    baseURL: process.env.TELEO_READER_URL || base.use?.baseURL,
+  },
+  webServer: process.env.TELEO_READER_URL ? undefined : base.webServer,
   testMatch: "reader-v12.spec.ts",
   outputDir: "test-results/reader-v12",
   workers: 1,

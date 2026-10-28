@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import { remoteValue, closeRemoteValue, chooseSelect } from "./helpers";
@@ -41,6 +42,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     test.setTimeout(90000);
     await create(page, locale);
     await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
     await page
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -158,7 +160,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await ack("speedUp", () =>
       phone.getByRole("button", { name: t.speedUp, exact: true }).click(),
     );
-    await expect(phone.locator(".remote-speed")).toHaveText("1.25×");
+    await expect(phone.locator(".remote-speed")).toHaveText("1.1×");
     await ack("speedDown", () =>
       phone.getByRole("button", { name: t.speedDown, exact: true }).click(),
     );
@@ -595,6 +597,7 @@ test("empty/edited script, stale target, private control and persisted typograph
   ).toBeVisible();
   await page.reload();
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await expect(page.locator(".reader article")).toHaveCSS("font-size", "68px");
   await context.close();
 });

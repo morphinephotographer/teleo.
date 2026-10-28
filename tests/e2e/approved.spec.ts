@@ -1,3 +1,5 @@
+import { readerTypography } from "./helpers";
+import { prepareReader } from "./helpers";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import {
@@ -73,6 +75,7 @@ for (const locale of ["en", "uk", "ru"] as const)
     await dock.getByRole("button", { name: t.alignLeft, exact: true }).click();
     await dock.getByRole("button", { name: t.play, exact: true }).click();
     await expect(page.locator(".reader")).toBeVisible();
+    await prepareReader(page, t);
     await page
       .locator(".reader-controls")
       .getByRole("button", { name: t.pause, exact: true })
@@ -323,10 +326,7 @@ test("queued typography and alignment gestures are cancelled when the host switc
   await page
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Paragraph A.\n\n".repeat(100));
-  await page
-    .locator(".reader-controls")
-    .getByRole("slider", { name: t.fontSize, exact: true })
-    .fill("68");
+  await (await readerTypography(page, t, "fontSize")).fill("68");
   if (!(await page.locator(".library").isVisible()))
     await page
       .locator("header")
@@ -343,6 +343,7 @@ test("queued typography and alignment gestures are cancelled when the host switc
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Paragraph B.\n\n".repeat(100));
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await page
     .locator("header")
     .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -377,6 +378,7 @@ test("queued typography and alignment gestures are cancelled when the host switc
   await expect(font).toHaveValue("68");
   await expect(page.locator(".reader article")).toHaveCSS("font-size", "68px");
   await closeRemoteValue(phone, t);
+  await readerTypography(page, t, "fontSize");
   await page
     .locator(".reader-controls")
     .getByRole("button", { name: t.alignCenter, exact: true })

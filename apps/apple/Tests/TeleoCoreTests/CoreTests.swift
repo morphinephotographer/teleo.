@@ -22,6 +22,21 @@ final class CoreTests: XCTestCase {
     }
     XCTAssertFalse(gate.accept(first, now: 101))
   }
+  func testExactTenthsAndLegacySpeed() {
+    var p = Playback()
+    p.maximum = 1000; p.position = 320; p.countdown = 2
+    p.dispatch(Command(.speedUp)); XCTAssertEqual(p.speed, 1.1)
+    for _ in 0..<9 { p.dispatch(Command(.speedUp)) }; XCTAssertEqual(p.speed, 2)
+    for _ in 0..<10 { p.dispatch(Command(.speedDown)) }; XCTAssertEqual(p.speed, 1)
+    XCTAssertEqual(p.position, 320); XCTAssertEqual(p.countdown, 2); XCTAssertFalse(p.playing)
+    p.speed = 0.75; XCTAssertEqual(speedLabel(p.speed), "0.75")
+    p.dispatch(Command(.speedUp)); XCTAssertEqual(p.speed, 0.8)
+    p.speed = 0.85; p.dispatch(Command(.speedDown)); XCTAssertEqual(p.speed, 0.8)
+    XCTAssertEqual(speedLabel(1), "1.0")
+    XCTAssertEqual(steppedSpeed(2.9, direction: 1, minimum: 0.55, maximum: 2.95), 2.9)
+    p.countdown = 1; p.playing = true; p.tick(0); p.tick(0.02)
+    p.dispatch(Command(.speedUp)); p.tick(0.04); XCTAssertEqual(p.countdown, 0.96, accuracy: 0.000001)
+  }
   func testCanonicalFixture() throws {
     var root = URL(fileURLWithPath: #filePath)
     for _ in 0..<5 { root.deleteLastPathComponent() }

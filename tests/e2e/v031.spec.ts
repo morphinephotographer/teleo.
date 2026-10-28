@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { test, expect, type Page, type Locator } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import {
@@ -295,6 +296,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await page.evaluate(() =>
     Object.defineProperty(document, "fullscreenEnabled", {
       value: false,
@@ -302,7 +304,7 @@ test("picker positioning at every required viewport; outside/Escape and dark she
     }),
   );
   await page
-    .locator(".reader-controls")
+    .locator(".reader-top")
     .getByRole("button", { name: t.fullscreen, exact: true })
     .click();
   const immersiveLanguage = page
@@ -390,6 +392,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     test.setTimeout(60000);
     await create(page, locale);
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await prepareReader(page, t);
     await page
       .locator(".reader")
       .getByRole("button", { name: t.connect, exact: true })
@@ -515,7 +518,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     });
     const wing = phone.getByRole("button", { name: t.speedUp, exact: true });
     await acknowledged("speedUp", () => wing.click());
-    await expect(phone.locator(".remote-speed")).toContainText("1.25");
+    await expect(phone.locator(".remote-speed")).toContainText("1.1");
     await acknowledged("play", () =>
       phone.getByRole("button", { name: t.play, exact: true }).click(),
     );
@@ -589,6 +592,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "Updated live words.",
     );
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await prepareReader(page, t);
     await managePhone(page, t);
     await page
       .getByRole("checkbox", { name: t.allowPreview, exact: true })

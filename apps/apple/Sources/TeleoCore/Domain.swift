@@ -1,5 +1,14 @@
 import Foundation
 
+public func steppedSpeed(_ value: Double, direction: Int, minimum: Double = 0.5, maximum: Double = 3) -> Double {
+  guard value.isFinite, minimum.isFinite, maximum.isFinite, minimum <= maximum else { return value }
+  let scaled = value * 10, nearest = scaled.rounded()
+  let tick = abs(scaled-nearest) < 1e-9 ? nearest + Double(direction) : direction > 0 ? floor(scaled)+1 : ceil(scaled)-1
+  return tick >= ceil(minimum*10-1e-9) && tick <= floor(maximum*10+1e-9) ? tick/10 : value
+}
+public func speedLabel(_ value: Double) -> String {
+  abs(value*10-(value*10).rounded()) < 1e-9 ? String(format: "%.1f", locale: Locale(identifier: "en_US_POSIX"), value) : String(value)
+}
 public struct ReadingPreferences: Codable, Equatable, Sendable {
   public var speed = 1.0
   public var fontSize = 40.0
@@ -90,9 +99,9 @@ public struct Playback: Sendable {
       position = 0
       playing = false
       countdown = 0
-    case .speedUp: speed = min(3, speed + 0.25)
-    case .speedDown: speed = max(0.5, speed - 0.25)
-    case .setSpeed: speed = c.value!
+    case .speedUp: speed = steppedSpeed(speed, direction: 1); return true
+    case .speedDown: speed = steppedSpeed(speed, direction: -1); return true
+    case .setSpeed: speed = c.value!; return true
     case .previousParagraph: position = paragraphs.last(where: { $0 < position - 2 }) ?? 0
     case .nextParagraph: position = paragraphs.first(where: { $0 > position + 2 }) ?? maximum
     case .scrollBack: position -= 100

@@ -3462,3 +3462,343 @@ input[type="checkbox"] {
 .app-shell > header > .language-control {
   margin-left: auto;
 }
+
+/* v1.2 Reader: controls reserve real layout space; the active line is never behind a panel. */
+.reader-controls.reader-dock {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+  gap: 0;
+  width: min(1000px, calc(100% - 24px));
+  padding: 8px 12px;
+  margin: 8px auto 12px;
+  border-radius: var(--radius-base);
+  background: #202122;
+  color: #f5f5f3;
+}
+.reader-dock .dock-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.reader-dock .icon-button,
+.reader-dock .dock-aa,
+.reader-dock .dock-expand {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  flex: 0 0 44px;
+}
+.reader-dock .dock-play {
+  width: 52px;
+  height: 52px;
+  flex-basis: 52px;
+  min-height: 52px;
+  background: #f1f0ed;
+  color: #080909;
+}
+.reader-dock .dock-main-row > .dock-group {
+  border: 0;
+  padding: 0;
+}
+.reader-dock .speed-group output {
+  font-size: 14px;
+  min-width: 48px;
+  color: inherit;
+}
+.reader-dock .aa-glyph {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.08em;
+}
+.reader-dock .dock-inline-panel {
+  width: min(580px, 100%);
+  padding: 0 8px 8px;
+  margin: 0 auto 8px;
+  border-bottom: 1px solid #ffffff15;
+  max-height: min(36dvh, 250px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.reader-dock .dock-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.reader-dock .dock-text-tabs {
+  display: flex;
+  gap: 4px;
+}
+.reader-dock .dock-live-slider {
+  display: grid;
+  grid-template-columns: 28px minmax(40px, 1fr) 62px;
+  gap: 14px;
+  align-items: center;
+  min-height: 48px;
+}
+.reader-dock .dock-live-slider input {
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  accent-color: #eee;
+}
+.reader-dock .dock-live-slider output {
+  font-size: 13px;
+  text-align: right;
+}
+.reader-dock .alignment-control {
+  background: #303132;
+  border-color: #3b3c3d;
+  --surface: #202122;
+  --ink: #eee;
+}
+.reader-dock .alignment-control button {
+  color: #eee;
+}
+.reader-dock .alignment-control button[aria-pressed="true"] {
+  color: #111;
+}
+.reader-dock .dock-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.reader-dock .dock-countdown {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+}
+.reader-dock .dock-countdown button {
+  min-height: 44px;
+  background: #303132;
+  border: 0;
+  color: inherit;
+  padding: 8px 12px;
+}
+.reader-dock .dock-countdown button[aria-pressed="true"] {
+  background: #eee;
+  color: #111;
+}
+.reader-dock .dock-seek.seek {
+  height: 24px !important;
+  min-height: 24px;
+  margin: 0 12px !important;
+  width: calc(100% - 24px) !important;
+  accent-color: #ddd;
+}
+.reader-dock.minimal {
+  width: auto;
+  max-width: calc(100% - 24px);
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+}
+.reader-dock.minimal .dock-main-row {
+  flex-wrap: nowrap;
+  gap: 12px;
+}
+.reader-dock.compact.expanded {
+  padding: 6px 8px;
+}
+.reader-dock.compact .dock-main-row {
+  gap: 0;
+}
+.reader-dock.compact .dock-inline-panel {
+  padding: 0 4px 6px;
+  margin-bottom: 4px;
+}
+.reader.light .reader-dock {
+  background: #e9e9eb;
+  color: #111;
+  border-color: #d3d3d6;
+}
+.reader.light .reader-dock .dock-play {
+  background: #111;
+  color: #fff;
+}
+.reader.light .reader-dock .dock-inline-panel {
+  border-color: #1112;
+}
+.reader.light .reader-dock .dock-live-slider input {
+  accent-color: #111;
+}
+.reader-dock :focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -3px;
+}
+/* Latest approved paired Remote; quick typography is in flow, with Play/Pause above it. */
+.remote-v12 .remote-script-title {
+  flex: 0 0 auto;
+  padding: 4px 0 0;
+}
+.remote-v12 .remote-script-title span {
+  display: block;
+  color: #999;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.remote-v12 .remote-script-title strong {
+  font-size: 17px;
+  font-weight: 550;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.remote-v12 .remote-text {
+  min-height: 40px;
+  padding-top: 4px;
+}
+.remote-v12 .remote-playback > button {
+  border: 0;
+}
+.remote-v12 .remote-paragraphs button {
+  border: 0;
+  border-radius: var(--radius-base);
+}
+.remote-v12 .remote-quick-trigger {
+  border: 0;
+}
+.remote-v12 .remote-quick-menu {
+  position: static;
+  inset: auto;
+  transform: none;
+  width: 100%;
+  flex: 0 1 auto;
+  max-height: min(260px, 44dvh);
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  padding: 6px 12px 10px;
+  border-radius: var(--radius-base);
+  display: flex;
+  flex-direction: column;
+  background: #202122;
+  overflow: hidden;
+}
+.remote-v12 .remote-inline-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 36px;
+}
+.remote-v12 .remote-inline-heading h2 {
+  font-size: 18px;
+  font-weight: 500;
+  margin: 0;
+}
+.remote-v12 .remote-inline-heading .icon-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+}
+.remote-v12 .quick-typography {
+  overflow: auto;
+  min-height: 0;
+}
+.remote-v12 .quick-slider {
+  min-height: 44px;
+  grid-template-columns: 36px minmax(40px, 1fr) 42px;
+  gap: 10px;
+}
+.remote-v12 .quick-symbol {
+  width: 36px;
+  height: 36px;
+}
+.remote-v12 .quick-alignment {
+  padding-top: 4px;
+}
+.remote-v12.current-text .remote-text {
+  font-size: 22px !important;
+}
+.remote-v12.current-text .remote-text p[aria-current="true"] {
+  background: #202122;
+  border-radius: var(--radius-base);
+  padding: 12px;
+}
+.remote-v12.current-text .remote-playback {
+  flex-basis: 76px;
+}
+.remote-v12.current-text .remote-playback > button {
+  width: 64px;
+  height: 64px;
+}
+.remote-v12.current-text .remote-playback > .remote-main-play {
+  width: 76px;
+  height: 76px;
+}
+.remote-v12 .remote-text-back {
+  align-self: center;
+  border: 0;
+  background: #202122;
+  color: inherit;
+  min-height: 44px;
+  padding: 8px 20px;
+}
+.remote-v12 .remote-reconnect {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  text-align: center;
+  gap: 12px;
+}
+.remote-v12 .remote-reconnect > svg {
+  width: 90px;
+  height: 90px;
+  color: #6f7072;
+  margin: 0 0 10px;
+}
+.remote-v12 .remote-reconnect h2 {
+  font-size: 24px;
+  margin: 0;
+}
+.remote-v12 .remote-reconnect p {
+  font-size: 14px;
+  color: #aaa;
+  line-height: 1.5;
+}
+.remote-v12 .remote-reconnect button {
+  min-height: 48px;
+  border: 0;
+  background: #eee;
+  color: #111;
+  width: 100%;
+}
+@media (max-height: 720px) and (orientation: portrait) {
+  .remote-v12.controller {
+    gap: 5px;
+  }
+  .remote-v12 .remote-script-title strong {
+    font-size: 15px;
+  }
+  .remote-v12 .remote-script-title span {
+    font-size: 9px;
+    margin-bottom: 2px;
+  }
+}
+@media (orientation: landscape) and (max-height: 600px) {
+  .remote-v12 .remote-script-title {
+    display: none;
+  }
+  .remote-v12 .remote-quick-menu {
+    grid-column: 1;
+    grid-row: 2/6;
+    max-height: 100%;
+    align-self: stretch;
+    z-index: 2;
+  }
+  .remote-v12 .remote-text-back {
+    grid-column: 2;
+    grid-row: 5;
+  }
+}

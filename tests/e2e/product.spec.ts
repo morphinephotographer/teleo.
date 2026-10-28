@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { openSettings, closeSettings, managePhone } from "./helpers";
 import { chooseSelect } from "./helpers";
 import { test, expect } from "@playwright/test";
@@ -68,6 +69,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       page.getByRole("textbox", { name: "Your words", exact: true }),
     ).toHaveValue(body + " ");
     await page.getByRole("button", { name: "Read", exact: true }).click();
+    await prepareReader(page, dictionaries.en);
     await page.getByRole("button", { name: "Play", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "Pause", exact: true }),
@@ -128,6 +130,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("textbox", { name: t.body, exact: true })
       .fill("Paragraph\n\n".repeat(100));
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await prepareReader(page, t);
     await page
       .locator(".reader")
       .getByRole("button", { name: t.connect })
@@ -247,7 +250,7 @@ test("physical remote two-button learning, conflict and reader dispatch", async 
   ).toBeVisible();
   await page.keyboard.press("b");
   await expect(page.locator(".reader-controls .speed-group output")).toHaveText(
-    "1.25×",
+    "1.25×", // Button B cycles the preserved preset list; it is not a speed step.
   );
   await page.keyboard.press("a");
   await expect(

@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { disconnectPhone, managePhone } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
@@ -76,6 +77,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("textbox", { name: t.body, exact: true })
       .fill("Staging QA 🌍\n\n".repeat(100));
     await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
     await page
       .locator(".reader")
       .getByRole("button", { name: t.connect })

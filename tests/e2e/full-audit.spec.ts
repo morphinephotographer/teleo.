@@ -1,3 +1,5 @@
+import { readerTypography } from "./helpers";
+import { prepareReader } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 const t = dictionaries.en;
@@ -110,6 +112,7 @@ test("Back dismisses a modal and fullscreen rejection does not break editing", a
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Read this safely.");
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await page.evaluate(() => {
     Object.defineProperty(document, "fullscreenElement", {
       configurable: true,
@@ -174,6 +177,7 @@ test("responsive editor, reading, language menus and remote at six sizes plus la
       path: `docs/screenshots/full-audit-${info.project.name}-studio-${width}x${height}.png`,
     });
     await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
     await page
       .locator(".reader-controls")
       .getByRole("button", { name: t.play, exact: true })
@@ -187,10 +191,7 @@ test("responsive editor, reading, language menus and remote at six sizes plus la
       .locator(".reader-controls")
       .getByRole("button", { name: t.pause, exact: true })
       .click();
-    await page
-      .locator(".reader-controls")
-      .getByRole("slider", { name: t.fontSize, exact: true })
-      .fill("52");
+    await (await readerTypography(page, t, "fontSize")).fill("52");
     await expect(page.locator(".reader article")).toHaveCSS(
       "font-size",
       "52px",

@@ -133,7 +133,6 @@ struct ReaderView: View {
   @FocusState private var focused: Bool
   @FocusState private var learningFocus: Bool
   @FocusState private var presetEditing: Bool
-  @State private var controlsVisible = true
   var body: some View {
     let prefs = script.preferences
     VStack(spacing: 0) {
@@ -171,7 +170,9 @@ struct ReaderView: View {
           }
         }
         if prefs.focusLine {
-          Rectangle().fill(Color(red: 0.3, green: 0.49, blue: 1).opacity(0.4)).frame(height: 1)
+          Rectangle()
+            .fill((prefs.appearance == "light" ? Color.black : Color.white).opacity(0.25))
+            .frame(height: 1)
             .allowsHitTesting(false).offset(y: -70)
         }
         if model.playback.countdown > 0 {
@@ -182,8 +183,7 @@ struct ReaderView: View {
       ViewThatFits(in: .horizontal) {
         controls
         ScrollView(.horizontal) { controls }
-      }.padding(8).opacity(controlsVisible ? 1 : 0).allowsHitTesting(controlsVisible)
-        .accessibilityHidden(!controlsVisible)
+      }.padding(8)
       if model.playback.maximum > 0 {
         Slider(
           value: Binding(
@@ -306,14 +306,6 @@ struct ReaderView: View {
         return model?.playback ?? Playback()
       }
     }
-    .onTapGesture { controlsVisible = true }
-    .task(id: model.playback.playing) {
-      controlsVisible = true
-      if model.playback.playing {
-        do { try await Task.sleep(for: .seconds(4)) } catch { return }
-        controlsVisible = false
-      }
-    }
     .onChange(of: model.playback.speed) { _, speed in
       var p = script.preferences
       p.speed = speed
@@ -343,7 +335,7 @@ struct ReaderView: View {
       }
       Button("Restart") { model.dispatch(Command(.restart)) }
       Button("−") { model.dispatch(Command(.speedDown)) }.accessibilityLabel("Slower")
-      Text("\(model.playback.speed.formatted())×").monospacedDigit()
+      Text("\(speedLabel(model.playback.speed))×").monospacedDigit()
       Button("+") { model.dispatch(Command(.speedUp)) }.accessibilityLabel("Faster")
       Button("Previous") { model.dispatch(Command(.previousParagraph)) }
       Button("Next") { model.dispatch(Command(.nextParagraph)) }

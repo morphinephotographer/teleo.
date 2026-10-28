@@ -9,6 +9,7 @@ import {
   type ControlCommand,
   type ControlValues,
 } from "../../../packages/protocol/control";
+import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
 import { type Key } from "./i18n";
 import { Wordmark } from "./Wordmark";
 import { AlignmentControl, type Alignment } from "./AlignmentControl";
@@ -85,6 +86,14 @@ function HostSlider({
         onPointerUp={() => {
           active.current = false;
           flush();
+          setDraft(null);
+        }}
+        onPointerCancel={() => {
+          active.current = false;
+          pending.current = null;
+          clearTimeout(timer.current);
+          timer.current = undefined;
+          setDraft(null);
         }}
         onChange={(e) => {
           const next = Number(e.target.value);
@@ -157,7 +166,11 @@ export function RemoteController({
     return () => document.removeEventListener("fullscreenchange", changed);
   }, []);
   useEffect(() => {
-    if (!connected) setScrub(null);
+    if (!connected) {
+      setScrub(null);
+      setQuick(false);
+      setExpanded(false);
+    }
   }, [connected]);
   useEffect(() => {
     setScrub(null);
@@ -212,10 +225,23 @@ export function RemoteController({
     if (active && scroll.current) {
       const a = active.getBoundingClientRect(),
         r = scroll.current.getBoundingClientRect();
-      if (a.top < r.top || a.bottom > r.bottom)
-        active.scrollIntoView({ block: "center", behavior: "auto" });
+      if (a.top < r.top || a.bottom > r.bottom) {
+        // Scroll only the preview, never the page or its fixed playback controls.
+        scroll.current.scrollTop +=
+          a.top -
+          r.top -
+          Math.max(0, (scroll.current.clientHeight - a.height) / 2);
+      }
     }
-  }, [index, preview.script?.revision, expanded]);
+  }, [
+    index,
+    preview.script?.revision,
+    expanded,
+    quick,
+    visibleText,
+    c?.fontSize,
+    c?.lineHeight,
+  ]);
   const act = (action: ControlCommand) => {
     if (!connected) return;
     feedback();
@@ -260,10 +286,24 @@ export function RemoteController({
       act({ action: "seek", target: c.target, value: scrub });
     setScrub(null);
   };
+  const lost = !!status && !["connecting", "waiting"].includes(status);
   const text = !connected ? (
-    <p className="remote-empty" role="status">
-      {t(status || "pairHelp")}
-    </p>
+    <div className="remote-empty remote-reconnect">
+      <Icon name="monitor" />
+      <h2>{t(lost ? "connectionLost" : "pairHelp")}</h2>
+      <p role="status">{t(status || "pairHelp")}</p>
+      {lost && (
+        <button
+          type="button"
+          onClick={() => {
+            setDetail("connection");
+            setAdvanced(true);
+          }}
+        >
+          {t("reconnect")}
+        </button>
+      )}
+    </div>
   ) : !preview.allowed ? (
     <div className="remote-empty">
       <h2>{t("previewPrivate")}</h2>
@@ -339,7 +379,9 @@ export function RemoteController({
       ));
   }
   return (
-    <main className={`controller remote-v06${filling ? " viewport-fill" : ""}`}>
+    <main
+      className={`controller remote-v06 remote-v12${expanded ? " current-text" : ""}${filling ? " viewport-fill" : ""}`}
+    >
       <header className="remote-header">
         <Wordmark />
         <span
@@ -363,6 +405,16 @@ export function RemoteController({
         />
         {!advanced && language}
       </header>
+      {connected &&
+        preview.allowed &&
+        preview.script &&
+        visibleText &&
+        !expanded && (
+          <div className="remote-script-title">
+            <span>{t("currentScriptLabel")}</span>
+            <strong>{preview.script.title}</strong>
+          </div>
+        )}
       <div
         className="remote-text"
         ref={scroll}
@@ -422,7 +474,9 @@ export function RemoteController({
         <IconButton
           name="minus"
           label={t("speedDown")}
-          disabled={!connected || state.speed <= 0.5}
+          disabled={
+            !connected || !c || stepSpeed(state.speed, -1) === state.speed
+          }
           onClick={() => act({ action: "speedDown" })}
         />
         <button
@@ -436,76 +490,90 @@ export function RemoteController({
         <IconButton
           name="plus"
           label={t("speedUp")}
-          disabled={!connected || state.speed >= 3}
+          disabled={
+            !connected || !c || stepSpeed(state.speed, 1) === state.speed
+          }
           onClick={() => act({ action: "speedUp" })}
         />
       </div>
       <output className="remote-speed" aria-label={t("speed")}>
-        {state.speed.toFixed(2).replace(/0$/, "")}×
+        {connected && c ? `${formatSpeed(state.speed)}×` : "—"}
       </output>
-      <div className="remote-paragraphs">
-        <IconButton
-          name="paragraphPrevious"
-          label={t("previousParagraph")}
-          disabled={!connected}
-          onClick={() => act({ action: "previousParagraph" })}
-        />
-        <IconButton
-          name="paragraphNext"
-          label={t("nextParagraph")}
-          disabled={!connected}
-          onClick={() => act({ action: "nextParagraph" })}
-        />
-      </div>
-      <button
-        ref={quickTrigger}
-        className="remote-quick-trigger"
-        aria-label={t("quickSettings")}
-        aria-expanded={quick}
-        aria-controls="remote-quick"
-        onClick={() => (quick ? closeQuick() : setQuick(true))}
-      >
-        <Icon name="settings" />
-      </button>
-      <Sheet
-        id="remote-quick"
-        open={quick}
-        className="remote-quick-menu"
-        title={t("textSettings")}
-        closeLabel={t("close")}
-        onClose={closeQuick}
-      >
-        <div className="sheet-handle" aria-hidden="true" />
-        <div ref={quickRef} className="quick-typography">
-          {(
-            [
-              ["fontSize", "size", 16, 100, 1],
-              ["lineHeight", "spacing", 1, 3, 0.1],
-              ["textWidth", "width", 280, 1600, 10],
-            ] as const
-          ).map(([key, icon, min, max, step]) => (
-            <HostSlider
-              key={(c?.target || "none") + key}
-              name={t(key)}
-              icon={icon}
-              min={min}
-              max={max}
-              step={step}
-              value={c?.[key] || min}
-              disabled={!connected || !c}
-              onChange={(v) => pref(key, v)}
-            />
-          ))}
-          <div className="quick-alignment">
-            <AlignmentControl
-              t={t}
-              value={c?.alignment}
-              disabled={!connected || !c?.alignment}
-              onChange={align}
-            />
-          </div>
+      {!quick && (
+        <div className="remote-paragraphs">
+          <IconButton
+            name="paragraphPrevious"
+            label={t("previousParagraph")}
+            disabled={!connected}
+            onClick={() => act({ action: "previousParagraph" })}
+          />
+          <IconButton
+            name="paragraphNext"
+            label={t("nextParagraph")}
+            disabled={!connected}
+            onClick={() => act({ action: "nextParagraph" })}
+          />
         </div>
-      </Sheet>
+      )}
+      {!quick && (
+        <button
+          ref={quickTrigger}
+          className="remote-quick-trigger"
+          aria-label={t("quickSettings")}
+          aria-expanded={quick}
+          aria-controls="remote-quick"
+          onClick={() => (quick ? closeQuick() : setQuick(true))}
+        >
+          <Icon name="settings" />
+        </button>
+      )}
+      {expanded && !quick && (
+        <button className="remote-text-back" onClick={() => setExpanded(false)}>
+          {t("back")}
+        </button>
+      )}
+      {quick && (
+        <section
+          id="remote-quick"
+          className="remote-quick-menu"
+          aria-label={t("textSettings")}
+          role="region"
+        >
+          <div className="remote-inline-heading">
+            <h2>{t("textSettings")}</h2>
+            <IconButton name="close" label={t("close")} onClick={closeQuick} />
+          </div>
+          <div ref={quickRef} className="quick-typography">
+            {(
+              [
+                ["fontSize", "size", 16, 100, 1],
+                ["lineHeight", "spacing", 1, 3, 0.1],
+                ["textWidth", "width", 280, 1600, 10],
+              ] as const
+            ).map(([key, icon, min, max, step]) => (
+              <HostSlider
+                key={(c?.target || "none") + key}
+                name={t(key)}
+                icon={icon}
+                min={min}
+                max={max}
+                step={step}
+                value={c?.[key] || min}
+                disabled={!connected || !c}
+                onChange={(v) => pref(key, v)}
+              />
+            ))}
+            <div className="quick-alignment">
+              <AlignmentControl
+                t={t}
+                value={c?.alignment}
+                disabled={!connected || !c?.alignment}
+                onChange={align}
+              />
+            </div>
+          </div>
+        </section>
+      )}
       <Sheet
         open={advanced}
         className="remote-advanced remote-settings-page"
@@ -683,15 +751,6 @@ export function RemoteController({
             </section>
           )}
         </div>
-      </Sheet>
-      <Sheet
-        open={expanded}
-        className="remote-expanded"
-        title={t("textSettings")}
-        closeLabel={t("close")}
-        onClose={() => setExpanded(false)}
-      >
-        <div className="remote-expanded-text">{text}</div>
       </Sheet>
     </main>
   );

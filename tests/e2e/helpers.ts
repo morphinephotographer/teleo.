@@ -91,6 +91,22 @@ export async function setTimer(
   t: typeof dictionaries.en,
   n: number,
 ) {
+  if (await page.locator(".reader-dock").isVisible()) {
+    await prepareReader(page, t);
+    const tools = page.locator(".dock-countdown");
+    if (!(await tools.isVisible()))
+      await page
+        .locator(".reader-dock")
+        .getByRole("button", { name: t.timer, exact: true })
+        .click();
+    await tools
+      .getByRole("button", {
+        name: n ? `${n} ${t.seconds}` : t.off,
+        exact: true,
+      })
+      .click();
+    return;
+  }
   await page
     .locator(".reader-controls")
     .getByRole("button", { name: t.timer, exact: true })
@@ -99,4 +115,37 @@ export async function setTimer(
     .getByRole("menuitem")
     .filter({ hasText: n ? `${n} ${t.seconds}` : t.off })
     .click();
+}
+
+/** Legacy workspace scenarios deliberately use windowed Reader; dedicated v1.2 tests cover viewport fill. */
+export async function prepareReader(page: Page, t: typeof dictionaries.en) {
+  await expect(page.locator(".reader")).toBeVisible();
+  if (await page.locator(".app-shell.immersive").count())
+    await page
+      .locator(".reader-top")
+      .getByRole("button", { name: t.fullscreen, exact: true })
+      .click();
+  const expand = page
+    .locator(".reader-dock")
+    .getByRole("button", { name: t.expandControls, exact: true });
+  if (await expand.isVisible()) await expand.click();
+}
+export async function readerTypography(
+  page: Page,
+  t: typeof dictionaries.en,
+  key: "fontSize" | "lineHeight" | "textWidth",
+) {
+  const dock = page.locator(".reader-dock");
+  if (await dock.isVisible()) {
+    await prepareReader(page, t);
+    if (!(await page.locator(".dock-text-tabs").isVisible()))
+      await dock.locator(".dock-aa").click();
+    await dock
+      .locator(".dock-text-tabs")
+      .getByRole("button", { name: t[key], exact: true })
+      .click();
+  }
+  return page
+    .locator(".reader-controls")
+    .getByRole("slider", { name: t[key], exact: true });
 }

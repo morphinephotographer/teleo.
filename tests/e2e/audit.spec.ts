@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { remoteValue, chooseSelect } from "./helpers";
 import { dictionaries } from "../../apps/web/src/i18n";
@@ -226,6 +227,7 @@ test("a queued typography frame cannot change a newly selected script playhead",
   );
   await chooseSelect(selector, aId);
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await page
     .locator("header")
     .getByRole("button", { name: t.remoteConnection, exact: true })

@@ -402,7 +402,12 @@ struct ReadingSettings: View {
   var body: some View {
     NavigationStack {
       Form {
-        LabeledContent("Speed") { Slider(value: number(\.speed), in: 0.5...3, step: 0.25) }
+        LabeledContent("Speed") {
+          VStack {
+            Text("\(speedLabel(script.preferences.speed))×")
+            Slider(value: number(\.speed), in: 0.5...3, step: 0.1)
+          }
+        }
         LabeledContent("Text size") { Slider(value: number(\.fontSize), in: 16...100) }
         LabeledContent("Line spacing") { Slider(value: number(\.lineHeight), in: 1...3) }
         LabeledContent("Text width") { Slider(value: number(\.textWidth), in: 280...1600) }
@@ -504,7 +509,7 @@ struct NativeControllerView: View {
             ], id: \.self
           ) { action in Button(action.rawValue) { link.command(action) }.frame(minHeight: 44) }
           if let ack = link.ack {
-            Text("ACK · \(ack.speed.formatted())× · \(ack.playing ? "Playing" : "Paused")")
+            Text("ACK · \(speedLabel(ack.speed))× · \(ack.playing ? "Playing" : "Paused")")
           }
         }
         Button("Disconnect") { link.stop() }

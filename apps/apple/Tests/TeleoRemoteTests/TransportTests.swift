@@ -32,7 +32,7 @@ final class TransportTests: XCTestCase {
     try await wait { phone.ack?.playing == true }
     XCTAssertTrue(playback.playing)
     phone.command(.speedUp)
-    try await wait { phone.ack?.speed == 1.25 }
+    try await wait { phone.ack?.speed == 1.1 }
     host.stop()
     try await wait { phone.status.contains("Disconnected") }
     XCTAssertTrue(playback.playing)

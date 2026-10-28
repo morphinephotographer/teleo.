@@ -19,6 +19,7 @@
     "tests",
     "vite.config.ts",
     "playwright.config.ts",
+    "playwright.reader.config.ts",
     "playwright.staging.config.ts",
     "playwright.redesign-staging.config.ts",
     "playwright.v031-staging.config.ts",

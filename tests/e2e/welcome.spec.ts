@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 import { welcomeBodies } from "../../apps/web/src/welcome";
@@ -213,6 +214,7 @@ test("edited demo is retained beside one fresh restored demo, with playback and 
     .click();
   await expect(body).toHaveValue(welcomeBodies.en);
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   const dock = page.locator(".reader-controls");
   await dock
     .getByRole("button", { name: t.nextParagraph, exact: true })

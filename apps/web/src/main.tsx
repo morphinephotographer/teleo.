@@ -2,6 +2,7 @@ import React, {
   useCallback,
   useEffect,
   useMemo,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -58,6 +59,13 @@ import {
   type PreviewPermission,
   type PreviewEnvelope,
 } from "../../../packages/protocol/preview";
+import { ReaderDock } from "./ReaderDock";
+import {
+  captureAnchor,
+  restoreAnchor,
+  type ReadingAnchor,
+} from "./reading-anchor";
+import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
 import "./style.css";
 const engine = new Playback();
 function download(name: string, text: string, type = "text/plain") {
@@ -141,7 +149,7 @@ function App() {
     [status, setStatus] = useState<Key>("saved"),
     [notice, setNotice] = useState<Key | null>(null),
     [reading, setReading] = useState(false),
-    [frame, setFrame] = useState(0),
+    [, setFrame] = useState(0),
     [controlsVisible, setControlsVisible] = useState(true),
     [revisions, setRevisions] = useState<Revision[] | null>(null),
     [online, setOnline] = useState(navigator.onLine);
@@ -180,8 +188,7 @@ function App() {
   const showControls = () => {
     setControlsVisible(true);
     clearTimeout(controlsTimer.current);
-    if (engine.playing)
-      controlsTimer.current = setTimeout(() => setControlsVisible(false), 4000);
+    // The only Pause action must remain reachable without waking hidden controls.
   };
   const remote = useRef(new RemoteLink()),
     viewport = useRef<HTMLDivElement>(null),
@@ -189,6 +196,105 @@ function App() {
     currentRef = useRef<Script | null>(null),
     wake = useRef<WakeLockSentinel | null>(null),
     lastAck = useRef("");
+  const lastHostState = useRef("");
+  const focusPositionRef = useRef(focusPosition);
+  focusPositionRef.current = focusPosition;
+  const geometry = useRef<{
+    script: string;
+    anchor: ReadingAnchor;
+    position: number;
+    mirrored: boolean;
+    scroll: number;
+    layout: string;
+  } | null>(null);
+  const geometryHeld = useRef(false);
+  const geometryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const viewPosition = (view: HTMLElement) =>
+    currentRef.current?.preferences.mirrorVertical
+      ? engine.maximum - view.scrollTop
+      : view.scrollTop;
+  const syncView = (view: HTMLElement) => {
+    view.scrollTop = currentRef.current?.preferences.mirrorVertical
+      ? engine.maximum - engine.position
+      : engine.position;
+  };
+  const viewLayout = (view: HTMLElement) =>
+    `${view.clientWidth}/${view.clientHeight}/${view.scrollHeight}`;
+  const rememberGeometry = () => {
+    const view = viewport.current,
+      script = currentRef.current;
+    if (!view || !script) return;
+    if (
+      !geometryHeld.current ||
+      geometry.current?.script !== script.scriptId ||
+      (!engine.playing &&
+        Math.abs(view.scrollTop - geometry.current.scroll) > 1)
+    ) {
+      const anchor = captureAnchor(view, focusPosition);
+      geometry.current = anchor
+        ? {
+            script: script.scriptId,
+            anchor,
+            position: engine.position,
+            mirrored: !!script.preferences.mirrorVertical,
+            scroll: view.scrollTop,
+            layout: viewLayout(view),
+          }
+        : null;
+    }
+    geometryHeld.current = true;
+    clearTimeout(geometryTimer.current);
+    geometryTimer.current = setTimeout(() => {
+      geometryHeld.current = false;
+    }, 400);
+  };
+  const restoreGeometry = () => {
+    const view = viewport.current,
+      script = currentRef.current;
+    if (!view || !script) return;
+    engine.maximum = script.body.trim()
+      ? Math.max(0, view.scrollHeight - view.clientHeight)
+      : 0;
+    const saved = geometry.current;
+    if (saved?.script === script.scriptId) {
+      const anchor = {
+        ...saved.anchor,
+        delta:
+          saved.anchor.delta -
+          (engine.playing ? engine.position - saved.position : 0) *
+            (saved.mirrored ? -1 : 1),
+      };
+      restoreAnchor(view, anchor, focusPosition);
+      engine.position = viewPosition(view);
+      geometry.current = {
+        script: script.scriptId,
+        anchor,
+        position: engine.position,
+        mirrored: !!script.preferences.mirrorVertical,
+        scroll: view.scrollTop,
+        layout: viewLayout(view),
+      };
+    } else {
+      engine.position = Math.max(0, Math.min(engine.maximum, engine.position));
+      syncView(view);
+      engine.position = viewPosition(view);
+      const anchor = captureAnchor(view, focusPosition);
+      geometry.current = anchor
+        ? {
+            script: script.scriptId,
+            anchor,
+            position: engine.position,
+            mirrored: !!script.preferences.mirrorVertical,
+            scroll: view.scrollTop,
+            layout: viewLayout(view),
+          }
+        : null;
+    }
+  };
+  const restoreGeometryRef = useRef(restoreGeometry);
+  restoreGeometryRef.current = restoreGeometry;
   const sender = useRef<HostPreview | null>(null);
   if (!sender.current)
     sender.current = new HostPreview(remote.current, () =>
@@ -204,6 +310,7 @@ function App() {
     () => () => {
       sender.current?.dispose();
       clearTimeout(controlsTimer.current);
+      clearTimeout(geometryTimer.current);
       clearTimeout(inviteTimer.current);
       remote.current.close();
     },
@@ -345,6 +452,19 @@ function App() {
     persist(next);
   };
   const pref = (patch: Partial<Preferences>) => {
+    if (
+      Object.keys(patch).some((key) =>
+        [
+          "fontSize",
+          "lineHeight",
+          "textWidth",
+          "alignment",
+          "mirrorHorizontal",
+          "mirrorVertical",
+        ].includes(key),
+      )
+    )
+      rememberGeometry();
     if (currentRef.current)
       edit({ preferences: { ...currentRef.current.preferences, ...patch } });
   };
@@ -358,7 +478,47 @@ function App() {
   const command = (c: Command) => {
     if (c.action === "play" || (c.action === "togglePlay" && !engine.playing))
       engine.countdown = currentRef.current?.preferences.countdownSeconds || 0;
-    engine.command(c, paragraphs());
+    if (
+      [
+        "seek",
+        "restart",
+        "previousParagraph",
+        "nextParagraph",
+        "scrollBack",
+        "scrollForward",
+      ].includes(c.action)
+    ) {
+      geometryHeld.current = false;
+      geometry.current = null;
+    }
+    if (
+      (c.action === "nextParagraph" || c.action === "previousParagraph") &&
+      currentRef.current?.preferences.mirrorVertical &&
+      viewport.current
+    ) {
+      const view = viewport.current;
+      const anchor = captureAnchor(view, focusPosition);
+      const total = view.querySelectorAll("[data-paragraph]").length;
+      if (anchor) {
+        restoreAnchor(
+          view,
+          {
+            paragraph: Math.max(
+              0,
+              Math.min(
+                total - 1,
+                anchor.paragraph + (c.action === "nextParagraph" ? 1 : -1),
+              ),
+            ),
+            offset: 0,
+            delta: 0,
+          },
+          focusPosition,
+        );
+        engine.position = viewPosition(view);
+      }
+    } else engine.command(c, paragraphs());
+    if (viewport.current) syncView(viewport.current);
     if (
       currentRef.current &&
       engine.speed !== currentRef.current.preferences.speed
@@ -494,12 +654,46 @@ function App() {
     window.addEventListener("popstate", pop);
     return () => window.removeEventListener("popstate", pop);
   }, []);
-  useEffect(() => {
+  useLayoutEffect(() => {
+    geometry.current = null;
+    geometryHeld.current = false;
     engine.suspend();
     lastPreviewPosition.current = { paragraph: 0, offset: 0 };
     engine.position = Number(localGet("teleo.position." + selected)) || 0;
     engine.speed = current?.preferences.speed || 1;
   }, [selected]);
+  useLayoutEffect(() => {
+    if (!reading) return;
+    // WebKit/Firefox range geometry can lag a transform commit until the next frame.
+    if (
+      geometry.current &&
+      geometry.current.mirrored !== !!current?.preferences.mirrorVertical
+    ) {
+      let frame = requestAnimationFrame(() => {
+        frame = requestAnimationFrame(() => restoreGeometryRef.current());
+      });
+      return () => cancelAnimationFrame(frame);
+    }
+    restoreGeometry();
+  }, [
+    reading,
+    current?.scriptId,
+    current?.body,
+    current?.preferences.fontSize,
+    current?.preferences.lineHeight,
+    current?.preferences.textWidth,
+    current?.preferences.alignment,
+    current?.preferences.mirrorHorizontal,
+    current?.preferences.mirrorVertical,
+    focusPosition,
+  ]);
+  useEffect(() => {
+    if (!reading || !viewport.current) return;
+    const observer = new ResizeObserver(() => restoreGeometryRef.current());
+    observer.observe(viewport.current);
+    if (content.current) observer.observe(content.current);
+    return () => observer.disconnect();
+  }, [reading, selected]);
   useEffect(() => {
     if (!reading) return;
     let raf = 0,
@@ -508,15 +702,30 @@ function App() {
     const tick = (now: number) => {
       const view = viewport.current;
       if (view) {
+        if (geometry.current && geometry.current.layout !== viewLayout(view))
+          restoreGeometryRef.current();
         engine.maximum = currentRef.current?.body.trim()
           ? Math.max(0, view.scrollHeight - view.clientHeight)
           : 0;
-        view.scrollTop = engine.tick(now);
+        engine.tick(now);
+        if (engine.playing) syncView(view);
         if (now - lastSave >= 250) {
           localSet("teleo.position." + selected, String(engine.position));
           lastSave = now;
         }
         if (now - lastUI >= 100) {
+          if (!geometryHeld.current && currentRef.current) {
+            const anchor = captureAnchor(view, focusPositionRef.current);
+            if (anchor)
+              geometry.current = {
+                script: currentRef.current.scriptId,
+                anchor,
+                position: engine.position,
+                mirrored: !!currentRef.current.preferences.mirrorVertical,
+                scroll: view.scrollTop,
+                layout: viewLayout(view),
+              };
+          }
           setFrame((x) => x + 1);
           lastUI = now;
         }
@@ -718,7 +927,9 @@ function App() {
             "target" in requested &&
             requested.target !== controlTargetRef.current
           ) {
-            remote.current.send({ type: "ack", id: e.id, state: hostState() });
+            const state = hostState();
+            lastHostState.current = JSON.stringify(state);
+            remote.current.send({ type: "ack", id: e.id, state });
             return;
           }
           const currentView = viewport.current;
@@ -728,11 +939,11 @@ function App() {
               : 0;
           const acknowledge = () => {
             if (remote.current.socket !== socket) return;
-            remote.current.send({ type: "ack", id: e.id, state: hostState() });
+            const state = hostState();
+            lastHostState.current = JSON.stringify(state);
+            remote.current.send({ type: "ack", id: e.id, state });
           };
           if (requested.action === "setPreference") {
-            const fraction =
-              engine.maximum > 0 ? engine.position / engine.maximum : 0;
             if (requested.key === "focusDimming") {
               dimmingRef.current = requested.value as boolean;
               setFocusDimming(requested.value as boolean);
@@ -754,22 +965,18 @@ function App() {
                   0,
                   view.scrollHeight - view.clientHeight,
                 );
-                if (requested.key !== "alignment")
-                  engine.position = fraction * engine.maximum;
-                view.scrollTop = engine.position;
+                restoreGeometryRef.current();
               }
               acknowledge();
             });
           } else {
             if (requested.action === "seek") {
               engine.position = requested.value * engine.maximum;
-              if (viewport.current)
-                viewport.current.scrollTop = engine.position;
+              if (viewport.current) syncView(viewport.current);
               setFrame((x) => x + 1);
             } else {
               command(requested);
-              if (viewport.current)
-                viewport.current.scrollTop = engine.position;
+              if (viewport.current) syncView(viewport.current);
             }
             acknowledge();
           }
@@ -783,19 +990,18 @@ function App() {
             requestAnimationFrame(apply);
           });
       }
-      if (e.type === "ack" && e.id === lastAck.current && e.state)
-        setRemoteState(e.state);
+      if (e.type === "ack" && e.state) setRemoteState(e.state);
     };
   });
   useEffect(() => {
     if (remoteStatus !== "connected" || route === "/remote") return;
-    let previous = "";
+    lastHostState.current = "";
     const snapshot = () => {
       const state = hostState(),
         signature = JSON.stringify(state);
-      if (signature !== previous) {
+      if (signature !== lastHostState.current) {
         remote.current.state(state);
-        previous = signature;
+        lastHostState.current = signature;
       }
     };
     snapshot();
@@ -819,19 +1025,18 @@ function App() {
           previewOffsets.length - 1,
         );
         sender.current?.position(
-          { playing: false, speed: engine.speed, position: engine.position },
+          {
+            playing: false,
+            speed: engine.speed,
+            position: engine.position,
+          },
           Math.max(0, index),
           previewOffsets[Math.max(0, index)]?.offset || 0,
         );
         return;
       }
-      const target = view.scrollTop + (view.clientHeight * focusPosition) / 100;
-      let index = 0;
-      Array.from(
-        article.querySelectorAll<HTMLElement>("[data-paragraph]"),
-      ).forEach((p, i) => {
-        if (p.offsetTop - article.offsetTop <= target) index = i;
-      });
+      const anchor = captureAnchor(view, focusPosition);
+      const index = anchor?.paragraph || 0;
       lastPreviewPosition.current = {
         paragraph: index,
         offset: previewOffsets[index]?.offset || 0,
@@ -997,6 +1202,8 @@ function App() {
     await flush();
     if (!reading) libraryBeforeReading.current = libraryOpen;
     setLibraryOpen(false);
+    if (innerWidth <= 600 || (innerHeight <= 500 && innerWidth <= 1000))
+      setImmersive(true);
     setReading(true);
   }
   async function showConnection() {
@@ -1356,12 +1563,14 @@ function App() {
         <IconButton
           name="minus"
           label={t("speedDown")}
+          disabled={stepSpeed(engine.speed, -1) === engine.speed}
           onClick={() => command({ action: "speedDown" })}
         />
-        <output>{engine.speed.toFixed(2)}×</output>
+        <output>{formatSpeed(engine.speed)}×</output>
         <IconButton
           name="plus"
           label={t("speedUp")}
+          disabled={stepSpeed(engine.speed, 1) === engine.speed}
           onClick={() => command({ action: "speedUp" })}
         />
       </div>
@@ -1845,11 +2054,24 @@ function App() {
                   } as React.CSSProperties
                 }
                 ref={viewport}
-                onWheel={() => command({ action: "pause" })}
-                onTouchStart={() => command({ action: "pause" })}
+                onPointerDown={() => {
+                  geometryHeld.current = false;
+                  geometry.current = null;
+                  command({ action: "pause" });
+                }}
+                onWheel={() => {
+                  geometryHeld.current = false;
+                  geometry.current = null;
+                  command({ action: "pause" });
+                }}
+                onTouchStart={() => {
+                  geometryHeld.current = false;
+                  geometry.current = null;
+                  command({ action: "pause" });
+                }}
                 onScroll={(e) => {
-                  if (!engine.playing)
-                    engine.position = e.currentTarget.scrollTop;
+                  if (!engine.playing && !geometryHeld.current)
+                    engine.position = viewPosition(e.currentTarget);
                 }}
               >
                 <article
@@ -1876,18 +2098,20 @@ function App() {
                 <div className="countdown">{Math.ceil(engine.countdown)}</div>
               )}
             </div>
-            {controls}
-            <input
-              className="seek"
-              aria-label={t("position")}
-              type="range"
-              min="0"
-              max={engine.maximum || 1}
-              value={engine.position}
-              onChange={(e) => {
+            <ReaderDock
+              engine={engine}
+              preferences={current.preferences}
+              t={t}
+              command={command}
+              preference={pref}
+              beforeLayout={rememberGeometry}
+              seek={(position) => {
+                geometryHeld.current = false;
+                geometry.current = null;
                 engine.command({ action: "pause" });
-                engine.position = Number(e.target.value);
-                setFrame(frame + 1);
+                engine.position = position;
+                if (viewport.current) syncView(viewport.current);
+                setFrame((x) => x + 1);
               }}
             />
           </section>

@@ -1,3 +1,5 @@
+import { readerTypography } from "./helpers";
+import { prepareReader } from "./helpers";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { test, expect } from "@playwright/test";
@@ -77,6 +79,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await page.setViewportSize(original);
     }
     await page.getByRole("button", { name: t.read, exact: true }).click();
+    await prepareReader(page, t);
+    await readerTypography(page, t, "fontSize");
     await page
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -180,6 +184,12 @@ for (const locale of ["en", "uk", "ru"] as const) {
       animations: "disabled",
       path: `docs/screenshots/v061-${info.project.name}-${locale}-connected.png`,
     });
+    if (
+      !(await dock
+        .getByRole("button", { name: t.mirrorHorizontal, exact: true })
+        .isVisible())
+    )
+      await dock.getByRole("button", { name: t.timer, exact: true }).click();
     await dock
       .getByRole("button", { name: t.mirrorHorizontal, exact: true })
       .click();
@@ -187,6 +197,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       "transform",
       "matrix(-1, 0, 0, 1, 0, 0)",
     );
+    await readerTypography(page, t, "fontSize");
     await phone.locator(".remote-quick-trigger").click();
     const quick = phone.locator(".remote-quick-menu");
     const phoneAlign = quick.getByRole("group", {
@@ -287,6 +298,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .click();
     offline = false;
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
+    await phone
+      .getByRole("button", { name: t.quickSettings, exact: true })
+      .click();
     await expect(
       phoneAlign.getByRole("button", { name: t.alignCenter, exact: true }),
     ).toHaveAttribute("aria-pressed", "true");

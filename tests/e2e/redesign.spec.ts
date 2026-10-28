@@ -1,3 +1,5 @@
+import { readerTypography } from "./helpers";
+import { prepareReader } from "./helpers";
 import { closeSettings } from "./helpers";
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
@@ -150,6 +152,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
           path: `docs/screenshots/premium-${locale}-${size.width}-editor.png`,
         });
       await page.getByRole("button", { name: t.read, exact: true }).click();
+      await prepareReader(page, t);
       const dock = page.locator(".reader-controls");
       await dock.getByRole("button", { name: t.play, exact: true }).click();
       await page.waitForTimeout(200);
@@ -161,9 +164,15 @@ for (const locale of ["en", "uk", "ru"] as const) {
         ),
       ).toBeGreaterThan(0);
       await dock.getByRole("button", { name: t.pause, exact: true }).click();
-      await expect(dock.locator(".speed-group output")).toHaveText("1.00×");
+      await expect(dock.locator(".speed-group output")).toHaveText("1.0×");
       await dock.getByRole("button", { name: t.speedUp, exact: true }).click();
-      await expect(dock.locator(".speed-group output")).toContainText("1.25");
+      await expect(dock.locator(".speed-group output")).toContainText("1.1");
+      if (
+        !(await dock
+          .getByRole("button", { name: t.mirrorHorizontal, exact: true })
+          .isVisible())
+      )
+        await dock.getByRole("button", { name: t.timer, exact: true }).click();
       await dock
         .getByRole("button", { name: t.mirrorHorizontal, exact: true })
         .click();
@@ -175,6 +184,12 @@ for (const locale of ["en", "uk", "ru"] as const) {
           .locator(".reading-viewport article")
           .evaluate((el) => getComputedStyle(el).transform),
       ).toContain("-1");
+      if (
+        !(await dock
+          .getByRole("button", { name: t.mirrorHorizontal, exact: true })
+          .isVisible())
+      )
+        await dock.getByRole("button", { name: t.timer, exact: true }).click();
       await dock
         .getByRole("button", { name: t.mirrorHorizontal, exact: true })
         .click();
@@ -212,10 +227,8 @@ test("settings sheet traps focus, persists preferences and Escape preserves read
   await skipSession(page);
   await create(page);
   await page.getByRole("button", { name: en.read, exact: true }).click();
-  await page
-    .locator(".reader-controls")
-    .getByRole("slider", { name: en.fontSize, exact: true })
-    .fill("52");
+  await prepareReader(page, en);
+  await (await readerTypography(page, en, "fontSize")).fill("52");
   await page
     .locator("header")
     .getByRole("button", { name: en.settings, exact: true })
@@ -295,6 +308,7 @@ test("viewport fullscreen fallback, collapsible library and simulated keyboard r
     .click();
   await expect(page.locator(".library")).not.toBeVisible();
   await page.getByRole("button", { name: en.read, exact: true }).click();
+  await prepareReader(page, en);
   await page.evaluate(() =>
     Object.defineProperty(document, "fullscreenEnabled", {
       value: false,
@@ -302,12 +316,12 @@ test("viewport fullscreen fallback, collapsible library and simulated keyboard r
     }),
   );
   await page
-    .locator(".reader-controls")
+    .locator(".reader-top")
     .getByRole("button", { name: en.fullscreen, exact: true })
     .click();
   await expect(page.locator(".app-shell")).toHaveClass(/immersive/);
   await page
-    .locator(".reader-controls")
+    .locator(".reader-top")
     .getByRole("button", { name: en.fullscreen, exact: true })
     .click();
   await expect(page.locator(".app-shell")).not.toHaveClass(/immersive/);

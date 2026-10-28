@@ -140,3 +140,9 @@ npx playwright test --config playwright.v07.config.ts
 ```
 
 Use separate browser cohorts when testing the public relay: room creation is limited to 10/minute/IP. Tests create isolated libraries and must never clear the owner's browser data. Production publication follows staging validation, a clean committed checkout and the existing interactive `npm run deploy:production` workflow. Native distribution, physical HID, native two-device LAN and CloudKit still require their separate device/signing checks.
+
+## Local Reader v1.2 work (not deployed)
+
+Reader typography now expands inside the playback dock and reserves space for the active text. On phones the minimal dock keeps Play/Pause visible; expand it for typography, timeline, paragraph controls, mirrors and countdown. Speed actions use exact 0.1× steps within 0.5–3.0×; valid legacy speeds and presets retain their actual values until explicitly adjusted. Paired remote typography and queued speed actions remain host-authoritative.
+
+Cross-engine local verification: `npx playwright test --config playwright.reader.config.ts` (installed Chromium, WebKit and Firefox). See [Reader verification and screenshots](docs/audits/TELEO_READER_UI_VERIFICATION.md). This feature work does not change the production release record above.

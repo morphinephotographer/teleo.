@@ -8,6 +8,7 @@ import {
   type ControlCommand,
   type PlaybackState,
 } from "../../../packages/protocol/control";
+import { stepSpeed } from "../../../packages/protocol/speed";
 export type { PlaybackState } from "../../../packages/protocol/control";
 export type RemoteEvent = {
   type: string;
@@ -39,6 +40,12 @@ export class RemoteLink {
   private sequence = -1;
   private lastPong = 0;
   private pending = new Map<string, ReturnType<typeof setTimeout>>();
+  private speedQueue: { id: string; command: ControlCommand }[] = [];
+  private activeSpeed?: string;
+  private speedTimer?: ReturnType<typeof setTimeout>;
+  private lastSpeedSent = -Infinity;
+  private confirmedSpeed?: number;
+  private confirmedTarget?: string;
   onEvent: (event: RemoteEvent) => void = () => {};
   constructor(
     private base = import.meta.env.VITE_RELAY_URL || location.origin,
@@ -175,17 +182,32 @@ export class RemoteLink {
       if (event.type === "ack" || event.type === "state") {
         if (
           !validPlaybackState(event.state) ||
-          typeof event.sequence !== "number" ||
-          event.sequence <= this.sequence
+          !Number.isSafeInteger(event.sequence) ||
+          event.sequence! < 0
         )
           return;
-        this.sequence = event.sequence;
-        if (event.id) {
+        if (event.type === "ack" && event.id) {
           clearTimeout(this.pending.get(event.id));
           this.pending.delete(event.id);
+          if (this.activeSpeed === event.id) this.activeSpeed = undefined;
         }
+        if (event.sequence! <= this.sequence) {
+          this.pumpSpeed();
+          return;
+        }
+        this.sequence = event.sequence!;
+        this.confirmedSpeed = event.state!.speed;
+        const target = event.state!.controls?.target;
+        if (this.confirmedTarget && target !== this.confirmedTarget) {
+          // A queued gesture belongs to the script visible when it was made.
+          for (const item of this.speedQueue)
+            this.onEvent({ type: "unconfirmed", id: item.id });
+          this.speedQueue = [];
+        }
+        this.confirmedTarget = target;
       }
       this.onEvent(event);
+      this.pumpSpeed();
     };
     socket.onclose = (e) => {
       if (this.socket !== socket || this.stopped) return;
@@ -222,6 +244,13 @@ export class RemoteLink {
     this.recoveryTimer = setTimeout(() => this.finish("disconnected"), 25000);
   }
   private uncertain() {
+    clearTimeout(this.speedTimer);
+    this.activeSpeed = undefined;
+    this.confirmedSpeed = undefined;
+    this.confirmedTarget = undefined;
+    for (const item of this.speedQueue)
+      this.onEvent({ type: "unconfirmed", id: item.id });
+    this.speedQueue = [];
     for (const [id, timer] of this.pending) {
       clearTimeout(timer);
       this.onEvent({ type: "unconfirmed", id });
@@ -252,21 +281,60 @@ export class RemoteLink {
       this.onEvent({ type: "unconfirmed", id });
       return id;
     }
+    if (command.action === "speedUp" || command.action === "speedDown") {
+      if (this.speedQueue.length >= 50)
+        this.onEvent({ type: "unconfirmed", id });
+      else {
+        this.speedQueue.push({ id, command });
+        this.pumpSpeed();
+      }
+    } else this.dispatch(id, command);
+    return id;
+  }
+  private dispatch(id: string, command: ControlCommand) {
     this.pending.set(
       id,
       setTimeout(() => {
         this.pending.delete(id);
         this.onEvent({ type: "unconfirmed", id });
+        if (this.activeSpeed === id) this.uncertain();
       }, 5000),
     );
     this.send({ type: "command", id, command });
-    return id;
+  }
+  private pumpSpeed() {
+    if (!this.ready || this.activeSpeed || !this.speedQueue.length) return;
+    clearTimeout(this.speedTimer);
+    const delay = Math.max(0, 80 - (Date.now() - this.lastSpeedSent));
+    if (delay) {
+      this.speedTimer = setTimeout(() => this.pumpSpeed(), delay);
+      return;
+    }
+    while (this.speedQueue.length) {
+      const next = this.speedQueue.shift()!;
+      const direction = next.command.action === "speedUp" ? 1 : -1;
+      if (
+        this.confirmedSpeed !== undefined &&
+        stepSpeed(this.confirmedSpeed, direction) === this.confirmedSpeed
+      )
+        continue;
+      this.activeSpeed = next.id;
+      this.lastSpeedSent = Date.now();
+      this.dispatch(next.id, next.command);
+      break;
+    }
   }
   close() {
     this.creating?.abort();
     this.creating = undefined;
     this.stopped = true;
     this.ready = false;
+    clearTimeout(this.speedTimer);
+    this.speedQueue = [];
+    this.activeSpeed = undefined;
+    this.confirmedSpeed = undefined;
+    this.confirmedTarget = undefined;
+    this.lastSpeedSent = -Infinity;
     clearInterval(this.heartbeat);
     clearTimeout(this.timeout);
     clearTimeout(this.retry);

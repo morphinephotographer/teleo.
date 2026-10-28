@@ -1,3 +1,4 @@
+import { stepSpeed } from "./speed";
 export const actions = [
   "play",
   "pause",
@@ -106,14 +107,14 @@ export class Playback {
         this.countdown = 0;
         break;
       case "speedUp":
-        this.speed = Math.min(3, this.speed + 0.25);
-        break;
+        this.speed = stepSpeed(this.speed, 1);
+        return true;
       case "speedDown":
-        this.speed = Math.max(0.5, this.speed - 0.25);
-        break;
+        this.speed = stepSpeed(this.speed, -1);
+        return true;
       case "setSpeed":
         this.speed = c.value!;
-        break;
+        return true;
       case "scrollBack":
         this.position -= 100;
         break;

@@ -1,4 +1,10 @@
 export const en = {
+  expandControls: "Expand reading controls",
+  collapseControls: "Collapse reading controls",
+  readingTools: "Reading tools",
+  currentScriptLabel: "Current script",
+  connectionLost: "Connection lost",
+
   databaseBlocked:
     "Close older Teleo. tabs, then reload this page to finish updating local storage.",
   gettingStarted: "Getting started",
@@ -228,6 +234,12 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  expandControls: "Розгорнути керування читанням",
+  collapseControls: "Згорнути керування читанням",
+  readingTools: "Інструменти читання",
+  currentScriptLabel: "Поточний сценарій",
+  connectionLost: "З’єднання втрачено",
+
   databaseBlocked:
     "Закрийте старі вкладки Teleo. та перезавантажте цю сторінку, щоб завершити оновлення локального сховища.",
   gettingStarted: "Початок роботи",
@@ -454,6 +466,12 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  expandControls: "Развернуть управление чтением",
+  collapseControls: "Свернуть управление чтением",
+  readingTools: "Инструменты чтения",
+  currentScriptLabel: "Текущий сценарий",
+  connectionLost: "Соединение потеряно",
+
   databaseBlocked:
     "Закройте старые вкладки Teleo. и перезагрузите эту страницу, чтобы завершить обновление локального хранилища.",
   gettingStarted: "Начало работы",

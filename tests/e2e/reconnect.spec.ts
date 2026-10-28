@@ -1,3 +1,4 @@
+import { prepareReader } from "./helpers";
 import { disconnectPhone, managePhone } from "./helpers";
 import { test, expect, type Page, type WebSocketRoute } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
@@ -16,6 +17,7 @@ async function host(page: Page, locale: "en" | "uk" | "ru") {
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Private host text 🌍\n\n".repeat(100));
   await page.getByRole("button", { name: t.read, exact: true }).click();
+  await prepareReader(page, t);
   await page
     .locator(".reader")
     .getByRole("button", { name: t.connect })

@@ -166,3 +166,126 @@ it("closing while room creation is in flight cannot open a late background socke
   await rejection;
   expect(Socket.instances).toHaveLength(0);
 });
+
+it("serializes rapid speed taps at bounded rate, applying each logical step once", () => {
+  const socket = paired();
+  socket.receive({
+    type: "state",
+    sequence: 0,
+    state: { playing: true, speed: 1, position: 42 },
+  });
+  const ids = Array.from({ length: 10 }, () =>
+    link.command({ action: "speedUp" }),
+  );
+  expect(socket.sent.filter((m) => m.type === "command")).toHaveLength(1);
+  for (let i = 0; i < 10; i++) {
+    socket.receive({
+      type: "ack",
+      id: ids[i],
+      sequence: i + 1,
+      state: { playing: true, speed: (11 + i) / 10, position: 42 },
+    });
+    vi.advanceTimersByTime(80);
+  }
+  expect(
+    socket.sent.filter((m) => m.type === "command").map((m) => m.id),
+  ).toEqual(ids);
+  expect(events.filter((e) => e.type === "ack").at(-1)?.state?.speed).toBe(2);
+});
+it("suppresses redundant queued bound steps and drops uncertain steps on reconnect", () => {
+  const socket = paired();
+  socket.receive({
+    type: "state",
+    sequence: 0,
+    state: { playing: false, speed: 2.9, position: 42 },
+  });
+  const id = link.command({ action: "speedUp" });
+  for (let i = 0; i < 9; i++) link.command({ action: "speedUp" });
+  socket.receive({
+    type: "ack",
+    id,
+    sequence: 1,
+    state: { playing: false, speed: 3, position: 42 },
+  });
+  vi.advanceTimersByTime(1000);
+  expect(socket.sent.filter((m) => m.type === "command")).toHaveLength(1);
+  link.command({ action: "speedDown" });
+  link.command({ action: "speedDown" });
+  socket.terminate();
+  vi.advanceTimersByTime(250);
+  const resumed = Socket.instances.at(-1)!;
+  resumed.open();
+  resumed.receive({ type: "authenticated" });
+  resumed.receive({ type: "connected" });
+  vi.advanceTimersByTime(1000);
+  expect(resumed.sent.filter((m) => m.type === "command")).toHaveLength(0);
+});
+it("a delayed ACK completes its queue entry without replacing a newer authoritative state", () => {
+  const socket = paired();
+  socket.receive({
+    type: "state",
+    sequence: 0,
+    state: { playing: false, speed: 1, position: 42 },
+  });
+  const id = link.command({ action: "speedUp" });
+  const next = link.command({ action: "speedDown" });
+  socket.receive({
+    type: "state",
+    sequence: 3,
+    state: { playing: false, speed: 2, position: 42 },
+  });
+  socket.receive({
+    type: "ack",
+    id,
+    sequence: 2,
+    state: { playing: false, speed: 1.1, position: 42 },
+  });
+  vi.advanceTimersByTime(80);
+  expect(events.filter((e) => e.type === "state").at(-1)?.state?.speed).toBe(2);
+  expect(events.filter((e) => e.type === "ack")).toHaveLength(0);
+  expect(socket.sent.filter((m) => m.type === "command").at(-1)?.id).toBe(next);
+});
+
+it("cancels unsent speed gestures when the host switches script target", () => {
+  const socket = paired();
+  const state = (target: string) => ({
+    playing: false,
+    speed: 1,
+    position: 0,
+    controls: {
+      version: 1,
+      target,
+      maximum: 1000,
+      fontSize: 40,
+      lineHeight: 1.6,
+      textWidth: 760,
+      mirrorHorizontal: false,
+      mirrorVertical: false,
+      focusLine: true,
+      countdownSeconds: 0,
+    },
+  });
+  socket.receive({
+    type: "state",
+    sequence: 0,
+    state: state("11111111-1111-4111-8111-111111111111"),
+  });
+  const active = link.command({ action: "speedUp" });
+  const queued = link.command({ action: "speedUp" });
+  socket.receive({
+    type: "state",
+    sequence: 1,
+    state: state("22222222-2222-4222-8222-222222222222"),
+  });
+  socket.receive({
+    type: "ack",
+    id: active,
+    sequence: 2,
+    state: state("22222222-2222-4222-8222-222222222222"),
+  });
+  vi.advanceTimersByTime(1000);
+  expect(socket.sent.filter((m) => m.type === "command")).toHaveLength(1);
+  expect(events.some((e) => e.type === "unconfirmed" && e.id === queued)).toBe(
+    true,
+  );
+});

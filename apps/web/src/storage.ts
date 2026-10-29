@@ -172,6 +172,29 @@ export const storage = {
     await tx.done;
     return settings;
   },
+  async receiveScript(script: Script) {
+    const db = await database();
+    const tx = db.transaction(["scripts", "onboarding"], "readwrite");
+    // A failed request also rejects tx.done. Observe that rejection even if the
+    // request throws first; the caller still receives the original failure.
+    void tx.done.catch(() => {});
+    const scripts = tx.objectStore("scripts");
+    const receipts = tx.objectStore("onboarding");
+    const old: Script | undefined = await scripts.get(script.scriptId);
+    const receipt = await receipts.get("quick-send:" + script.scriptId);
+    // The receipt and script commit atomically. A transfer cannot claim an existing script.
+    if (old && !receipt) {
+      await tx.done;
+      throw Error("saveConflict");
+    }
+    if (!receipt) {
+      await scripts.add(script);
+      await receipts.put(true, "quick-send:" + script.scriptId);
+    }
+    await tx.done;
+    if (!receipt) remember(script);
+    return old || script;
+  },
   async list(): Promise<Script[]> {
     const scripts: Script[] = await (await database()).getAll("scripts");
     for (const script of scripts) remember(script);

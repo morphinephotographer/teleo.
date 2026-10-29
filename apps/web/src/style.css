@@ -4200,3 +4200,218 @@ input[type="checkbox"] {
 .app-shell > header > .top-settings {
   margin-left: auto;
 }
+
+/* Quick Send extends only the remote's bottom action row and modal sheets. */
+.remote-v12 .remote-bottom-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  width: 100%;
+  flex: 0 0 52px;
+}
+.remote-v12 .remote-bottom-actions > button {
+  width: 100%;
+  height: 52px;
+  min-height: 44px;
+  border-radius: 28px;
+  background: #232425;
+  border: 0;
+  padding: 10px;
+}
+.remote-bottom-actions svg {
+  width: 27px;
+  height: 27px;
+}
+.quick-send-sheet,
+.quick-send-review {
+  --line: #353637;
+  color-scheme: dark;
+  inset: auto 0 var(--visual-bottom, 0px);
+  height: auto;
+  max-width: 100%;
+  background: #141516;
+  color: #f5f5f5;
+  border: 1px solid #353637;
+  border-radius: 28px 28px 0 0;
+  width: min(100%, 440px);
+  max-height: calc(var(--visual-height, 100dvh) - 24px);
+  margin: auto auto 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.quick-send-sheet::before {
+  content: "";
+  display: block;
+  flex: 0 0 5px;
+  width: 40px;
+  border-radius: 4px;
+  background: #898a8b;
+  margin: 12px auto 0;
+}
+.quick-send-sheet::backdrop,
+.quick-send-review::backdrop {
+  background: #0009;
+  backdrop-filter: blur(5px);
+}
+.quick-send-sheet .eyebrow {
+  display: none;
+}
+.quick-send-sheet .sheet-heading {
+  border: 0;
+  padding: 14px 20px;
+}
+.quick-send-sheet .sheet-heading h2 {
+  font-size: 21px;
+}
+.quick-send-sheet button,
+.quick-send-review button {
+  color: #f5f5f5;
+  background: #242526;
+  border: 0;
+  border-radius: 32px;
+  min-height: 48px;
+}
+.quick-send-sheet .primary {
+  color: #111;
+  background: #f4f4f5;
+  font-weight: 600;
+  min-height: 56px;
+}
+.quick-send-sheet button:disabled {
+  opacity: 0.45;
+}
+.quick-send-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 0 18px max(20px, env(safe-area-inset-bottom));
+}
+.quick-send-content textarea {
+  width: 100%;
+  height: clamp(120px, 28dvh, 260px);
+  min-height: 100px;
+  resize: vertical;
+  flex-shrink: 0;
+  border: 1px solid #3b3c3d;
+  border-radius: 20px;
+  color: #f5f5f5;
+  background: #1d1e1f;
+  padding: 16px;
+  font: inherit;
+  font-size: 16px;
+  line-height: 1.45;
+}
+.quick-send-content textarea::placeholder {
+  color: #9b9c9d;
+}
+.quick-send-sheet :focus-visible {
+  outline: 2px solid #ddd;
+  outline-offset: 2px;
+}
+.quick-send-count {
+  text-align: right;
+  font-size: 12px;
+  color: #aaa;
+  margin-top: -10px;
+}
+.quick-send-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.quick-send-tools button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+.quick-send-tools button {
+  font-size: 14px;
+  font-weight: 400;
+}
+.quick-send-tools svg {
+  width: 24px;
+  height: 24px;
+}
+.quick-send-sheet fieldset {
+  border: 0;
+  padding: 0;
+  margin: 4px 0;
+  display: grid;
+  gap: 18px;
+}
+.quick-send-sheet legend {
+  margin-bottom: 16px;
+}
+.quick-send-sheet fieldset label {
+  display: flex;
+  align-items: start;
+  gap: 12px;
+  cursor: pointer;
+}
+.quick-send-sheet input[type="radio"] {
+  width: 22px;
+  height: 22px;
+  accent-color: #eee;
+  flex: 0 0 22px;
+  margin-top: 1px;
+}
+.quick-send-sheet small {
+  display: block;
+  color: #aaa;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+.quick-send-content p {
+  color: #b3b3b3;
+  margin: 0;
+  line-height: 1.5;
+}
+.quick-send-success .sheet-heading h2 {
+  visibility: hidden;
+}
+.quick-send-success .quick-send-content {
+  text-align: center;
+  gap: 20px;
+  padding-top: 16px;
+  padding-bottom: 30px;
+}
+.quick-send-success h3 {
+  font-size: 25px;
+  font-weight: 500;
+  margin: 0;
+}
+.quick-send-check {
+  border: 3px solid #666;
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+  margin: auto;
+  font-size: 48px;
+}
+.quick-send-received {
+  position: fixed;
+  z-index: 50;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #242526;
+  color: #fff;
+  border-radius: 20px;
+  padding: 12px 18px;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  max-width: 95vw;
+}
+.quick-send-received button {
+  white-space: nowrap;
+}
+.quick-send-review pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 45dvh;
+  overflow: auto;
+  font: inherit;
+}

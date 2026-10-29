@@ -146,7 +146,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await phone.getByRole("button", { name: t.play, exact: true }).click();
       await expect(
         page
-          .locator(".reader-dock")
+          .locator(".reader-top")
           .getByRole("button", { name: t.pause, exact: true }),
       ).toBeVisible();
       await phone.getByRole("button", { name: t.pause, exact: true }).click();

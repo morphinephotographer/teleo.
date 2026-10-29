@@ -1,4 +1,36 @@
 export const en = {
+  quickSendTitle: "Send text",
+  quickSendPlaceholder: "Paste or enter your script…",
+  quickSendCharacters: "characters",
+  quickSendPaste: "Paste",
+  quickSendImport: "Import",
+  quickSendDestination: "Where to send",
+  quickSendSession: "To the current prompter session",
+  quickSendLibrary: "To a new script",
+  quickSendSessionHelp:
+    "Delivered for review. The current script changes only after confirmation on the computer.",
+  quickSendLibraryHelp:
+    "Creates a separate script in the computer’s library. The current session stays unchanged.",
+  quickSendSubmit: "Send to teleo.",
+  quickSendSending: "Sending…",
+  quickSendSuccess: "Text sent",
+  quickSendDelivered:
+    "Text received by the computer. Applying it requires confirmation there.",
+  quickSendSaved: "A new script was saved in the computer’s library.",
+  quickSendContinue: "Continue",
+  quickSendPairRequired:
+    "Connect to an approved computer session to send text.",
+  quickSendFailed:
+    "Could not send. Check the connection, finish reviewing any previous text on the computer, then retry.",
+  quickSendUncertain:
+    "Receipt not confirmed. Retry without changing the text to avoid duplicates.",
+  quickSendClipboard:
+    "Clipboard unavailable. Paste directly into the text field (up to 8,000 characters).",
+  quickSendReceived: "Text received from your phone",
+  quickSendReview: "Review text",
+  quickSendReplace: "Replace current text and stop playback",
+  quickSendDiscard: "Discard received text",
+
   expandControls: "Expand reading controls",
   collapseControls: "Collapse reading controls",
   readingTools: "Reading tools",
@@ -252,6 +284,38 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  quickSendTitle: "Надіслати текст",
+  quickSendPlaceholder: "Вставте або введіть текст сценарію…",
+  quickSendCharacters: "символів",
+  quickSendPaste: "Вставити",
+  quickSendImport: "Імпорт",
+  quickSendDestination: "Куди надіслати",
+  quickSendSession: "У поточну сесію суфлера",
+  quickSendLibrary: "У новий сценарій",
+  quickSendSessionHelp:
+    "Текст буде доставлено для перегляду. Поточний сценарій зміниться лише після підтвердження на комп’ютері.",
+  quickSendLibraryHelp:
+    "Створює окремий сценарій у бібліотеці комп’ютера. Поточна сесія залишається без змін.",
+  quickSendSubmit: "Надіслати в teleo.",
+  quickSendSending: "Надсилання…",
+  quickSendSuccess: "Текст надіслано",
+  quickSendDelivered:
+    "Комп’ютер отримав текст. Для застосування потрібне підтвердження на ньому.",
+  quickSendSaved: "Новий сценарій збережено в бібліотеці комп’ютера.",
+  quickSendContinue: "Продовжити",
+  quickSendPairRequired:
+    "Для надсилання тексту під’єднайтеся до підтвердженої сесії комп’ютера.",
+  quickSendFailed:
+    "Не вдалося надіслати. Перевірте з’єднання, завершіть перегляд попереднього тексту на комп’ютері та повторіть.",
+  quickSendUncertain:
+    "Отримання не підтверджено. Повторіть без зміни тексту, щоб уникнути дублікатів.",
+  quickSendClipboard:
+    "Буфер обміну недоступний. Вставте текст у поле вручну (до 8 000 символів).",
+  quickSendReceived: "Отримано текст із телефона",
+  quickSendReview: "Переглянути текст",
+  quickSendReplace: "Замінити поточний текст і зупинити відтворення",
+  quickSendDiscard: "Відхилити отриманий текст",
+
   expandControls: "Розгорнути керування читанням",
   collapseControls: "Згорнути керування читанням",
   readingTools: "Інструменти читання",
@@ -504,6 +568,38 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  quickSendTitle: "Отправить текст",
+  quickSendPlaceholder: "Вставьте или введите текст сценария…",
+  quickSendCharacters: "символов",
+  quickSendPaste: "Вставить",
+  quickSendImport: "Импорт",
+  quickSendDestination: "Куда отправить",
+  quickSendSession: "В текущую сессию суфлёра",
+  quickSendLibrary: "В новый сценарий",
+  quickSendSessionHelp:
+    "Текст будет доставлен для просмотра. Текущий сценарий изменится только после подтверждения на компьютере.",
+  quickSendLibraryHelp:
+    "Создаёт отдельный сценарий в библиотеке компьютера. Текущая сессия остаётся без изменений.",
+  quickSendSubmit: "Отправить в teleo.",
+  quickSendSending: "Отправка…",
+  quickSendSuccess: "Текст отправлен",
+  quickSendDelivered:
+    "Компьютер получил текст. Для применения нужно подтверждение на нём.",
+  quickSendSaved: "Новый сценарий сохранён в библиотеке компьютера.",
+  quickSendContinue: "Продолжить",
+  quickSendPairRequired:
+    "Для отправки текста подключитесь к подтверждённой сессии компьютера.",
+  quickSendFailed:
+    "Не удалось отправить. Проверьте соединение, завершите просмотр предыдущего текста на компьютере и повторите.",
+  quickSendUncertain:
+    "Получение не подтверждено. Повторите без изменения текста, чтобы избежать дубликатов.",
+  quickSendClipboard:
+    "Буфер обмена недоступен. Вставьте текст в поле вручную (до 8 000 символов).",
+  quickSendReceived: "Получен текст с телефона",
+  quickSendReview: "Просмотреть текст",
+  quickSendReplace: "Заменить текущий текст и остановить воспроизведение",
+  quickSendDiscard: "Отклонить полученный текст",
+
   expandControls: "Развернуть управление чтением",
   collapseControls: "Свернуть управление чтением",
   readingTools: "Инструменты чтения",

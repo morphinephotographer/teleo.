@@ -1,3 +1,7 @@
+import {
+  validQuickSend,
+  validQuickSendAck,
+} from "../../packages/protocol/quick-send";
 import { DurableObject } from "cloudflare:workers";
 import { validPreviewPayload } from "../../packages/protocol/preview";
 import {
@@ -24,6 +28,7 @@ type RoomData = {
   detached: Partial<Record<Role, number>>;
   sequence: number;
   lastSeen: Partial<Record<Role, number>>;
+  transfers?: string[];
   previewAllowed?: boolean;
   previewEpoch?: number;
 };
@@ -236,7 +241,8 @@ export class Room extends DurableObject<Env> {
         const m = JSON.parse(message);
         if (
           message.length > 1024 &&
-          !(a.role === "host" && m.type === "previewContent")
+          !(a.role === "host" && m.type === "previewContent") &&
+          !(a.role === "controller" && m.type === "quickSend")
         )
           throw Error();
         if (a.role === "new") {
@@ -336,6 +342,77 @@ export class Room extends DurableObject<Env> {
           this.send(d, "controller", this.previewPermission(d));
           if (d.previewAllowed && this.ready(d))
             this.send(d, "host", { type: "previewRequest" });
+          return;
+        }
+        if (a.role === "controller" && validQuickSend(m)) {
+          if (!this.ready(d)) {
+            ws.send(
+              JSON.stringify({
+                type: "quickSendAck",
+                id: m.id,
+                result: "failed",
+              }),
+            );
+            return;
+          }
+          // Persist only a fingerprint and receipt, never the submitted text.
+          const key = "transfer:" + m.id;
+          const fingerprint = await hash(
+            JSON.stringify([m.destination, m.body]),
+          );
+          const old = await this.ctx.storage.get<{
+            fingerprint: string;
+            destination: string;
+            result?: string;
+          }>(key);
+          if (old && old.fingerprint !== fingerprint) throw Error();
+          if (old?.result) {
+            this.send(d, "controller", {
+              type: "quickSendAck",
+              id: m.id,
+              result: old.result,
+            });
+            return;
+          }
+          if (!old) {
+            d.transfers ||= [];
+            if (d.transfers.length >= 100) {
+              ws.send(
+                JSON.stringify({
+                  type: "quickSendAck",
+                  id: m.id,
+                  result: "failed",
+                }),
+              );
+              return;
+            }
+            d.transfers.push(m.id);
+            await this.ctx.storage.put(key, {
+              fingerprint,
+              destination: m.destination,
+            });
+            await this.ctx.storage.put("room", d);
+          }
+          this.send(d, "host", m);
+          return;
+        }
+        if (a.role === "host" && validQuickSendAck(m)) {
+          const key = "transfer:" + m.id;
+          const old = await this.ctx.storage.get<{
+            fingerprint: string;
+            destination: string;
+            result?: string;
+          }>(key);
+          if (!old || old.result) return;
+          if (
+            m.result !== "failed" &&
+            m.result !== (old.destination === "session" ? "delivered" : "saved")
+          )
+            throw Error();
+          // Failed operations may be retried with the same ID.
+          if (m.result !== "failed")
+            await this.ctx.storage.put(key, { ...old, result: m.result });
+          this.send(d, "controller", m);
           return;
         }
         if (a.role === "host" && validPreviewPayload(m)) {

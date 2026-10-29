@@ -1,4 +1,10 @@
 import {
+  validQuickSend,
+  validQuickSendAck,
+  type QuickSend,
+  type QuickSendAck,
+} from "../../../packages/protocol/quick-send";
+import {
   validPreviewPayload,
   type PreviewEnvelope,
   type PreviewPermission,
@@ -14,6 +20,7 @@ export type RemoteEvent = {
   type: string;
   id?: string;
   command?: ControlCommand;
+  transfer?: QuickSend;
   state?: PlaybackState;
   sequence?: number;
   preview?: PreviewEnvelope | PreviewPermission;
@@ -25,6 +32,14 @@ const secret = () =>
 /** Credentials and reconnect state deliberately live only in this tab's memory. */
 export class RemoteLink {
   socket?: WebSocket;
+  private transfers = new Map<
+    string,
+    {
+      resolve: (ack: QuickSendAck) => void;
+      reject: (error: Error) => void;
+      timer: ReturnType<typeof setTimeout>;
+    }
+  >();
   private creating?: AbortController;
   private heartbeat?: ReturnType<typeof setInterval>;
   private timeout?: ReturnType<typeof setTimeout>;
@@ -118,6 +133,21 @@ export class RemoteLink {
         event = JSON.parse(e.data);
       } catch {
         this.finish("unavailable");
+        return;
+      }
+      if (validQuickSend(event)) {
+        this.onEvent({ type: "quickSend", transfer: event });
+        return;
+      }
+      if (validQuickSendAck(event)) {
+        const pending = this.transfers.get(event.id);
+        if (pending) {
+          clearTimeout(pending.timer);
+          this.transfers.delete(event.id);
+          if (event.result === "failed")
+            pending.reject(Error("quickSendFailed"));
+          else pending.resolve(event);
+        }
         return;
       }
       if (event.type === "previewPermission") {
@@ -243,7 +273,31 @@ export class RemoteLink {
     this.recoveryDeadline = Date.now() + 25000;
     this.recoveryTimer = setTimeout(() => this.finish("disconnected"), 25000);
   }
+  private rejectTransfers() {
+    for (const pending of this.transfers.values()) {
+      clearTimeout(pending.timer);
+      pending.reject(Error("quickSendUncertain"));
+    }
+    this.transfers.clear();
+  }
+  quickSend(message: QuickSend): Promise<QuickSendAck> {
+    if (
+      !this.ready ||
+      !validQuickSend(message) ||
+      this.transfers.has(message.id)
+    )
+      return Promise.reject(Error("quickSendFailed"));
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.transfers.delete(message.id);
+        reject(Error("quickSendUncertain"));
+      }, 10000);
+      this.transfers.set(message.id, { resolve, reject, timer });
+      this.send(message);
+    });
+  }
   private uncertain() {
+    this.rejectTransfers();
     clearTimeout(this.speedTimer);
     this.activeSpeed = undefined;
     this.confirmedSpeed = undefined;
@@ -325,6 +379,7 @@ export class RemoteLink {
     }
   }
   close() {
+    this.rejectTransfers();
     this.creating?.abort();
     this.creating = undefined;
     this.stopped = true;

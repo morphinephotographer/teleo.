@@ -1,3 +1,7 @@
+import type {
+  QuickSend,
+  QuickSendAck,
+} from "../../../packages/protocol/quick-send";
 import React, {
   useCallback,
   useEffect,
@@ -96,6 +100,14 @@ function App() {
   });
   const [restoringWelcome, setRestoringWelcome] = useState(false);
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
+  const [receivedText, setReceivedText] = useState<{
+    message: QuickSend;
+    target: string;
+  } | null>(null);
+  const incoming = useRef<typeof receivedText>(null);
+  const [reviewText, setReviewText] = useState(false);
+  const transferResults = useRef(new Map<string, QuickSendAck>());
+  const transferBusy = useRef(new Set<string>());
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
   const libraryBeforeReading = useRef(libraryOpen);
@@ -1015,6 +1027,63 @@ function App() {
         if (receiver.current.receive(e.preview as PreviewEnvelope))
           refreshPreview((x) => x + 1);
       }
+      if (e.type === "quickSend" && e.transfer && route === "/studio") {
+        const message = e.transfer;
+        const link = remote.current;
+        const socket = link.socket;
+        const reply = (result: QuickSendAck["result"]) => {
+          const receipt: QuickSendAck = {
+            type: "quickSendAck",
+            id: message.id,
+            result,
+          };
+          if (result !== "failed")
+            transferResults.current.set(message.id, receipt);
+          if (link.socket === socket) link.send(receipt);
+        };
+        const old = transferResults.current.get(message.id);
+        if (old) link.send(old);
+        else if (!transferBusy.current.has(message.id)) {
+          if (message.destination === "session") {
+            if (incoming.current || !currentRef.current) reply("failed");
+            else {
+              incoming.current = {
+                message,
+                target: currentRef.current.scriptId,
+              };
+              setReceivedText(incoming.current);
+              reply("delivered");
+            }
+          } else {
+            transferBusy.current.add(message.id);
+            const script = {
+              ...createScript(
+                message.body
+                  .split(/\r?\n/)
+                  .find((line) => line.trim())
+                  ?.slice(0, 80) || t("untitled"),
+                message.body,
+              ),
+              scriptId: message.id,
+            };
+            void storage
+              .receiveScript(script)
+              .then(
+                (saved) => {
+                  setScripts((list) =>
+                    saved.deletedAt ||
+                    list.some((item) => item.scriptId === saved.scriptId)
+                      ? list
+                      : [saved, ...list],
+                  );
+                  reply("saved");
+                },
+                () => reply("failed"),
+              )
+              .finally(() => transferBusy.current.delete(message.id));
+          }
+        }
+      }
       if (e.type === "previewRequest" && route !== "/remote")
         sender.current?.publish();
       if (e.type === "approval") setApproval(true);
@@ -1293,6 +1362,10 @@ function App() {
     }
   }
   function endRemote() {
+    incoming.current = null;
+    setReceivedText(null);
+    setReviewText(false);
+    transferResults.current.clear();
     setQRState("idle");
     clearTimeout(inviteTimer.current);
     setInviteDeadline(0);
@@ -1786,6 +1859,52 @@ function App() {
             {t("offline")}
           </p>
         )}
+        {receivedText && route === "/studio" && (
+          <div role="status" className="quick-send-received">
+            <span>{t("quickSendReceived")}</span>
+            <button onClick={() => setReviewText(true)}>
+              {t("quickSendReview")}
+            </button>
+          </div>
+        )}
+        <Sheet
+          open={reviewText && !!receivedText}
+          title={t("quickSendReceived")}
+          closeLabel={t("close")}
+          onClose={() => setReviewText(false)}
+          className="quick-send-review"
+        >
+          <div className="quick-send-content">
+            <pre>{receivedText?.message.body}</pre>
+            <p>{t("quickSendSessionHelp")}</p>
+            <button
+              disabled={receivedText?.target !== current?.scriptId}
+              onClick={() => {
+                if (
+                  !receivedText ||
+                  currentRef.current?.scriptId !== receivedText.target
+                )
+                  return;
+                editMode();
+                edit({ body: receivedText.message.body });
+                incoming.current = null;
+                setReceivedText(null);
+                setReviewText(false);
+              }}
+            >
+              {t("quickSendReplace")}
+            </button>
+            <button
+              onClick={() => {
+                incoming.current = null;
+                setReceivedText(null);
+                setReviewText(false);
+              }}
+            >
+              {t("quickSendDiscard")}
+            </button>
+          </div>
+        </Sheet>
         {notice && (
           <div role="alert" className="banner">
             {t(notice)} {button("close", () => setNotice(null))}
@@ -1807,6 +1926,7 @@ function App() {
             preview={receiver.current}
             language={lang}
             onStudio={() => navigate("/studio")}
+            onQuickSend={(message) => remote.current.quickSend(message)}
             onRequest={() => remote.current.requestPreview()}
             onCommand={(command: ControlCommand) => {
               lastAck.current = remote.current.command(command);

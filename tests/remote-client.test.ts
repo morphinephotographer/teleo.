@@ -289,3 +289,52 @@ it("cancels unsent speed gestures when the host switches script target", () => {
     true,
   );
 });
+
+it("Quick Send waits for receiver receipt, ignores other IDs, and supports a same-ID retry after timeout", async () => {
+  const socket = paired();
+  const message = {
+    type: "quickSend" as const,
+    id: crypto.randomUUID(),
+    destination: "session" as const,
+    body: "Text\n\n👋",
+  };
+  let resolved = false;
+  const waiting = link.quickSend(message).then(() => {
+    resolved = true;
+  });
+  await Promise.resolve();
+  expect(resolved).toBe(false);
+  socket.receive({
+    type: "quickSendAck",
+    id: crypto.randomUUID(),
+    result: "delivered",
+  });
+  await Promise.resolve();
+  expect(resolved).toBe(false);
+  socket.receive({ type: "quickSendAck", id: message.id, result: "delivered" });
+  await waiting;
+  expect(resolved).toBe(true);
+  const timeout = link.quickSend(message);
+  const rejection = expect(timeout).rejects.toThrow("quickSendUncertain");
+  vi.advanceTimersByTime(10000);
+  await rejection;
+  const retry = link.quickSend(message);
+  socket.receive({ type: "quickSendAck", id: message.id, result: "delivered" });
+  await expect(retry).resolves.toMatchObject({ result: "delivered" });
+});
+it("Quick Send rejects offline, failed and disconnected transfers without success", async () => {
+  const message = {
+    type: "quickSend" as const,
+    id: crypto.randomUUID(),
+    destination: "library" as const,
+    body: "Text",
+  };
+  await expect(link.quickSend(message)).rejects.toThrow();
+  const socket = paired();
+  const failed = link.quickSend(message);
+  socket.receive({ type: "quickSendAck", id: message.id, result: "failed" });
+  await expect(failed).rejects.toThrow("quickSendFailed");
+  const interrupted = link.quickSend(message);
+  socket.terminate();
+  await expect(interrupted).rejects.toThrow("quickSendUncertain");
+});

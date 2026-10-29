@@ -671,3 +671,81 @@ describe("v0.6 numeric controls on the existing authenticated channel", () => {
     host.send({ type: "revoke" });
   });
 });
+
+describe("Quick Send relay", () => {
+  it.each(["session", "library"])(
+    "forwards %s text only after approval and replays the receipt for duplicate IDs",
+    async (destination) => {
+      const { host, phone } = await session();
+      host.send({ type: "allow" });
+      await phone.next("connected");
+      const message = {
+        type: "quickSend",
+        id: crypto.randomUUID(),
+        destination,
+        body: "Текст 👋\n\n" + "x".repeat(2000),
+      };
+      phone.send(message);
+      expect(await host.next("quickSend")).toEqual(message);
+      const receipt = {
+        type: "quickSendAck",
+        id: message.id,
+        result: destination === "session" ? "delivered" : "saved",
+      };
+      host.send(receipt);
+      expect(await phone.next("quickSendAck")).toEqual(receipt);
+      phone.send(message);
+      expect(await phone.next("quickSendAck")).toEqual(receipt);
+      expect(host.messages.filter((m) => m.type === "quickSend")).toHaveLength(
+        0,
+      );
+      host.send({ type: "revoke" });
+    },
+  );
+  it("rejects unapproved text, wrong-role text and oversized submissions", async () => {
+    const first = await session();
+    first.phone.send({
+      type: "quickSend",
+      id: crypto.randomUUID(),
+      destination: "session",
+      body: "Private",
+    });
+    await first.phone.waitClosed();
+    expect(first.host.messages.some((m) => m.type === "quickSend")).toBe(false);
+    for (const role of ["host", "controller"]) {
+      const { host, phone } = await session();
+      host.send({ type: "allow" });
+      await phone.next("connected");
+      const sender = role === "host" ? host : phone;
+      sender.send({
+        type: "quickSend",
+        id: crypto.randomUUID(),
+        destination: "library",
+        body: role === "host" ? "Text" : "x".repeat(8001),
+      });
+      await sender.waitClosed();
+      host.ws.close();
+      phone.ws.close();
+    }
+  });
+  it("allows failed requests to retry and refuses changed text under a used ID", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const message = {
+      type: "quickSend",
+      id: crypto.randomUUID(),
+      destination: "library",
+      body: "Original",
+    };
+    phone.send(message);
+    await host.next("quickSend");
+    host.send({ type: "quickSendAck", id: message.id, result: "failed" });
+    await phone.next("quickSendAck");
+    phone.send(message);
+    expect(await host.next("quickSend")).toEqual(message);
+    phone.send({ ...message, body: "Changed" });
+    await phone.waitClosed();
+    host.ws.close();
+  });
+});

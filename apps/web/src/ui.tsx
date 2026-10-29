@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "documentPlus"
   | "copy"
   | "alignLeft"
   | "alignCenter"
@@ -34,6 +35,11 @@ export type IconName =
   | "sun"
   | "trash";
 const paths: Record<IconName, ReactNode> = {
+  documentPlus: (
+    <>
+      <path d="M13 3H5v18h11V7l-4-4v5h4M19 13v8m-4-4h8" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />

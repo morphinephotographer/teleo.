@@ -1,3 +1,8 @@
+import { QuickSendSheet } from "./QuickSendSheet";
+import type {
+  QuickSend,
+  QuickSendAck,
+} from "../../../packages/protocol/quick-send";
 import {
   useEffect,
   useLayoutEffect,
@@ -135,6 +140,7 @@ export function RemoteController({
   onRequest,
   language,
   onStudio,
+  onQuickSend,
 }: {
   t: (key: Key) => string;
   status: Key | null;
@@ -145,7 +151,9 @@ export function RemoteController({
   onRequest: () => void;
   language: ReactNode;
   onStudio: () => void;
+  onQuickSend: (message: QuickSend) => Promise<QuickSendAck>;
 }) {
+  const [sending, setSending] = useState(false);
   const [quick, setQuick] = useState(false),
     [advanced, setAdvanced] = useState(false),
     [detail, setDetail] = useState<
@@ -744,17 +752,31 @@ export function RemoteController({
         </div>
       )}
       {!quick && (
-        <button
-          ref={quickTrigger}
-          className="remote-quick-trigger"
-          aria-label={t("quickSettings")}
-          aria-expanded={quick}
-          aria-controls="remote-quick"
-          onClick={() => (quick ? closeQuick() : setQuick(true))}
-        >
-          <Icon name="settings" />
-        </button>
+        <div className="remote-bottom-actions">
+          <button
+            ref={quickTrigger}
+            className="remote-quick-trigger"
+            aria-label={t("quickSettings")}
+            aria-expanded={quick}
+            aria-controls="remote-quick"
+            onClick={() => (quick ? closeQuick() : setQuick(true))}
+          >
+            <Icon name="settings" />
+          </button>
+          <IconButton
+            name="documentPlus"
+            label={t("quickSendTitle")}
+            onClick={() => setSending(true)}
+          />
+        </div>
       )}
+      <QuickSendSheet
+        open={sending}
+        connected={connected}
+        t={t}
+        onClose={() => setSending(false)}
+        onSend={onQuickSend}
+      />
       {expanded && !quick && (
         <button className="remote-text-back" onClick={() => setExpanded(false)}>
           {t("back")}

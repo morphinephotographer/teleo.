@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 
 for (const locale of ["en", "ru", "uk"] as const) {
-  test(`${locale}: white glossy is the static install default and Settings has no install control`, async ({
+  test(`${locale}: white matte full-bleed is the static install default and Settings has no install control`, async ({
     page,
     browserName,
   }) => {
@@ -18,16 +18,18 @@ for (const locale of ["en", "ru", "uk"] as const) {
       (await fetch("/studio")).text(),
     );
     expect(html).toContain('href="/manifest.webmanifest"');
-    expect(html).toContain('href="/mac-icons/teleo_white_glossy-1024.png"');
+    expect(html).toContain(
+      'href="/mac-icons/teleo_white_matte_fullbleed_v1-1024.png"',
+    );
     const manifestLink = page.locator('link[rel="manifest"]');
     await expect(manifestLink).toHaveAttribute("href", "/manifest.webmanifest");
     await expect(page.locator('link[rel="apple-touch-icon"]')).toHaveAttribute(
       "href",
-      "/mac-icons/teleo_white_glossy-1024.png",
+      "/mac-icons/teleo_white_matte_fullbleed_v1-1024.png",
     );
     await expect(page.locator('link[rel="icon"]')).toHaveAttribute(
       "href",
-      "/mac-icons/teleo_white_glossy-32.png",
+      "/mac-icons/teleo_white_matte_fullbleed_v1-32.png",
     );
     const metadata = await page.evaluate(async () => {
       const link = document.querySelector<HTMLLinkElement>(
@@ -44,7 +46,9 @@ for (const locale of ["en", "ru", "uk"] as const) {
       display: "standalone",
     });
     for (const icon of metadata.manifest.icons) {
-      expect(icon.src).toMatch(/^\/mac-icons\/teleo_white_glossy-\d+\.png$/);
+      expect(icon.src).toMatch(
+        /^\/mac-icons\/teleo_white_matte_fullbleed_v1-\d+\.png$/,
+      );
       const dimensions = await page.evaluate(async (src: string) => {
         const image = new Image();
         image.src = src;

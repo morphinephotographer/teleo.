@@ -37,7 +37,14 @@ describe("Mac installation assets", () => {
       }
     });
   }
-  it("uses only white glossy icons in the default manifest and HTML", () => {
+  it("uses only white matte full-bleed icons in the default manifest and HTML", () => {
+    expect(
+      readFileSync(
+        "apps/web/public/mac-icons/teleo_white_matte_fullbleed_v1-1024.png",
+      ),
+    ).toEqual(
+      readFileSync("output/imagegen/teleo-white-matte-larger-1024.png"),
+    );
     const manifest = JSON.parse(
       readFileSync("apps/web/public/manifest.webmanifest", "utf8"),
     );
@@ -52,17 +59,23 @@ describe("Mac installation assets", () => {
       ["192x192", "256x256", "512x512", "1024x1024"],
     );
     for (const icon of manifest.icons) {
-      expect(icon.src).toMatch(/^\/mac-icons\/teleo_white_glossy-\d+\.png$/);
+      expect(icon.src).toMatch(
+        /^\/mac-icons\/teleo_white_matte_fullbleed_v1-\d+\.png$/,
+      );
       const bytes = readFileSync(`apps/web/public${icon.src}`);
       expect(`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`).toBe(
         icon.sizes,
       );
-      expect(icon.purpose).toBe("any");
+      expect(icon.purpose).toBe("any maskable");
     }
     const html = readFileSync("apps/web/index.html", "utf8");
     expect(html).toContain('href="/manifest.webmanifest"');
-    expect(html).toContain('href="/mac-icons/teleo_white_glossy-1024.png"');
-    expect(html).toContain('href="/mac-icons/teleo_white_glossy-32.png"');
+    expect(html).toContain(
+      'href="/mac-icons/teleo_white_matte_fullbleed_v1-1024.png"',
+    );
+    expect(html).toContain(
+      'href="/mac-icons/teleo_white_matte_fullbleed_v1-32.png"',
+    );
     expect(html).not.toContain("black_matte");
   });
 });

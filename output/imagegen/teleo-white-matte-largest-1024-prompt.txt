@@ -1,0 +1,3 @@
+Built-in imagegen edit; output normalized to 1024x1024 PNG using sips.
+
+Edit the supplied Teleo icon by enlarging the ENTIRE foreground group (black teleo. wordmark, all three gray bars, black cursor) uniformly by 22% relative to this input. Keep the group centered horizontally and vertically as a whole. Make longest bars span about 88% of canvas width, leaving approximately 6% margin on each side. No artwork may be clipped. Preserve exact wordmark text 'teleo.', typography, relative sizes and spacing between the elements, gray and black colors. Preserve the opaque matte off-white full-bleed square background. No frame, no border, no rounded outer tile, no shadows, no extra elements. PNG square 1024x1024. This is only a scale-up of the existing artwork, not a redesign.

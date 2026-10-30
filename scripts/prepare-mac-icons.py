@@ -51,12 +51,21 @@ subprocess.run([
     str(DEST / "teleo_white_glossy-1024.png"),
     "--out", str(DEST / "teleo_white_glossy-192.png"),
 ], check=True, capture_output=True)
-default_manifest = json.loads((DEST / "white_glossy.webmanifest").read_text())
-default_manifest["icons"].insert(0, {
-    "src": "/mac-icons/teleo_white_glossy-192.png", "sizes": "192x192",
-    "type": "image/png", "purpose": "any",
-})
+# Current website icon: owner-approved larger matte derivative. Keep the exact
+# chosen 1024px master; only smaller standard sizes are resampled.
+source = ROOT / "output/imagegen/teleo-white-matte-larger-1024.png"
+prefix = "teleo_white_matte_fullbleed_v1"
+(DEST / f"{prefix}-1024.png").write_bytes(source.read_bytes())
+for size in (32, 192, 256, 512):
+    subprocess.run(["sips", "--resampleHeightWidth", str(size), str(size),
+                    str(source), "--out", str(DEST / f"{prefix}-{size}.png")],
+                   check=True, capture_output=True)
+default_manifest = json.loads((DEST / "white_matte.webmanifest").read_text())
+default_manifest["icons"] = [{
+    "src": f"/mac-icons/{prefix}-{size}.png", "sizes": f"{size}x{size}",
+    "type": "image/png", "purpose": "any maskable",
+} for size in (192, 256, 512, 1024)]
 (DEST.parent / "manifest.webmanifest").write_text(json.dumps(default_manifest, indent=2) + "\n")
 provenance = ROOT / "design-references/mac-icons-provenance.json"
 provenance.write_text(json.dumps({"source": "teleo_icons_icns.zip", "extraction": "original embedded PNG bytes, no conversion", "variants": evidence}, indent=2) + "\n")
-print("Preserved 4 ICNS originals, extracted 20 exact PNGs, and prepared the white glossy default manifest + 192px PNG.")
+print("Preserved 4 ICNS originals, extracted 20 exact PNGs, and prepared the approved full-bleed matte default icons.")

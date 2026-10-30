@@ -83,6 +83,28 @@ links in its local Tab order. Final results above are after those fixes.
   repeatable extraction and hashes.
 - `tests/mac-icons.test.ts`, `tests/e2e/mac-install.spec.ts`,
   `playwright.mac-install.config.ts`: integrity and browser validation.
-- This report and its three evidence screenshots.
+- This report, three evidence screenshots and release verification records.
 
 Previous production version for rollback: `a087690b-b83e-464c-ab24-9ca5e171c7e7`.
+
+## Verified publication
+
+Live at https://teleo.cc/studio from source
+`61e5b37fe9d6c4057fd41352d146cfd973bf7119`.
+Production Worker version `ab9beb76-203a-4321-95bb-fe94d5b52eae`, with 100% traffic
+confirmed by Wrangler deployment readback and exact commit/version headers on
+normal public browser responses. Staging version:
+`1eea7f51-fe3f-4d21-af2d-f69044987163`.
+
+- Installation cohort: **12/12 staging**, **12/12 production**, Chromium/WebKit.
+- Production routes, HTTPS, strict Origin, security, redirects and identity: **2/2**.
+- On each origin, all **28 icon files** match local SHA-256 byte-for-byte.
+- On each origin, all **four HTML/CSS/JS/SW files** match raw HTTPS source bytes.
+  The existing Cloudflare browser HTML insertion was identified separately.
+- Verification records are in `evidence/mac-install/*assets.json` and
+  `production-deployment.txt`.
+
+Native Safari validation above used the local origin. Public browser checks and
+asset hashes verify the deployed feature and files; they do not extend the native
+test claim to every Safari/macOS version. No installed Mac app was modified.
+No GitHub push, data migration, dependency, domain or namespace change was made.

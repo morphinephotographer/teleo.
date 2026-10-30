@@ -103,10 +103,9 @@ export function hasWorkspaceHistory() {
   try {
     return Object.keys(localStorage).some(
       (key) =>
-        key.startsWith("teleo.") &&
-        !["teleo.locale", "teleo.demo.auto", "teleo.intro.seen.v1"].includes(
-          key,
-        ),
+        ["teleo.selectedScript", "teleo.lastReadScript"].includes(key) ||
+        key.startsWith("teleo.position.") ||
+        key.startsWith("teleo.recovery."),
     );
   } catch {
     return true;

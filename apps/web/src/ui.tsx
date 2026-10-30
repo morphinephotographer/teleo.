@@ -300,7 +300,11 @@ export function Sheet({
       return;
     }
     const previous = document.activeElement as HTMLElement | null;
-    if (!el.open) el.showModal();
+    if (!el.open) {
+      el.showModal();
+      // Do not autofocus the close button: Safari draws a persistent focus ring.
+      el.focus({ preventScroll: true });
+    }
     return () => {
       if (el.open) el.close();
       requestAnimationFrame(() => {
@@ -311,6 +315,7 @@ export function Sheet({
   }, [open]);
   return (
     <dialog
+      tabIndex={-1}
       id={id}
       ref={dialog}
       className={"settings-sheet " + className}

@@ -1,10 +1,29 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import "fake-indexeddb/auto";
 import { IDBFactory } from "fake-indexeddb";
 import { openDB } from "idb";
 import { storage } from "../apps/web/src/storage";
 import { createScript } from "../packages/protocol/domain";
-import { welcomeBodies, welcomeId } from "../apps/web/src/welcome";
+import {
+  hasWorkspaceHistory,
+  welcomeBodies,
+  welcomeId,
+} from "../apps/web/src/welcome";
+it("does not mistake appearance and icon choices for an existing document workspace", () => {
+  vi.stubGlobal("localStorage", {
+    "teleo.theme": "dark",
+    "teleo.macIcon": "white",
+    "teleo.letterSpacing": "0",
+  });
+  try {
+    expect(hasWorkspaceHistory()).toBe(false);
+    localStorage.setItem = () => {};
+    Object.assign(localStorage, { "teleo.selectedScript": "existing" });
+    expect(hasWorkspaceHistory()).toBe(true);
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
 beforeEach(() => {
   globalThis.indexedDB = new IDBFactory();
 });

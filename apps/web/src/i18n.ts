@@ -1,4 +1,7 @@
 export const en = {
+  letterSpacing: "Letter spacing",
+  previousLine: "Previous line",
+  nextLine: "Next line",
   quickSendTitle: "Send text",
   quickSendPlaceholder: "Paste or enter your script…",
   quickSendCharacters: "characters",
@@ -297,6 +300,9 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  letterSpacing: "Міжлітерний інтервал",
+  previousLine: "Попередній рядок",
+  nextLine: "Наступний рядок",
   quickSendTitle: "Надіслати текст",
   quickSendPlaceholder: "Вставте або введіть текст сценарію…",
   quickSendCharacters: "символів",
@@ -594,6 +600,9 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  letterSpacing: "Межбуквенный интервал",
+  previousLine: "Предыдущая строка",
+  nextLine: "Следующая строка",
   quickSendTitle: "Отправить текст",
   quickSendPlaceholder: "Вставьте или введите текст сценария…",
   quickSendCharacters: "символов",

@@ -150,6 +150,14 @@ function App() {
     () => localGet("teleo.focusDimming") === "true",
   );
   const [theme, setTheme] = useState(() => localGet("teleo.theme") || "system");
+  const [letterSpacing, setLetterSpacing] = useState(() =>
+    Math.max(0, Math.min(10, Number(localGet("teleo.letterSpacing")) || 0)),
+  );
+  useEffect(
+    () => localSet("teleo.letterSpacing", String(letterSpacing)),
+    [letterSpacing],
+  );
+
   const finishIntro = useCallback(() => {
     setIntro(false);
     requestAnimationFrame(() =>
@@ -381,6 +389,32 @@ function App() {
   const dimmingRef = useRef(focusDimming);
   dimmingRef.current = focusDimming;
   currentRef.current = current;
+  useEffect(() => {
+    const mq = matchMedia("(prefers-color-scheme: dark)");
+    const update = () => {
+      const dark = reading
+        ? currentRef.current?.preferences.appearance !== "light"
+        : theme === "dark" ||
+          (theme === "system" && mq.matches) ||
+          route === "/remote";
+      const color = reading
+        ? dark
+          ? "#080909"
+          : "#f1f1f0"
+        : dark
+          ? "#171719"
+          : "#f5f5f7";
+      document.documentElement.style.backgroundColor = color;
+      document.body.style.backgroundColor = color;
+      document
+        .querySelector('meta[name="theme-color"]')
+        ?.setAttribute("content", color);
+      document.documentElement.style.colorScheme = dark ? "dark" : "light";
+    };
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, [theme, reading, route, current?.preferences.appearance]);
   const controlTarget = useMemo(
     () => crypto.randomUUID(),
     [current?.scriptId, current?.body],
@@ -726,6 +760,7 @@ function App() {
     current?.preferences.mirrorHorizontal,
     current?.preferences.mirrorVertical,
     focusPosition,
+    letterSpacing,
   ]);
   useEffect(() => {
     if (!reading || !viewport.current) return;
@@ -1768,6 +1803,33 @@ function App() {
         )}
       </details>
       <section className="welcome-preference">
+        <button
+          disabled={!libraryLoaded}
+          onClick={async () => {
+            try {
+              await writer.current!.requireSaved();
+              const result = await storage.welcome(localeRef.current, {
+                restore: true,
+              });
+              setScripts(result.scripts);
+              setWelcomeSettings(result.settings);
+              if (result.selected) {
+                setSelected(result.selected.scriptId);
+                setPanel("editor");
+                document
+                  .querySelectorAll<HTMLElement>(
+                    ".top-settings [popover]:popover-open",
+                  )
+                  .forEach((el) => el.hidePopover());
+                dismissTransient();
+              }
+            } catch {
+              setStatus("saveError");
+            }
+          }}
+        >
+          {t("openDemo")}
+        </button>
         <label className="check">
           <input
             type="checkbox"
@@ -2261,6 +2323,7 @@ function App() {
                   style={{
                     fontSize: current.preferences.fontSize,
                     lineHeight: current.preferences.lineHeight,
+                    letterSpacing,
                     maxWidth: current.preferences.textWidth,
                     textAlign: current.preferences.alignment,
                     transform: `scale(${current.preferences.mirrorHorizontal ? -1 : 1},${current.preferences.mirrorVertical ? -1 : 1})`,
@@ -2281,6 +2344,24 @@ function App() {
               )}
             </div>
             <ReaderDock
+              letterSpacing={letterSpacing}
+              setLetterSpacing={setLetterSpacing}
+              moveLine={(direction) => {
+                if (!viewport.current || !content.current) return;
+                geometryHeld.current = false;
+                geometry.current = null;
+                const line =
+                  parseFloat(getComputedStyle(content.current).lineHeight) ||
+                  64;
+                engine.position = Math.max(
+                  0,
+                  Math.min(engine.maximum, engine.position + direction * line),
+                );
+                syncView(viewport.current);
+                rememberGeometry();
+                showControls();
+                setFrame((v) => v + 1);
+              }}
               engine={engine}
               preferences={current.preferences}
               t={t}

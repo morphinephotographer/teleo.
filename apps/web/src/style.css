@@ -4852,3 +4852,244 @@ input[type="checkbox"] {
     padding-bottom: 8px;
   }
 }
+
+/* Mobile viewport and input surfaces share the app background, including safe areas. */
+.settings-sheet .sheet-heading > .icon-button,
+.quick-send-sheet .sheet-heading > .icon-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+}
+.settings-sheet:focus {
+  outline: none;
+}
+.settings-sheet .sheet-heading > .icon-button:focus:not(:focus-visible) {
+  outline: none;
+}
+@media (max-width: 600px) {
+  #root {
+    min-height: 0;
+  }
+  .app-shell.route-studio {
+    padding: env(safe-area-inset-top) 8px max(6px, env(safe-area-inset-bottom));
+    gap: 6px;
+  }
+  .app-shell.route-studio:not(.prompting) .editor {
+    padding: 10px 12px;
+    gap: 6px;
+    overflow: auto;
+  }
+  .editor .title-input {
+    flex: 0 0 38px;
+    height: 38px;
+    min-height: 38px;
+    max-height: 38px;
+    font-size: 22px !important;
+  }
+  .editor textarea {
+    flex: 1 1 0;
+    height: 0;
+    min-height: 120px;
+    padding: 8px 0 !important;
+    border-radius: 0 !important;
+  }
+  .editor textarea:focus-visible {
+    box-shadow: none;
+  }
+  .document-actions {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    overflow: visible;
+    padding: 0;
+    margin: 0;
+  }
+  .document-actions > button {
+    padding: 5px 4px;
+    font-size: 10px;
+    min-height: 34px;
+    white-space: normal;
+  }
+  .editor > label {
+    flex-shrink: 0;
+  }
+  .editor-top {
+    flex-shrink: 0;
+  }
+  .reader {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .quick-send-sheet:not(.quick-send-success) {
+    width: 100%;
+    height: var(--visual-height, 100dvh);
+    max-height: var(--visual-height, 100dvh);
+    border: 0;
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
+  }
+  .quick-send-sheet::before {
+    display: none;
+  }
+  .quick-send-sheet .sheet-heading {
+    padding: 8px 12px;
+  }
+  .quick-send-sheet .quick-send-content {
+    flex: 1;
+    min-height: 0;
+    gap: 8px;
+    padding: 0 12px max(8px, env(safe-area-inset-bottom));
+  }
+  .quick-send-content textarea {
+    flex: 1 1 auto;
+    height: auto;
+    min-height: 140px;
+    resize: none;
+  }
+  .quick-send-sheet fieldset {
+    gap: 8px;
+  }
+  .quick-send-sheet legend {
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+  .quick-send-sheet fieldset label {
+    gap: 8px;
+    font-size: 13px;
+  }
+  .quick-send-sheet small {
+    font-size: 10px;
+    line-height: 1.25;
+    margin-top: 2px;
+  }
+  .quick-send-sheet .primary {
+    min-height: 44px;
+    flex-shrink: 0;
+  }
+  .quick-send-tools button {
+    min-height: 40px;
+  }
+  .reader.is-playing .mobile-reader-dock {
+    visibility: visible;
+    pointer-events: auto;
+  }
+}
+.reader-controls.mobile-reader-dock {
+  width: calc(100% - 16px);
+  max-width: calc(100% - 16px);
+  border-radius: 24px;
+  margin: 6px auto;
+  padding: 6px;
+}
+.mobile-reader-main {
+  display: grid;
+  grid-template-columns: 1fr 52px 1fr;
+  align-items: center;
+  width: 100%;
+  gap: 4px;
+}
+.mobile-speed,
+.mobile-lines {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+.mobile-reader-dock .mobile-reader-main .icon-button {
+  width: 32px;
+  height: 44px;
+  flex: 0 0 32px;
+  min-height: 44px;
+  border: 0;
+}
+.mobile-reader-dock .mobile-reader-main .dock-play {
+  width: 52px;
+  height: 52px;
+  min-height: 52px;
+}
+.mobile-speed output {
+  font-size: 12px;
+  min-width: 36px;
+  text-align: center;
+}
+.mobile-reader-options {
+  width: 100%;
+  max-height: min(48dvh, 360px);
+  overflow: auto;
+  padding: 6px;
+}
+.mobile-reader-slider {
+  display: grid;
+  grid-template-columns: minmax(85px, 1fr) minmax(70px, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.mobile-reader-slider input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+}
+.mobile-reader-options .dock-countdown {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 12px;
+}
+@media (max-width: 600px) and (max-height: 500px) {
+  .app-shell.route-studio {
+    --toolbar: 52px;
+  }
+  .app-shell.route-studio header {
+    padding-bottom: 0;
+  }
+  .app-shell.route-studio header > .segmented {
+    position: static;
+    width: auto;
+  }
+  .editor:focus-within .document-actions,
+  .editor:focus-within > label,
+  .editor:focus-within .editor-top {
+    display: none;
+  }
+}
+.top-settings .welcome-preference {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 8px;
+  align-items: center;
+  padding-top: 6px;
+}
+.top-settings .welcome-preference > button {
+  grid-column: 2;
+  grid-row: 1;
+  min-height: 32px;
+  padding: 4px 8px;
+  font-size: 10px;
+}
+.top-settings .welcome-preference > .check {
+  grid-column: 1;
+  grid-row: 1;
+  font-size: 10px;
+}
+.top-settings .welcome-preference > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 10px;
+}
+.reader.is-playing .mobile-reader-dock,
+.reader.quiet .mobile-reader-dock {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: none;
+}
+.quick-send-sheet[open],
+.quick-send-review[open] {
+  animation: none;
+}

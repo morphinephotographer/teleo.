@@ -44,3 +44,26 @@ was not performed. An initial dev-server response-body fixture race was fixed
 by fetching the HTML after navigation rather than reusing an invalidated response.
 
 Previous production rollback target: `ab9beb76-203a-4321-95bb-fe94d5b52eae`.
+
+## Verified publication
+
+Live at https://teleo.cc/studio from source
+`7da5b05548c8ef6b081565e7453c416012828109`.
+Production version: `a6e63bfa-75a9-4bf3-81da-b9cc56a7c9d0`.
+Staging version: `c2aa84c6-e42f-4797-9027-c661e24cc1da`.
+
+- Six default-icon/Settings checks passed on each public origin, in Chromium
+  and WebKit, across all three locales and four viewport sizes.
+- Two production security/routes/HTTPS/Origin/exact-version checks passed.
+- On each origin, four core HTML/CSS/JS/SW files and all 30 icon/manifest files
+  matched local SHA-256. Existing Cloudflare HTML insertion was checked separately.
+- **Real Safari 27.2 on the production origin** automatically displayed white
+  glossy in Add to Dock. It initially showed a temporary letter tile while
+  loading, then resolved to the correct image without any icon-picker interaction.
+  [Production native preview](evidence/default-icon/safari-auto-white-glossy-production.png).
+  The native sheet was canceled and only the test tab closed.
+- Deployment readback confirms the listed version serves 100% of traffic.
+
+Verification records are in `evidence/default-icon/`. No app installation,
+replacement, installed-app file edit, data migration, dependency, domain or
+namespace change was performed. No GitHub push was performed.

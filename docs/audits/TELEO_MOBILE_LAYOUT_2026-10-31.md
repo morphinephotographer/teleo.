@@ -41,3 +41,13 @@ Source `bb48882e68681aa0f9a89e91949caa20b3ad1c48`, production `be36cd8b-30da-444
 - Folder selector uses the available row width. Normal mobile layout uses dynamic viewport height; focused inputs retain visual viewport behavior for the keyboard. Removed outer bottom safe-area padding, retaining it inside the editor and reader so controls stay above the home indicator.
 - Reader is positioned to the bottom of its container. Settings arrow has its own centered row; line buttons have an 8px gap. Added spacing around the timer/alignment area and before the main playback row.
 - Typecheck, ESLint, build, dry-run, 2 mobile layout checks and 8 document/settings/desktop-reader regression checks passed. Screenshots visually reviewed for editor and expanded dock. No physical iPhone verification.
+
+## Follow-up: installed window sizing and Welcome alignment
+
+Source `a22ad5167a612b87fbc2a633bd0a0bd8360ac463`, production `daa34c51-f323-4899-8274-2332db5e1405`; previous production `be36cd8b-30da-444f-b063-46cbb01d3d6b`.
+
+- Detect home-screen standalone mode using display-mode and navigator.standalone. On small installed windows, size the root chain to its containing web view with fill-available and percentage sizing; replace fixed shell/immersive reader positioning with absolute positioning. Keep visual viewport sizing while a focused input and a substantial viewport reduction indicate an open keyboard. Do not force physical screen.height or move controls outside the drawable web view.
+- Playback expansion arrow now has a transparent background in normal, hover and active states.
+- Welcome setting label and switch use an explicit full-width flex row. Explanation and Open Welcome occupy separate columns in the following row, preventing the switch from floating above its label.
+- Typecheck, ESLint, production build and Wrangler dry-run passed. Eight mobile tests passed (normal mobile flow plus EN/UK/RU standalone-mode simulation in Chromium and WebKit); two settings viewport regression checks passed. Simulated keyboard shrink/restore and transparent arrow states are covered. Settled screenshots inspected after disabling transitional animations.
+- Tests emulate the installed-mode signal and visual viewport reduction; they do not launch an actual iPhone home-screen app. No physical iPhone validation is available. The system-owned bottom strip described in https://bugs.webkit.org/show_bug.cgi?id=313800 may remain outside the drawable page. Do not claim this release proves removal of that native strip.

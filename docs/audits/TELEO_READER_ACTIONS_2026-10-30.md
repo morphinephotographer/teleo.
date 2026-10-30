@@ -40,3 +40,12 @@ Local validation:
 - Final Open last/empty-library recheck: four passed.
 - Typecheck, lint, production build/dry-run and diff checks passed.
 - Portrait and landscape settings screenshots were inspected.
+
+
+Initial staging validation found an existing first-load race: programmatic TXT
+import could run before library initialization completed, then the initial empty
+snapshot replaced the optimistic document list. Creation/import controls now
+wait for library readiness (including the empty-state creation button); `add`
+also refuses pre-initialization mutations. The file-input test now waits for the
+same enabled state a user needs to open the picker. The importer and validation
+formats are unchanged. Initial staging results were 33/34, not a release pass.

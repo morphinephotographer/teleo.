@@ -164,8 +164,13 @@ export function LibraryPanel({
         <IconButton name="close" label={t("closeLibrary")} onClick={onClose} />
       </div>
       <div className="library-create">
-        <button onClick={onCreate}>{t("newScript")}</button>
-        <button onClick={() => onAction({ kind: "newFolder" })}>
+        <button disabled={!ready} onClick={onCreate}>
+          {t("newScript")}
+        </button>
+        <button
+          disabled={!ready}
+          onClick={() => onAction({ kind: "newFolder" })}
+        >
           {t("newFolder")}
         </button>
       </div>
@@ -317,13 +322,14 @@ export function LibraryPanel({
           ref={input}
           type="file"
           hidden
+          disabled={!ready}
           accept=".txt,.json,text/plain,application/json"
           onChange={(e) => {
             if (e.target.files?.[0]) onImport(e.target.files[0]);
             e.target.value = "";
           }}
         />
-        <button onClick={() => input.current?.click()}>
+        <button disabled={!ready} onClick={() => input.current?.click()}>
           <Icon name="import" />
           <span>{t("import")}</span>
         </button>

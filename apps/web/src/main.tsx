@@ -1397,6 +1397,7 @@ function App() {
     setRoute(path === "/" ? "/studio" : path);
   }
   async function add(s = createScript(t("untitled"))) {
+    if (!libraryLoaded) return;
     const completed = flush();
     setScripts((list) => [s, ...list]);
     setSelected(s.scriptId);
@@ -1564,8 +1565,17 @@ function App() {
       setNotice("invalidImport");
     }
   }
-  const button = (key: Key, fn: () => void, primary = false) => (
-    <button className={primary ? "primary" : ""} onClick={fn}>
+  const button = (
+    key: Key,
+    fn: () => void,
+    primary = false,
+    disabled = false,
+  ) => (
+    <button
+      className={primary ? "primary" : ""}
+      disabled={disabled}
+      onClick={fn}
+    >
       {t(key)}
     </button>
   );
@@ -2134,7 +2144,7 @@ function App() {
                 <span className="eyebrow">{t("tagline")}</span>
                 <h2>{t("emptyTitle")}</h2>
                 <p>{t("empty")}</p>
-                {button("newScript", () => void add(), true)}
+                {button("newScript", () => void add(), true, !libraryLoaded)}
               </section>
             )}
           </main>

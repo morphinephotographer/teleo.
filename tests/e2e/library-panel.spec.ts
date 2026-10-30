@@ -839,6 +839,7 @@ test("TXT and JSON imports retain validation and content; empty last action is s
     library.getByRole("button", { name: t.openLast, exact: true }),
   ).toBeDisabled();
   const input = library.locator('input[type="file"]');
+  await expect(input).toBeEnabled();
   await input.setInputFiles({
     name: "Текст.txt",
     mimeType: "text/plain",

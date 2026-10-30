@@ -4216,6 +4216,13 @@ input[type="checkbox"] {
   flex: 1;
   min-height: 40px;
 }
+.remote-v12 .remote-inline-heading .icon-button,
+.remote-quick-menu .sheet-heading > .icon-button,
+.settings-sheet .sheet-heading > .icon-button {
+  border: 0;
+  border-radius: 50%;
+  box-shadow: none;
+}
 .remote-v12 .remote-text {
   position: absolute;
   inset: 0;

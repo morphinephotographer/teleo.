@@ -96,6 +96,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .getByRole("button", { name: t.quickSettings, exact: true })
         .click();
       await expect(phone.locator("#remote-quick")).toBeVisible();
+      const closeStyle = await phone
+        .locator("#remote-quick .icon-button")
+        .evaluate((el) => {
+          const style = getComputedStyle(el);
+          return { border: style.borderTopWidth, radius: style.borderRadius };
+        });
+      expect(closeStyle).toEqual({ border: "0px", radius: "50%" });
       await phone
         .locator("#remote-quick")
         .getByRole("button", { name: t.close, exact: true })
@@ -104,6 +111,23 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await expect(
         page.getByRole("button", { name: t.pause, exact: true }).first(),
       ).toBeVisible();
+      // Playback must advance on local animation frames, not just host packets.
+      const movingFrames = await phone.locator(".remote-text").evaluate(
+        (el) =>
+          new Promise<number>((resolve) => {
+            const start = performance.now();
+            let previous = el.scrollTop,
+              changes = 0;
+            const frame = (now: number) => {
+              if (el.scrollTop > previous) changes++;
+              previous = el.scrollTop;
+              if (now - start < 1600) requestAnimationFrame(frame);
+              else resolve(changes);
+            };
+            requestAnimationFrame(frame);
+          }),
+      );
+      expect(movingFrames).toBeGreaterThan(15);
       await phone
         .getByRole("button", { name: t.quickSendTitle, exact: true })
         .click();
@@ -176,7 +200,10 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .check();
       await submit.click();
       await expect(sheet.getByRole("status")).toHaveText(t.quickSendSaved);
-      await expect(active).toHaveValue(body);
+      await expect(active).toHaveValue("New library script\n\nSeparate 👋");
+      await expect(phone.locator(".remote-text")).toContainText(
+        "New library script",
+      );
       await expect(page.locator(".library")).toContainText(
         "New library script",
       );

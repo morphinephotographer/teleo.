@@ -1100,6 +1100,13 @@ function App() {
                       ? list
                       : [saved, ...list],
                   );
+                  if (!saved.deletedAt) {
+                    void flush();
+                    setSelected(saved.scriptId);
+                    setPanel("editor");
+                    if (innerWidth <= 900) setLibraryOpen(false);
+                    setRevisions(null);
+                  }
                   reply("saved");
                 },
                 () => reply("failed"),

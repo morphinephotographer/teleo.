@@ -3,7 +3,7 @@ type Sample = {
   timestamp: number;
   state: { playing: boolean; position: number };
 };
-/** Local frame interpolation. Host packets remain authoritative; prediction is bounded to one packet interval. */
+/** Host packets remain authoritative; bounded prediction tolerates network jitter. */
 export class RemoteTextFollow {
   private current: number | null = null;
   private sample: Sample | null = null;
@@ -34,13 +34,13 @@ export class RemoteTextFollow {
     }
     this.sample = sample;
     this.received = now;
-    this.frame = now;
+    if (!previous) this.frame = now;
   }
   step(now: number) {
     if (!this.sample || this.current === null) return null;
     const target =
       this.sample.offset +
-      this.velocity * Math.min(250, Math.max(0, now - this.received));
+      this.velocity * Math.min(750, Math.max(0, now - this.received));
     const elapsed = Math.max(0, Math.min(64, now - this.frame));
     this.frame = now;
     this.current += (target - this.current) * (1 - Math.exp(-elapsed / 45));
@@ -48,7 +48,7 @@ export class RemoteTextFollow {
     return {
       offset: this.current,
       active:
-        (this.velocity > 0 && now - this.received < 500) ||
+        (this.velocity > 0 && now - this.received < 750) ||
         this.current !== target,
     };
   }

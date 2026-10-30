@@ -1,5 +1,18 @@
 import { expect, it } from "vitest";
 import { RemoteTextFollow } from "../apps/web/src/remote-text-follow";
+it("keeps moving through delayed packets without losing a frame on receipt", () => {
+  const follow = new RemoteTextFollow();
+  follow.receive(sample(0, 1000, true), 0);
+  follow.receive(sample(25, 1250, true), 250);
+  let previous = follow.step(256)!.offset;
+  for (let now = 272; now <= 736; now += 16) {
+    if (now === 656) follow.receive(sample(65, 1650, true), now);
+    const next = follow.step(now)!;
+    expect(next.offset).toBeGreaterThan(previous);
+    expect(next.offset - previous).toBeLessThan(3);
+    previous = next.offset;
+  }
+});
 const sample = (
   offset: number,
   timestamp: number,
@@ -41,9 +54,9 @@ it("bounds playback prediction, rejects stale samples and stops on the authorita
     follow.step(266 + i * 16)!,
   );
   expect(moving[8].offset).toBeGreaterThan(125);
-  expect(moving.at(-1)).toEqual({ offset: 150, active: false });
+  expect(moving.at(-1)).toEqual({ offset: 200, active: false });
   follow.receive(sample(9000, 1200, true), 1600);
-  expect(follow.step(1616)!.offset).toBe(150);
+  expect(follow.step(1616)!.offset).toBe(200);
   follow.receive(sample(130, 1500, false), 1700);
   for (let n = 1; n <= 40; n++) follow.step(1700 + n * 16);
   expect(follow.step(2400)).toEqual({ offset: 130, active: false });

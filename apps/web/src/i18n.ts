@@ -10,13 +10,14 @@ export const en = {
   quickSendSessionHelp:
     "Delivered for review. The current script changes only after confirmation on the computer.",
   quickSendLibraryHelp:
-    "Creates a separate script in the computer’s library. The current session stays unchanged.",
+    "Creates a separate script in the computer’s library and selects it for reading.",
   quickSendSubmit: "Send to teleo.",
   quickSendSending: "Sending…",
   quickSendSuccess: "Text sent",
   quickSendDelivered:
     "Text received by the computer. Applying it requires confirmation there.",
-  quickSendSaved: "A new script was saved in the computer’s library.",
+  quickSendSaved:
+    "The new script was saved and selected for reading on the computer.",
   quickSendContinue: "Continue",
   quickSendPairRequired:
     "Connect to an approved computer session to send text.",
@@ -307,13 +308,14 @@ export const uk: Record<Key, string> = {
   quickSendSessionHelp:
     "Текст буде доставлено для перегляду. Поточний сценарій зміниться лише після підтвердження на комп’ютері.",
   quickSendLibraryHelp:
-    "Створює окремий сценарій у бібліотеці комп’ютера. Поточна сесія залишається без змін.",
+    "Створює окремий сценарій у бібліотеці комп’ютера та вибирає його для читання.",
   quickSendSubmit: "Надіслати в teleo.",
   quickSendSending: "Надсилання…",
   quickSendSuccess: "Текст надіслано",
   quickSendDelivered:
     "Комп’ютер отримав текст. Для застосування потрібне підтвердження на ньому.",
-  quickSendSaved: "Новий сценарій збережено в бібліотеці комп’ютера.",
+  quickSendSaved:
+    "Новий сценарій збережено та вибрано для читання на комп’ютері.",
   quickSendContinue: "Продовжити",
   quickSendPairRequired:
     "Для надсилання тексту під’єднайтеся до підтвердженої сесії комп’ютера.",
@@ -603,13 +605,13 @@ export const ru: Record<Key, string> = {
   quickSendSessionHelp:
     "Текст будет доставлен для просмотра. Текущий сценарий изменится только после подтверждения на компьютере.",
   quickSendLibraryHelp:
-    "Создаёт отдельный сценарий в библиотеке компьютера. Текущая сессия остаётся без изменений.",
+    "Создаёт отдельный сценарий в библиотеке компьютера и выбирает его для чтения.",
   quickSendSubmit: "Отправить в teleo.",
   quickSendSending: "Отправка…",
   quickSendSuccess: "Текст отправлен",
   quickSendDelivered:
     "Компьютер получил текст. Для применения нужно подтверждение на нём.",
-  quickSendSaved: "Новый сценарий сохранён в библиотеке компьютера.",
+  quickSendSaved: "Новый сценарий сохранён и выбран для чтения на компьютере.",
   quickSendContinue: "Продолжить",
   quickSendPairRequired:
     "Для отправки текста подключитесь к подтверждённой сессии компьютера.",

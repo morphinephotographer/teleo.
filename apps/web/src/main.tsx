@@ -48,8 +48,6 @@ import {
 } from "../../../packages/protocol/control";
 import { ActionDialog } from "./ActionDialog";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
-import { MacInstallSheet } from "./MacInstallSheet";
-import { useMacIcon } from "./mac-icons";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet } from "./ui";
 import { TeleoSelect, Popover } from "./menus";
@@ -85,8 +83,6 @@ function download(name: string, text: string, type = "text/plain") {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 function App() {
-  const [macIcon, setMacIcon] = useMacIcon();
-  const [macInstallOpen, setMacInstallOpen] = useState(false);
   const [locale, setLocale] = useLocale();
   const localeRef = useRef(locale);
   localeRef.current = locale;
@@ -1615,29 +1611,7 @@ function App() {
   );
   const settingsContent = (
     <aside className="settings">
-      <div className="settings-title-row">
-        <h2>{t("settings")}</h2>
-        <button
-          className="mac-install-entry"
-          aria-label={t("macInstall")}
-          title={t("macInstall")}
-          onClick={(event) => {
-            const trigger = event.currentTarget
-              .closest(".top-settings")
-              ?.querySelector<HTMLButtonElement>(":scope > button");
-            document
-              .querySelectorAll<HTMLElement>(
-                ".top-settings > [popover]:popover-open",
-              )
-              .forEach((el) => el.hidePopover());
-            // The sheet restores focus here, rather than to the hidden menu entry.
-            trigger?.focus();
-            setMacInstallOpen(true);
-          }}
-        >
-          {t("macInstallShort")}
-        </button>
-      </div>
+      <h2>{t("settings")}</h2>
       <div className="settings-language">
         <span>{t("language")}</span>
         {lang}
@@ -2452,15 +2426,6 @@ function App() {
               </div>
             </div>
           </Sheet>
-        )}
-        {macInstallOpen && (
-          <MacInstallSheet
-            open
-            selected={macIcon}
-            onSelect={setMacIcon}
-            onClose={() => setMacInstallOpen(false)}
-            t={t}
-          />
         )}
         {actionDialog && (
           <ActionDialog

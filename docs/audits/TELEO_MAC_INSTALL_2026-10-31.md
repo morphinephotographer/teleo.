@@ -1,5 +1,9 @@
 # Mac web app icon selection — 2026-10-31
 
+**Superseded by the owner's follow-up:** the picker and Settings Install entry
+were removed; white glossy is now the static installation default. See
+[current default-icon report](TELEO_DEFAULT_ICON_2026-10-31.md).
+
 Settings now contains a compact Install entry alongside its existing heading.
 It opens a separate dialog with four labeled previews, a visible selected state,
 PNG download, original ICNS download and manual Safari instructions in EN/UK/RU.

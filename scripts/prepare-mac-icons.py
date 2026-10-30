@@ -3,6 +3,7 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import subprocess
 import sys
 import zipfile
 
@@ -43,6 +44,19 @@ with zipfile.ZipFile(sys.argv[1]) as archive:
                       for size in (256, 512, 1024)],
         }
         (DEST / f"{variant}.webmanifest").write_text(json.dumps(manifest, indent=2) + "\n")
+# Chromium's install metadata also needs a 192px representation. The native
+# macOS converter only resizes; the ICNS and extracted PNGs remain untouched.
+subprocess.run([
+    "sips", "--resampleHeightWidth", "192", "192",
+    str(DEST / "teleo_white_glossy-1024.png"),
+    "--out", str(DEST / "teleo_white_glossy-192.png"),
+], check=True, capture_output=True)
+default_manifest = json.loads((DEST / "white_glossy.webmanifest").read_text())
+default_manifest["icons"].insert(0, {
+    "src": "/mac-icons/teleo_white_glossy-192.png", "sizes": "192x192",
+    "type": "image/png", "purpose": "any",
+})
+(DEST.parent / "manifest.webmanifest").write_text(json.dumps(default_manifest, indent=2) + "\n")
 provenance = ROOT / "design-references/mac-icons-provenance.json"
 provenance.write_text(json.dumps({"source": "teleo_icons_icns.zip", "extraction": "original embedded PNG bytes, no conversion", "variants": evidence}, indent=2) + "\n")
-print("Preserved 4 ICNS originals and extracted 20 exact PNG representations.")
+print("Preserved 4 ICNS originals, extracted 20 exact PNGs, and prepared the white glossy default manifest + 192px PNG.")

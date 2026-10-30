@@ -2,11 +2,11 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import provenance from "../design-references/mac-icons-provenance.json";
-import { dictionaries } from "../apps/web/src/i18n";
-import { macIcons, validMacIcon } from "../apps/web/src/mac-icons";
 
 describe("Mac installation assets", () => {
-  for (const { id, label } of macIcons) {
+  for (const id of Object.keys(
+    provenance.variants,
+  ) as (keyof typeof provenance.variants)[]) {
     it(`${id}: preserves originals and exact embedded PNGs with one app identity`, () => {
       const root = "apps/web/public/mac-icons/";
       const hashes = provenance.variants[id];
@@ -35,13 +35,34 @@ describe("Mac installation assets", () => {
           readFileSync(`apps/web/public${icon.src}`).length,
         ).toBeGreaterThan(0);
       }
-      for (const locale of ["en", "ru", "uk"] as const)
-        expect(dictionaries[locale][label]).toBeTruthy();
     });
   }
-  it("falls back safely from missing or invalid local choices", () => {
-    expect(validMacIcon(null)).toBe("black_matte");
-    expect(validMacIcon("../../other")).toBe("black_matte");
-    expect(validMacIcon("white_glossy")).toBe("white_glossy");
+  it("uses only white glossy icons in the default manifest and HTML", () => {
+    const manifest = JSON.parse(
+      readFileSync("apps/web/public/manifest.webmanifest", "utf8"),
+    );
+    expect(manifest).toMatchObject({
+      id: "/studio",
+      start_url: "/studio",
+      scope: "/",
+      name: "teleo.",
+      display: "standalone",
+    });
+    expect(manifest.icons.map((icon: { sizes: string }) => icon.sizes)).toEqual(
+      ["192x192", "256x256", "512x512", "1024x1024"],
+    );
+    for (const icon of manifest.icons) {
+      expect(icon.src).toMatch(/^\/mac-icons\/teleo_white_glossy-\d+\.png$/);
+      const bytes = readFileSync(`apps/web/public${icon.src}`);
+      expect(`${bytes.readUInt32BE(16)}x${bytes.readUInt32BE(20)}`).toBe(
+        icon.sizes,
+      );
+      expect(icon.purpose).toBe("any");
+    }
+    const html = readFileSync("apps/web/index.html", "utf8");
+    expect(html).toContain('href="/manifest.webmanifest"');
+    expect(html).toContain('href="/mac-icons/teleo_white_glossy-1024.png"');
+    expect(html).toContain('href="/mac-icons/teleo_white_glossy-32.png"');
+    expect(html).not.toContain("black_matte");
   });
 });

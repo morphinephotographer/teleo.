@@ -45,24 +45,6 @@ export const en = {
     "Create a welcome script when starting with a new, empty library.",
   restoreDemo: "Restore demo script",
   openDemo: "Open Welcome",
-  macInstall: "Install on Mac",
-  macInstallShort: "Install",
-  macInstallIntro:
-    "Choose your app icon, download its PNG and select that file manually in Safari. Your choice is saved in this browser independently of the interface theme.",
-  macChooseIcon: "App icon",
-  macBlackGlossy: "Black glossy",
-  macBlackMatte: "Black matte",
-  macWhiteGlossy: "White glossy",
-  macWhiteMatte: "White matte",
-  macSelected: "Selected",
-  macDownloadPng: "Download icon PNG",
-  macDownloadIcns: "Original .icns",
-  macInstallStep1: "Choose an icon and download its PNG.",
-  macInstallStep2: "In Safari on Mac, choose File → Add to Dock.",
-  macInstallStep3:
-    "In the Add to Dock window, click the icon and select the downloaded PNG, then click Add.",
-  macInstalledNote:
-    "This choice does not change the icon of an app already installed on your Mac.",
 
   pairTitle: "Connect your phone",
   pairHelper: "Scan this QR code with your iPhone.",
@@ -359,24 +341,6 @@ export const uk: Record<Key, string> = {
   autoDemoHelp: "Створювати вступний сценарій для нової порожньої бібліотеки.",
   restoreDemo: "Відновити приклад",
   openDemo: "Відкрити Welcome",
-  macInstall: "Встановити на Mac",
-  macInstallShort: "Встановити",
-  macInstallIntro:
-    "Виберіть іконку, завантажте PNG та вручну виберіть цей файл у Safari. Вибір зберігається в цьому браузері незалежно від теми інтерфейсу.",
-  macChooseIcon: "Іконка застосунку",
-  macBlackGlossy: "Чорна глянцева",
-  macBlackMatte: "Чорна матова",
-  macWhiteGlossy: "Біла глянцева",
-  macWhiteMatte: "Біла матова",
-  macSelected: "Вибрано",
-  macDownloadPng: "Завантажити іконку PNG",
-  macDownloadIcns: "Оригінал .icns",
-  macInstallStep1: "Виберіть іконку та завантажте її PNG.",
-  macInstallStep2: "У Safari на Mac виберіть «Файл → Додати в Dock».",
-  macInstallStep3:
-    "У вікні «Додати в Dock» натисніть на іконку та виберіть завантажений PNG, потім натисніть «Додати».",
-  macInstalledNote:
-    "Цей вибір не змінює іконку вже встановленого на Mac застосунку.",
 
   pairTitle: "Підключіть телефон",
   pairHelper: "Відскануйте QR-код камерою iPhone.",
@@ -674,24 +638,6 @@ export const ru: Record<Key, string> = {
     "Создавать приветственный сценарий для новой пустой библиотеки.",
   restoreDemo: "Восстановить пример",
   openDemo: "Открыть Welcome",
-  macInstall: "Установить на Mac",
-  macInstallShort: "Установить",
-  macInstallIntro:
-    "Выберите иконку, скачайте PNG и вручную выберите этот файл в Safari. Выбор сохраняется в этом браузере независимо от темы интерфейса.",
-  macChooseIcon: "Иконка приложения",
-  macBlackGlossy: "Чёрная глянцевая",
-  macBlackMatte: "Чёрная матовая",
-  macWhiteGlossy: "Белая глянцевая",
-  macWhiteMatte: "Белая матовая",
-  macSelected: "Выбрано",
-  macDownloadPng: "Скачать иконку PNG",
-  macDownloadIcns: "Оригинал .icns",
-  macInstallStep1: "Выберите иконку и скачайте её PNG.",
-  macInstallStep2: "В Safari на Mac выберите «Файл → Добавить в Dock».",
-  macInstallStep3:
-    "В окне «Добавить в Dock» нажмите на иконку и выберите скачанный PNG, затем нажмите «Добавить».",
-  macInstalledNote:
-    "Этот выбор не меняет иконку приложения, уже установленного на Mac.",
 
   pairTitle: "Подключите телефон",
   pairHelper: "Отсканируйте QR-код камерой iPhone.",

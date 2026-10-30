@@ -84,6 +84,145 @@ async function action(page: Page, title: string, label: string) {
   return row.getByRole("button", { name: `${label}: ${title}`, exact: true });
 }
 
+test("folder ellipsis, transparent actions and selection dot match the refined library", async ({
+  page,
+}, info) => {
+  await seed(page);
+  const library = page.locator(".library");
+  const folder = library.locator(".library-folder-row").first();
+  await expect(folder.locator(".library-folder-more")).toBeVisible();
+  await expect(folder.locator(".library-folder-more circle")).toHaveCount(3);
+  await expect(folder.locator(".library-disclosure")).toHaveCount(0);
+  await folder.screenshot({ path: info.outputPath("folder-ellipsis.png") });
+  await folder.locator(".library-row-actions").hover();
+  await expect(folder.locator(".library-folder-more")).toHaveCSS(
+    "opacity",
+    "0",
+  );
+  await expect(folder.locator(".library-action-rename")).toHaveCSS(
+    "opacity",
+    "1",
+  );
+  await expect(folder.locator(".library-action-trash")).toHaveCSS(
+    "opacity",
+    "1",
+  );
+  const row = library.locator(".script-row").first();
+  const selected = row.locator(".library-document");
+  await expect(selected).toHaveAttribute("aria-current", "true");
+  await expect(selected).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  const dot = await selected.evaluate((el) => {
+    const dot = getComputedStyle(el, "::before");
+    return {
+      color: dot.backgroundColor,
+      width: dot.width,
+      height: dot.height,
+      radius: dot.borderRadius,
+    };
+  });
+  expect(dot.color).not.toBe("rgba(0, 0, 0, 0)");
+  expect(dot.width).toBe(dot.height);
+  expect(dot.radius).toBe("50%");
+  const controls = row.locator(".library-row-actions");
+  await controls.hover();
+  await expect(controls).toHaveCSS("background-image", "none");
+  await expect(controls).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await controls.locator(".library-action-rename").hover();
+  await expect(controls.locator(".library-action-rename")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
+  await expect(selected).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await row.screenshot({
+    path: info.outputPath("selected-script-actions.png"),
+  });
+  await library
+    .locator(".library-document")
+    .filter({ hasText: "Текст 1" })
+    .click();
+  await expect(selected).not.toHaveAttribute("aria-current", "true");
+  await expect
+    .poll(() =>
+      selected.evaluate(
+        (el) => getComputedStyle(el, "::before").backgroundColor,
+      ),
+    )
+    .toBe("rgba(0, 0, 0, 0)");
+  await expect(
+    library.locator('.library-document[aria-current="true"]'),
+  ).toHaveCount(1);
+});
+
+test("reader has one alignment outline, no phone button and round appearance symbols", async ({
+  page,
+}, info) => {
+  const t = dictionaries.ru;
+  await seed(page);
+  await page
+    .getByRole("textbox", { name: t.body, exact: true })
+    .fill("Абзац для проверки воспроизведения. ".repeat(400));
+  await page.getByRole("textbox", { name: t.body, exact: true }).blur();
+  const trigger = page.locator(".app-shell > header > .top-settings > button");
+  await trigger.click();
+  const settings = page.locator(
+    `[id="${await trigger.getAttribute("aria-controls")}"]`,
+  );
+  for (const symbol of await settings.locator(".appearance-symbol").all()) {
+    await expect(symbol).toHaveCSS("border-radius", "50%");
+    const box = await symbol.boundingBox();
+    expect(box!.width).toBe(box!.height);
+  }
+  await settings
+    .locator(".appearance-content")
+    .screenshot({ path: info.outputPath("round-appearance.png") });
+  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: t.read, exact: true }).click();
+  const reader = page.locator(".reader");
+  const toolbar = reader.locator(".approved-reader-toolbar");
+  await expect(toolbar).toBeVisible();
+  await expect(
+    reader.getByRole("button", { name: t.connect, exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    reader.getByRole("button", { name: t.connection, exact: true }),
+  ).toHaveCount(0);
+  await expect(toolbar.locator(".approved-alignment")).toHaveCSS(
+    "border-width",
+    "0px",
+  );
+  await expect(toolbar.locator(".alignment-control")).toHaveCSS(
+    "border-width",
+    "1px",
+  );
+  await toolbar
+    .getByRole("button", { name: t.alignCenter, exact: true })
+    .click();
+  await expect(
+    toolbar.getByRole("button", { name: t.alignCenter, exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await toolbar
+    .locator(".approved-alignment")
+    .screenshot({ path: info.outputPath("single-alignment-outline.png") });
+  await reader
+    .locator(".reader-top")
+    .screenshot({ path: info.outputPath("reader-without-phone.png") });
+  await toolbar.getByRole("button", { name: t.play, exact: true }).click();
+  await expect(toolbar).toBeHidden();
+  await reader.locator(".reader-pause").click();
+  await expect(toolbar).toBeVisible();
+  await page.setViewportSize({ width: 375, height: 812 });
+  await expect(
+    reader.getByRole("button", { name: t.connect, exact: true }),
+  ).toHaveCount(0);
+  await reader.getByRole("button", { name: t.exit, exact: true }).click();
+  await expect(reader).toHaveCount(0);
+  await expect(
+    page
+      .locator("header")
+      .getByRole("button", { name: t.remoteConnection, exact: true }),
+  ).toBeVisible();
+});
+
 test("right-edge actions and All folders disclosure do not overlap counts or open Welcome", async ({
   page,
 }, info) => {

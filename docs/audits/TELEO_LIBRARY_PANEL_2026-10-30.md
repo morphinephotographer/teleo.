@@ -156,3 +156,25 @@ The preceding production version for rollback is
 `52224e49-4a54-452a-acaf-d512ae9182a7`. No storage migration, dependency, domain,
 namespace, analytics-setting change or GitHub push was performed. Physical device
 behavior remains unverified; touch access was checked in browser emulation.
+
+## Follow-up: six visual refinements
+
+The owner's next request updates six specific details:
+
+1. Created folders use an ellipsis instead of a disclosure arrow. Hovering its
+   right-edge area reveals Rename and Trash; overlapping metadata hides while
+   the actions are visible. The All folders disclosure remains unchanged.
+2. Action groups and hovered action buttons have transparent backgrounds.
+3. Selected documents have no filled row background. A small circular marker
+   appears to the left of the file icon; selection still uses `aria-current`.
+4. Only the outer, duplicate border around Reader alignment is removed. The
+   shared alignment component retains its single border and all three actions.
+5. The Connect phone button is removed from Reader's top row. The Editor phone
+   control and pairing/session logic remain available.
+6. The two Appearance symbols in Settings have circular 44px backgrounds.
+
+Local Chromium/WebKit validation: **24/24** scenarios passed, including live
+play/pause, center alignment, mobile Reader, selection-marker movement,
+transparent hover states, ellipsis/actions, all previous library operations,
+keyboard and touch. Typecheck, lint, production build/dry-run and diff checks
+passed. Cropped screenshots of the changed controls were inspected.

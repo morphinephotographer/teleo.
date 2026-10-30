@@ -241,19 +241,17 @@ export function LibraryPanel({
                       >
                         <Icon name="folder" />
                         <span>{f.title}</span>
-                        <small>
+                        <small className="library-folder-count">
                           {
                             scripts.filter((s) => s.folderId === f.folderId)
                               .length
                           }
                         </small>
                         <span
-                          className={
-                            "library-disclosure" +
-                            (folder === f.folderId ? " expanded" : "")
-                          }
+                          className="library-folder-more"
+                          aria-hidden="true"
                         >
-                          <Icon name="chevron" />
+                          <Icon name="more" />
                         </span>
                       </button>
                       <div

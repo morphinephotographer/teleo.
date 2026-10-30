@@ -2127,10 +2127,6 @@ function App() {
                 active={immersive}
                 onClick={toggleFullscreen}
               />
-              {button(
-                remoteStatus === "connected" ? "connection" : "connect",
-                () => void showConnection(),
-              )}
               {immersive && (
                 <Popover
                   kind="dialog"

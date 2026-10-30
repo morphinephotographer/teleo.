@@ -14,7 +14,7 @@ the hardware-enable checkbox:
 - Left/right move backward/forward by the article's actual rendered line height.
 - Up/down increase/decrease speed with existing bounds and persistence.
 
-Typing, menus, dialogs, composition and modifier-key combinations remain guarded.
+Typing, menus, dialogs, composition and Ctrl/Alt/Meta combinations remain guarded.
 Native repeats are consumed without repeated toggling or browser-page scrolling.
 R400-specific Period/PageUp/PageDown/F5 behavior is preserved.
 
@@ -49,3 +49,29 @@ wait for library readiness (including the empty-state creation button); `add`
 also refuses pre-initialization mutations. The file-input test now waits for the
 same enabled state a user needs to open the picker. The importer and validation
 formats are unchanged. Initial staging results were 33/34, not a release pass.
+
+
+## Verified publication
+
+Live at https://teleo.cc/studio from final source
+`3cc58bc5430c0c483b3e9bf891e906ac05b1f99d` (reader behavior `37b5a0e` plus
+initialization guard). Production Worker version:
+`a087690b-b83e-464c-ab24-9ca5e171c7e7`; Cloudflare readback confirms **100% traffic**.
+Final staging version: `4338ebe3-906b-481b-b2d4-a87c66683a09`.
+
+- Final staging browser cohort: **34/34** passed.
+- Production browser cohort: **34/34** passed in Chromium/WebKit.
+- Production routes, HTTPS, Origin/security, redirect and exact identity: **2/2**.
+- Raw HTML/CSS/JS/service-worker hashes: **4/4** match on each origin. The existing
+  Cloudflare browser HTML insertion is checked separately from raw source bytes.
+- Import/creation/resume readiness recheck before publication: **6/6** passed.
+
+Production Settings screenshots were saved as
+`docs/screenshots/reader-actions-settings-*-live.png`; the compact portrait view
+was inspected. Release evidence is in
+`docs/audits/evidence/reader-actions-publication/`.
+
+Previous production version for rollback:
+`9f96a6e5-2c9f-4e59-b000-066413a4b292`. No rollback, GitHub push, data migration,
+namespace/domain mutation or dependency change was performed. Physical hardware
+and real mobile-device testing remain separate from browser emulation.

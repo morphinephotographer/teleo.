@@ -179,3 +179,8 @@ Library interaction correction: live source `656eb9c4cacdc9495b2b7ad2b2d7103717c
 
 
 Six visual refinements are live from `873a480fa5dcd1d191ea76cb72b49c459eeffe50`, Worker `9f96a6e5-2c9f-4e59-b000-066413a4b292` at 100% traffic: folder ellipsis, transparent row actions, a circular selected-document marker, a single Reader alignment outline, removal of Reader's Connect phone button, and round Appearance symbols in Settings. Editor phone pairing is preserved. Public staging and production checks each passed **24/24**. [Release evidence and screenshots](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md#follow-up-six-visual-refinements).
+
+
+## Reader actions — 2026-10-30
+
+Live source `3cc58bc5430c0c483b3e9bf891e906ac05b1f99d`, Worker `a087690b-b83e-464c-ab24-9ca5e171c7e7` at 100% traffic. Open last resumes the most recently read available script in paused Reader at its saved position. Space toggles playback, left/right move one rendered line, up/down change speed, independently of hardware profiles. Only the two Appearance buttons switch states directly; language, hardware controls and playback sliders retain their existing interactions. Default Settings fits portrait and landscape viewports without scrolling. Final public staging and production cohorts each passed **34/34**; local focused unit tests **88/88**, existing browser regression **6/6**. [Implementation, release evidence, screenshots and rollback](docs/audits/TELEO_READER_ACTIONS_2026-10-30.md).

@@ -2,12 +2,12 @@ import { useId, useRef, useState } from "react";
 import type { Folder, Script } from "../../../packages/protocol/domain";
 import type { Key, Locale } from "./i18n";
 import { Icon, IconButton } from "./ui";
-import { Popover } from "./menus";
 
 export type LibraryAction = {
   kind:
     | "newFolder"
     | "renameFolder"
+    | "renameScript"
     | "deleteFolder"
     | "deleteScript"
     | "purgeScript";
@@ -26,8 +26,6 @@ export function LibraryPanel({
   folder,
   ready,
   lastScriptId,
-  demoLabel,
-  demoBusy,
   onClose,
   onCreate,
   onSearch,
@@ -36,7 +34,6 @@ export function LibraryPanel({
   onAction,
   onImport,
   onRestore,
-  onDemo,
 }: {
   t: (key: Key) => string;
   locale: Locale;
@@ -48,8 +45,6 @@ export function LibraryPanel({
   folder: string;
   ready: boolean;
   lastScriptId: string;
-  demoLabel: "openDemo" | "restoreDemo";
-  demoBusy: boolean;
   onClose: () => void;
   onCreate: () => void;
   onSearch: (value: string) => void;
@@ -58,12 +53,13 @@ export function LibraryPanel({
   onAction: (action: LibraryAction) => void;
   onImport: (file: File) => void;
   onRestore: (id: string) => Promise<boolean>;
-  onDemo: () => void;
 }) {
   const [trashOpen, setTrashOpen] = useState(false);
+  const [foldersExpanded, setFoldersExpanded] = useState(true);
   const [restoring, setRestoring] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const listId = useId();
+  const foldersId = useId();
   const query = search.toLocaleLowerCase();
   const matches = (s: Script) =>
     `${s.title} ${s.body}`.toLocaleLowerCase().includes(query);
@@ -101,17 +97,17 @@ export function LibraryPanel({
                 </small>
               </span>
             </button>
-            <Popover
-              className="library-row-menu"
-              triggerClassName="library-overflow"
-              showChevron={false}
-              label={`${t("documentActions")}: ${title}`}
-              trigger={<Icon name="more" />}
+            <div
+              className="library-row-actions"
+              role="group"
+              aria-label={`${t("documentActions")}: ${title}`}
             >
               {trashOpen ? (
                 <>
-                  <button
-                    role="menuitem"
+                  <IconButton
+                    name="restart"
+                    className="library-action-restore"
+                    label={`${t("restore")}: ${title}`}
                     disabled={!!restoring}
                     onClick={async () => {
                       setRestoring(s.scriptId);
@@ -121,29 +117,41 @@ export function LibraryPanel({
                         setRestoring(null);
                       }
                     }}
-                  >
-                    {t("restore")}
-                  </button>
-                  <button
-                    role="menuitem"
+                  />
+                  <IconButton
+                    name="trash"
+                    className="library-action-trash"
+                    label={`${t("deleteForever")}: ${title}`}
                     onClick={() =>
                       onAction({ kind: "purgeScript", id: s.scriptId })
                     }
-                  >
-                    {t("deleteForever")}
-                  </button>
+                  />
                 </>
               ) : (
-                <button
-                  role="menuitem"
-                  onClick={() =>
-                    onAction({ kind: "deleteScript", id: s.scriptId })
-                  }
-                >
-                  {t("delete")}
-                </button>
+                <>
+                  <IconButton
+                    name="pencil"
+                    className="library-action-rename"
+                    label={`${t("renameScript")}: ${title}`}
+                    onClick={() =>
+                      onAction({
+                        kind: "renameScript",
+                        id: s.scriptId,
+                        initial: s.title,
+                      })
+                    }
+                  />
+                  <IconButton
+                    name="trash"
+                    className="library-action-trash"
+                    label={`${t("delete")}: ${title}`}
+                    onClick={() =>
+                      onAction({ kind: "deleteScript", id: s.scriptId })
+                    }
+                  />
+                </>
               )}
-            </Popover>
+            </div>
           </div>
         );
       })}
@@ -176,25 +184,37 @@ export function LibraryPanel({
           <button
             className="library-folder-button"
             aria-pressed={!trashOpen && !folder}
-            onClick={() => selectFolder("")}
+            onClick={() => {
+              selectFolder("");
+              setFoldersExpanded(true);
+            }}
           >
             <Icon name="folder" />
             <span>{t("allFolders")}</span>
           </button>
-          <Popover
-            className="library-options"
-            label={t("libraryActions")}
-            trigger={<Icon name="chevron" />}
-            showChevron={false}
+          <button
+            className="library-folders-toggle"
+            aria-label={t(
+              foldersExpanded && !trashOpen
+                ? "collapseFolders"
+                : "expandFolders",
+            )}
+            aria-expanded={foldersExpanded && !trashOpen}
+            aria-controls={foldersId}
+            onClick={() => {
+              setFoldersExpanded(!(foldersExpanded && !trashOpen));
+              selectFolder("");
+            }}
           >
-            <button
-              role="menuitem"
-              disabled={!ready || demoBusy}
-              onClick={onDemo}
+            <span
+              className={
+                "library-disclosure" +
+                (foldersExpanded && !trashOpen ? " expanded" : "")
+              }
             >
-              {t(demoLabel)}
-            </button>
-          </Popover>
+              <Icon name="chevron" />
+            </span>
+          </button>
         </div>
         <div className="library-scroll" id={listId}>
           {trashOpen ? (
@@ -204,7 +224,11 @@ export function LibraryPanel({
             </>
           ) : (
             <>
-              <div className="library-folders">
+              <div
+                className="library-folders"
+                id={foldersId}
+                hidden={!foldersExpanded}
+              >
                 {folders.map((f) => (
                   <div className="library-folder-group" key={f.folderId}>
                     <div className="library-folder-row">
@@ -232,14 +256,15 @@ export function LibraryPanel({
                           <Icon name="chevron" />
                         </span>
                       </button>
-                      <Popover
-                        className="library-folder-menu"
-                        label={`${t("folderActions")}: ${f.title}`}
-                        trigger={<Icon name="more" />}
-                        showChevron={false}
+                      <div
+                        className="library-row-actions"
+                        role="group"
+                        aria-label={`${t("folderActions")}: ${f.title}`}
                       >
-                        <button
-                          role="menuitem"
+                        <IconButton
+                          name="pencil"
+                          className="library-action-rename"
+                          label={`${t("renameFolder")}: ${f.title}`}
                           onClick={() =>
                             onAction({
                               kind: "renameFolder",
@@ -247,18 +272,16 @@ export function LibraryPanel({
                               initial: f.title,
                             })
                           }
-                        >
-                          {t("renameFolder")}
-                        </button>
-                        <button
-                          role="menuitem"
+                        />
+                        <IconButton
+                          name="trash"
+                          className="library-action-trash"
+                          label={`${t("deleteFolder")}: ${f.title}`}
                           onClick={() =>
                             onAction({ kind: "deleteFolder", id: f.folderId })
                           }
-                        >
-                          {t("deleteFolder")}
-                        </button>
-                      </Popover>
+                        />
+                      </div>
                     </div>
                     {folder === f.folderId && rows(visible, true)}
                   </div>

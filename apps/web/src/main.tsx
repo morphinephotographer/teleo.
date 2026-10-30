@@ -16,11 +16,7 @@ import { phonePairingIssue } from "./pairing-origin";
 import { Wordmark } from "./Wordmark";
 import { LanguageControl } from "./LanguageControl";
 import { useLocale } from "./useLocale";
-import {
-  hasWorkspaceHistory,
-  pristineWelcome,
-  type WelcomeSettings,
-} from "./welcome";
+import { hasWorkspaceHistory, type WelcomeSettings } from "./welcome";
 import {
   Playback,
   createScript,
@@ -99,7 +95,6 @@ function App() {
     autoCreate: localGet("teleo.demo.auto") !== "false",
     records: [],
   });
-  const [restoringWelcome, setRestoringWelcome] = useState(false);
   const t = (key: Key) => dictionaries[locale][key] || dictionaries.en[key];
   const [receivedText, setReceivedText] = useState<{
     message: QuickSend;
@@ -1331,35 +1326,6 @@ function App() {
       })
       .catch(() => setStatus("saveError"));
   }, [locale, libraryLoaded, route]);
-  async function restoreWelcome() {
-    if (restoringWelcome) return;
-    setRestoringWelcome(true);
-    mutation.current = "*";
-    try {
-      await writer.current!.requireSaved();
-      const result = await storage.welcome(localeRef.current, {
-        restore: true,
-      });
-      setWelcomeSettings(result.settings);
-      const restored = result.selected!;
-      setScripts((previous) =>
-        previous.some((script) => script.scriptId === restored.scriptId)
-          ? previous.map((script) =>
-              script.scriptId === restored.scriptId ? restored : script,
-            )
-          : [restored, ...previous],
-      );
-      setSelected(restored.scriptId);
-      setPanel("editor");
-      setReading(false);
-      setSettingsOpen(false);
-    } catch {
-      setStatus("saveError");
-    } finally {
-      mutation.current = null;
-      setRestoringWelcome(false);
-    }
-  }
   function endRemote() {
     incoming.current = null;
     setReceivedText(null);
@@ -1992,12 +1958,6 @@ function App() {
               folder={folder}
               ready={libraryLoaded}
               lastScriptId={selected}
-              demoLabel={
-                pristineWelcome(scripts, welcomeSettings)
-                  ? "openDemo"
-                  : "restoreDemo"
-              }
-              demoBusy={restoringWelcome}
               onClose={() => setLibraryOpen(false)}
               onCreate={() => void add()}
               onSearch={setSearch}
@@ -2006,7 +1966,6 @@ function App() {
               onAction={setActionDialog}
               onImport={(file) => void importFile(file)}
               onRestore={restoreTrashScript}
-              onDemo={() => void restoreWelcome()}
             />
             {current ? (
               <>
@@ -2426,8 +2385,13 @@ function App() {
             )}
             label={
               actionDialog.kind === "newFolder" ||
-              actionDialog.kind === "renameFolder"
-                ? t("folderName")
+              actionDialog.kind === "renameFolder" ||
+              actionDialog.kind === "renameScript"
+                ? t(
+                    actionDialog.kind === "renameScript"
+                      ? "title"
+                      : "folderName",
+                  )
                 : undefined
             }
             initial={actionDialog.initial}
@@ -2464,6 +2428,30 @@ function App() {
                 };
                 await storage.folder(entry);
                 setFolders(await storage.folders());
+              } else if (kind === "renameScript" && id) {
+                mutation.current = "*";
+                try {
+                  await writer.current!.requireSaved();
+                  const script =
+                    currentRef.current?.scriptId === id
+                      ? currentRef.current
+                      : scriptsRef.current.find((s) => s.scriptId === id);
+                  if (!script) return;
+                  if (script.title === value) return;
+                  const renamed = {
+                    ...script,
+                    title: value,
+                    updatedAt: new Date().toISOString(),
+                  };
+                  await storage.save(renamed, true);
+                  if (currentRef.current?.scriptId === id)
+                    currentRef.current = renamed;
+                  setScripts((list) =>
+                    list.map((s) => (s.scriptId === id ? renamed : s)),
+                  );
+                } finally {
+                  mutation.current = null;
+                }
               } else if (kind === "deleteFolder" && id) {
                 mutation.current = "*";
                 try {

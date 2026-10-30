@@ -76,17 +76,167 @@ async function showLibrary(page: Page) {
       .click();
 }
 
-async function menu(page: Page, title: string) {
+async function action(page: Page, title: string, label: string) {
   const row = page.locator(".script-row").filter({
     has: page.locator("strong", { hasText: new RegExp(`^${title}$`) }),
   });
-  const trigger = row.locator(".library-row-menu > button");
-  await trigger.click();
-  const id = await trigger.getAttribute("aria-controls");
-  return page.locator(`[id="${id}"]`);
+  await row.locator(".library-row-actions").hover();
+  return row.getByRole("button", { name: `${label}: ${title}`, exact: true });
 }
 
-test("reference composition, keyboard overflow and locale switching", async ({
+test("right-edge actions and All folders disclosure do not overlap counts or open Welcome", async ({
+  page,
+}, info) => {
+  const t = dictionaries.ru;
+  await seed(page);
+  const library = page.locator(".library");
+  for (const selector of [".script-row", ".library-folder-row"]) {
+    const row = library.locator(selector).first();
+    await page.mouse.move(0, 0);
+    const controls = row.locator(".library-row-actions");
+    await expect(controls.locator(".library-action-rename")).toHaveCSS(
+      "opacity",
+      "0",
+    );
+    await row.hover({ position: { x: 20, y: 20 } });
+    await expect(controls.locator(".library-action-rename")).toHaveCSS(
+      "opacity",
+      "0",
+    );
+    const before = await row.boundingBox();
+    await controls.hover();
+    await expect(controls.locator(".library-action-rename")).toHaveCSS(
+      "opacity",
+      "1",
+    );
+    await expect(controls.locator(".library-action-trash")).toHaveCSS(
+      "opacity",
+      "1",
+    );
+    expect(await row.boundingBox()).toEqual(before);
+    const left = await controls.locator(".library-action-rename").boundingBox();
+    const right = await controls.locator(".library-action-trash").boundingBox();
+    expect(left!.x + left!.width).toBeLessThanOrEqual(right!.x);
+    await row.screenshot({
+      path: info.outputPath(
+        selector === ".script-row"
+          ? "script-actions.png"
+          : "folder-actions.png",
+      ),
+    });
+  }
+  await library
+    .locator(".library-folder-button[aria-expanded]")
+    .first()
+    .click();
+  await expect(library.locator(".library-nested .script-row")).toHaveCount(2);
+  await library
+    .getByRole("button", { name: t.collapseFolders, exact: true })
+    .click();
+  await expect(library.locator(".library-folders")).toBeHidden();
+  await expect(library.locator(".script-row")).toHaveCount(4);
+  await expect(library.locator(".library-folders-toggle")).toHaveAttribute(
+    "aria-expanded",
+    "false",
+  );
+  await expect(library.getByRole("menu")).toHaveCount(0);
+  await expect(
+    library.getByRole("button", { name: t.openDemo, exact: true }),
+  ).toHaveCount(0);
+  await library.getByRole("searchbox").fill("уникальный-1");
+  await expect(library.locator(".script-row")).toHaveCount(1);
+  await library
+    .getByRole("button", { name: t.expandFolders, exact: true })
+    .click();
+  await expect(library.locator(".library-folders")).toBeVisible();
+  await library.getByRole("searchbox").fill("");
+  await expect(library.locator(".script-row")).toHaveCount(4);
+  await expect(page.locator(".title-input")).toHaveValue("Знакомство");
+});
+
+test("renaming current and other scripts preserves drafts, selection and saved content", async ({
+  page,
+}) => {
+  const t = dictionaries.ru;
+  await seed(page);
+  const body = page.getByRole("textbox", { name: t.body, exact: true });
+  await body.fill("Самая свежая правка без потери текста");
+  await (await action(page, "Знакомство", t.renameScript)).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("textbox")).toHaveValue("Знакомство");
+  await dialog.getByRole("textbox").fill("   ");
+  await dialog.getByRole("button", { name: t.save, exact: true }).click();
+  await expect(dialog.getByRole("alert")).toHaveText(t.nameRequired);
+  await dialog.getByRole("textbox").fill("Новое название");
+  await dialog.getByRole("button", { name: t.save, exact: true }).click();
+  await expect(page.locator(".title-input")).toHaveValue("Новое название");
+  await expect(body).toHaveValue("Самая свежая правка без потери текста");
+  await (await action(page, "Текст 1", t.renameScript)).click();
+  await dialog.getByRole("textbox").fill("Другой текст");
+  await dialog.getByRole("button", { name: t.save, exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(
+    page.locator(".script-row strong").filter({ hasText: "Другой текст" }),
+  ).toBeVisible();
+  await expect(page.locator(".title-input")).toHaveValue("Новое название");
+  await expect(body).toHaveValue("Самая свежая правка без потери текста");
+  await page.reload();
+  await expect(page.locator(".title-input")).toHaveValue("Новое название");
+  await expect(body).toHaveValue("Самая свежая правка без потери текста");
+  await page
+    .locator(".library-document")
+    .filter({ hasText: "Другой текст" })
+    .click();
+  await expect(body).toHaveValue("Содержимое документа 1. уникальный-1");
+});
+
+test("touch devices expose direct actions and can collapse folders without hovering", async ({
+  browser,
+}, info) => {
+  const context = await browser.newContext({
+    hasTouch: true,
+    viewport: { width: 375, height: 812 },
+    baseURL: info.project.use.baseURL,
+    serviceWorkers: "block",
+  });
+  try {
+    const page = await context.newPage();
+    await page.addInitScript(() => {
+      sessionStorage.setItem("teleo.intro.seen.v1", "true");
+      localStorage.setItem("teleo.demo.auto", "false");
+      localStorage.setItem("teleo.locale", "ru");
+    });
+    await seed(page);
+    await page.setViewportSize({ width: 375, height: 812 });
+    await showLibrary(page);
+    const library = page.locator(".library");
+    await expect(
+      library.locator(".script-row .library-action-rename").first(),
+    ).toHaveCSS("opacity", "1");
+    await expect(
+      library.locator(".library-folder-row .library-action-trash").first(),
+    ).toHaveCSS("opacity", "1");
+    await library.locator(".script-row .library-action-rename").first().tap();
+    await page
+      .getByRole("dialog")
+      .getByRole("textbox")
+      .fill("Переименовано касанием");
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: dictionaries.ru.save, exact: true })
+      .tap();
+    await expect(library.locator(".script-row strong").first()).toHaveText(
+      "Переименовано касанием",
+    );
+    await library.locator(".library-folders-toggle").tap();
+    await expect(library.locator(".library-folders")).toBeHidden();
+    await expect(library.locator(".script-row")).toHaveCount(4);
+  } finally {
+    await context.close();
+  }
+});
+
+test("reference composition, keyboard actions and locale switching", async ({
   page,
 }, info) => {
   await seed(page);
@@ -104,14 +254,18 @@ test("reference composition, keyboard overflow and locale switching", async ({
   await page.setViewportSize({ width: 1440, height: 1000 });
   await library.locator(".library-document").first().focus();
   await page.keyboard.press("Tab");
-  const overflow = library.locator(".library-row-menu > button").first();
-  await expect(overflow).toBeFocused();
-  await page.keyboard.press("Enter");
   await expect(
-    page.getByRole("menuitem", { name: dictionaries.ru.delete, exact: true }),
+    library.locator(".script-row .library-action-rename").first(),
   ).toBeFocused();
-  await page.keyboard.press("Escape");
-  await expect(overflow).toBeFocused();
+  await page.keyboard.press("Tab");
+  const remove = library.locator(".script-row .library-action-trash").first();
+  await expect(remove).toBeFocused();
+  await page.keyboard.press("Enter");
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: dictionaries.ru.cancel, exact: true })
+    .click();
+  await expect(remove).toBeFocused();
   await library.getByRole("searchbox").fill("уникальный-0");
   for (const locale of ["en", "uk", "ru"] as const) {
     const current = (await page.locator("html").getAttribute("lang")) as Locale;
@@ -268,11 +422,8 @@ test("folder creation, expansion, rename, navigation and safe folder removal", a
   await folder.locator(".library-folder-button").click();
   await expect(folder.locator(".library-nested .script-row")).toHaveCount(1);
   await expect(library.locator(".script-row")).toHaveCount(1);
-  await folder.locator(".library-folder-row").hover();
-  await folder.locator(".library-folder-menu > button").click();
-  await page
-    .getByRole("menuitem", { name: t.renameFolder, exact: true })
-    .click();
+  await folder.locator(".library-folder-row .library-row-actions").hover();
+  await folder.locator(".library-folder-row .library-action-rename").click();
   await page.getByRole("dialog").getByRole("textbox").fill("Переименовано");
   await page
     .getByRole("dialog")
@@ -281,11 +432,8 @@ test("folder creation, expansion, rename, navigation and safe folder removal", a
   const renamed = library
     .locator(".library-folder-group")
     .filter({ hasText: "Переименовано" });
-  await renamed.locator(".library-folder-row").hover();
-  await renamed.locator(".library-folder-menu > button").click();
-  await page
-    .getByRole("menuitem", { name: t.deleteFolder, exact: true })
-    .click();
+  await renamed.locator(".library-folder-row .library-row-actions").hover();
+  await renamed.locator(".library-folder-row .library-action-trash").click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })
@@ -308,11 +456,7 @@ test("document creation, trash restore, confirmed permanent deletion and last do
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Последние несохранённые слова");
   await page.getByRole("textbox", { name: t.body, exact: true }).blur();
-  await (
-    await menu(page, "Новый документ")
-  )
-    .getByRole("menuitem", { name: t.delete, exact: true })
-    .click();
+  await (await action(page, "Новый документ", t.delete)).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })
@@ -324,11 +468,7 @@ test("document creation, trash restore, confirmed permanent deletion and last do
   await expect(library.locator(".script-row strong")).toHaveText(
     "Новый документ",
   );
-  await (
-    await menu(page, "Новый документ")
-  )
-    .getByRole("menuitem", { name: t.restore, exact: true })
-    .click();
+  await (await action(page, "Новый документ", t.restore)).click();
   await expect(library.locator(".script-row")).toHaveCount(5);
   await library
     .locator(".library-document")
@@ -345,11 +485,7 @@ test("document creation, trash restore, confirmed permanent deletion and last do
   await expect(library).toBeHidden();
   await expect(page.locator(".title-input")).toHaveValue("Новый документ");
   await showLibrary(page);
-  await (
-    await menu(page, "Новый документ")
-  )
-    .getByRole("menuitem", { name: t.delete, exact: true })
-    .click();
+  await (await action(page, "Новый документ", t.delete)).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })
@@ -357,21 +493,13 @@ test("document creation, trash restore, confirmed permanent deletion and last do
   await library
     .getByRole("button", { name: new RegExp(`^${t.trash}`) })
     .click();
-  await (
-    await menu(page, "Новый документ")
-  )
-    .getByRole("menuitem", { name: t.deleteForever, exact: true })
-    .click();
+  await (await action(page, "Новый документ", t.deleteForever)).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.cancel, exact: true })
     .click();
   await expect(library.locator(".script-row")).toHaveCount(1);
-  await (
-    await menu(page, "Новый документ")
-  )
-    .getByRole("menuitem", { name: t.deleteForever, exact: true })
-    .click();
+  await (await action(page, "Новый документ", t.deleteForever)).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.deleteForever, exact: true })

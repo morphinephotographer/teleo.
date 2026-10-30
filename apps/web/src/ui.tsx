@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "pencil"
   | "folder"
   | "file"
   | "search"
@@ -41,6 +42,7 @@ export type IconName =
   | "sun"
   | "trash";
 const paths: Record<IconName, ReactNode> = {
+  pencil: <path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-2 2 5 5M4 15l5 5" />,
   folder: (
     <path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
   ),

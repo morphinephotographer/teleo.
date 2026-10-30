@@ -114,3 +114,26 @@ For rollback, use the existing `wrangler rollback` workflow with the previous
 production version above, without deleting namespaces or stored data. No rollback
 was needed. A subsequent documentation commit does not change the published
 application source. No GitHub push was performed.
+
+## Follow-up: row actions and folder disclosure
+
+The owner's screenshots exposed two incorrect interactions in the first release:
+the All folders arrow opened the demo menu, and row actions used overflow menus.
+The correction supersedes those details above:
+
+- The All folders arrow now collapses/expands the folder group. Collapsing clears
+  the folder filter and leaves documents searchable and visible. Clicking the
+  All folders label restores the expanded group and all documents.
+- The demo menu and its panel-only restoration action are removed. Saved Welcome
+  documents and the existing automatic-demo preference are preserved; deleted
+  documents can be restored from Trash without overwriting their edited text.
+- Hovering the right edge of a folder or document reveals direct Rename and
+  Trash buttons, without shifting the row. Keyboard focus reveals the same
+  actions. Touch devices show the buttons without requiring hover.
+- Script renaming uses the existing save/conflict/revision behavior and preserves
+  draft content, document identity, preferences and the current selection.
+- Local validation: **20/20** library browser scenarios, **4/4** existing
+  localization/deletion/restoration browser scenarios, **46/46** focused unit
+  tests, typecheck, lint, production build/dry-run and diff checks passed.
+- Header/editor screenshots and geometry remain identical to the original
+  baseline. No styles outside the library were changed.

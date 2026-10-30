@@ -118,9 +118,12 @@ test("Welcome follows UI language only while pristine; edits, deletion and resto
   ).toHaveValue("My own edited Welcome — keep this text.");
   await page.locator(".script-row > button:first-child").focus();
   await page.keyboard.press("Tab");
-  await expect(page.locator(".library-row-menu > button")).toBeFocused();
+  await expect(
+    page.locator(".script-row .library-action-rename"),
+  ).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.locator(".script-row .library-action-trash")).toBeFocused();
   await page.keyboard.press("Enter");
-  await page.getByRole("menuitem", { name: t.delete, exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })
@@ -133,13 +136,12 @@ test("Welcome follows UI language only while pristine; edits, deletion and resto
   await page.keyboard.press("Escape");
   await expect(page.locator(".script-row")).toHaveCount(0);
   await language(page, "uk");
-  await page.locator(".library-options > button").click();
-  await page
-    .getByRole("menuitem", { name: dictionaries.uk.restoreDemo, exact: true })
-    .click();
+  await page.locator(".library-trash-row").click();
+  await page.locator(".script-row .library-row-actions").hover();
+  await page.locator(".library-action-restore").click();
   await expect(
     page.getByRole("textbox", { name: dictionaries.uk.body, exact: true }),
-  ).toHaveValue(welcomeBodies.uk);
+  ).toHaveValue("My own edited Welcome — keep this text.");
   await expect(page.locator(".script-row")).toHaveCount(1);
 });
 test("settings own language/themes; dock hides immediately on Play and returns on Pause without guide movement", async ({
@@ -200,7 +202,7 @@ test("settings own language/themes; dock hides immediately on Play and returns o
     await expect(page.locator(".reader-controls")).toHaveCount(0);
   }
 });
-test("document overflow is keyboard reachable and deletes only the chosen script", async ({
+test("document edge actions are keyboard reachable and deletes only the chosen script", async ({
   page,
 }, info) => {
   await create(page);
@@ -222,20 +224,20 @@ test("document overflow is keyboard reachable and deletes only the chosen script
   const row = page
     .locator(".script-row")
     .filter({ has: page.locator("strong", { hasText: "Script A" }) });
-  const overflow = row.locator(".library-row-menu > button");
+  const remove = row.locator(".library-action-trash");
   await page.mouse.move(0, 0);
-  await expect(overflow).toBeVisible();
+  await expect(remove).toHaveCSS("opacity", "0");
   const rect = await row.boundingBox();
   await row.hover();
   expect(await row.boundingBox()).toEqual(rect);
   await row.locator(".library-document").focus();
   await page.keyboard.press("Tab");
-  await expect(overflow).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(remove).toBeFocused();
   await page.screenshot({
     path: `test-results/library/polish-${info.project.name}-script-menu.png`,
   });
-  await overflow.click();
-  await page.getByRole("menuitem", { name: t.delete, exact: true }).click();
+  await remove.click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })

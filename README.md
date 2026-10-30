@@ -176,3 +176,6 @@ Published on [Teleo.cc](https://teleo.cc/studio) from source `7d3089ad06b433e56d
 
 
 Library interaction correction: live source `656eb9c4cacdc9495b2b7ad2b2d7103717cfe787`, Worker `77b38620-e412-4b94-ab91-2521963e4ffa` at 100% traffic. All folders now collapses the folder group, with no Welcome menu. Direct Rename/Trash buttons appear at the right edge of folder/document rows and remain keyboard/touch accessible. Script renaming preserves current text and selection. Public staging and production library checks each passed **20/20**. [Correction details and release evidence](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md#follow-up-row-actions-and-folder-disclosure).
+
+
+Six visual refinements are live from `873a480fa5dcd1d191ea76cb72b49c459eeffe50`, Worker `9f96a6e5-2c9f-4e59-b000-066413a4b292` at 100% traffic: folder ellipsis, transparent row actions, a circular selected-document marker, a single Reader alignment outline, removal of Reader's Connect phone button, and round Appearance symbols in Settings. Editor phone pairing is preserved. Public staging and production checks each passed **24/24**. [Release evidence and screenshots](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md#follow-up-six-visual-refinements).

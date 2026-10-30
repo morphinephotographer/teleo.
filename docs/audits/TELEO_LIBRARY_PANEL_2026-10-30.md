@@ -178,3 +178,18 @@ play/pause, center alignment, mobile Reader, selection-marker movement,
 transparent hover states, ellipsis/actions, all previous library operations,
 keyboard and touch. Typecheck, lint, production build/dry-run and diff checks
 passed. Cropped screenshots of the changed controls were inspected.
+
+
+Published refinement source: `873a480fa5dcd1d191ea76cb72b49c459eeffe50`.
+Production Worker: `9f96a6e5-2c9f-4e59-b000-066413a4b292`, deployment
+`8f61bd0c-f20d-4f4b-ae32-13090da38769`, confirmed **100% traffic**.
+Staging Worker: `fcede12f-11f0-41e9-85b0-e201332beea9`.
+Previous production version for rollback: `77b38620-e412-4b94-ab91-2521963e4ffa`.
+
+Public validation: **24/24** library/reader/settings scenarios on staging and
+**24/24** on production in Chromium/WebKit; **2/2** production
+route/security/identity checks; **4/4** raw HTTPS asset hashes per origin match
+local build files. Updated control screenshots were inspected and saved as
+`docs/screenshots/refined-*-live.png`. Evidence is under
+`docs/audits/evidence/library-visual-refinements/`. No storage, protocol,
+dependency, namespace or domain configuration changes were made.

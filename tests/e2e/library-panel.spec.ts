@@ -84,6 +84,180 @@ async function action(page: Page, title: string, label: string) {
   return row.getByRole("button", { name: `${label}: ${title}`, exact: true });
 }
 
+test("Open last resumes the last reader document rather than the current editor selection", async ({
+  page,
+}) => {
+  const t = dictionaries.ru;
+  await seed(page);
+  const body = "Последний прочитанный сценарий. ".repeat(600);
+  await page.getByRole("textbox", { name: t.body, exact: true }).fill(body);
+  await page.getByRole("textbox", { name: t.body, exact: true }).blur();
+  await page.getByRole("button", { name: t.read, exact: true }).click();
+  const view = page.locator(".reading-viewport");
+  await view.evaluate((el) => {
+    el.scrollTop = 640;
+  });
+  await expect
+    .poll(() => view.evaluate((el) => el.scrollTop))
+    .toBeGreaterThan(600);
+  await page
+    .locator(".reader")
+    .getByRole("button", { name: t.exit, exact: true })
+    .click();
+  const position = await page.evaluate(() =>
+    Number(localStorage.getItem("teleo.position.script-0")),
+  );
+  expect(position).toBeGreaterThan(600);
+  await page
+    .locator(".library-document")
+    .filter({ hasText: "Текст 1" })
+    .click();
+  await page.reload();
+  await expect(page.locator(".title-input")).toHaveValue("Текст 1");
+  await page.getByRole("button", { name: t.openLast, exact: true }).click();
+  await expect(page.locator(".reader article")).toHaveText(body.trim());
+  await expect
+    .poll(() =>
+      page.locator(".reading-viewport").evaluate((el) => el.scrollTop),
+    )
+    .toBeCloseTo(position, 0);
+  await expect(
+    page
+      .locator(".approved-reader-toolbar")
+      .getByRole("button", { name: t.play, exact: true }),
+  ).toBeVisible();
+  await page
+    .locator(".reader")
+    .getByRole("button", { name: t.exit, exact: true })
+    .click();
+  await (await action(page, "Знакомство", t.delete)).click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: t.confirm, exact: true })
+    .click();
+  await page.getByRole("button", { name: t.openLast, exact: true }).click();
+  await expect(page.locator(".reader-script-title")).toHaveText("Текст 1");
+});
+
+for (const profile of ["standard", "r400", "custom"])
+  test(`${profile}: Space toggles, horizontal arrows move one rendered line and vertical arrows change speed`, async ({
+    page,
+  }) => {
+    const t = dictionaries.ru;
+    await seed(page);
+    await page
+      .getByRole("textbox", { name: t.body, exact: true })
+      .fill("Клавиатурное управление чтением. ".repeat(800));
+    await page.getByRole("textbox", { name: t.body, exact: true }).blur();
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Object.keys(localStorage).filter(
+            (k) => k.startsWith("teleo.recovery.") && localStorage.getItem(k),
+          ),
+        ),
+      )
+      .toEqual([]);
+    await page.evaluate((profile) => {
+      localStorage.setItem("teleo.profile", profile);
+      localStorage.setItem("teleo.keys", "false");
+    }, profile);
+    await page.reload();
+    await page.getByRole("button", { name: t.read, exact: true }).click();
+    const toolbar = page.locator(".approved-reader-toolbar");
+    await expect(toolbar).toBeVisible();
+    await page.keyboard.press("Space");
+    await expect(toolbar).toBeHidden();
+    await expect(page.locator(".reader-pause")).toBeVisible();
+    await page.keyboard.press("Space");
+    await expect(toolbar).toBeVisible();
+    const view = page.locator(".reading-viewport");
+    const line = await page
+      .locator(".reader article")
+      .evaluate((el) => parseFloat(getComputedStyle(el).lineHeight));
+    const initial = await view.evaluate((el) => el.scrollTop);
+    await page.keyboard.press("ArrowRight");
+    await expect
+      .poll(() => view.evaluate((el) => el.scrollTop))
+      .toBeCloseTo(initial + line, 0);
+    await page.keyboard.press("ArrowLeft");
+    await expect
+      .poll(() => view.evaluate((el) => el.scrollTop))
+      .toBeCloseTo(initial, 0);
+    await page.keyboard.press("ArrowUp");
+    await expect(
+      toolbar.getByRole("button", { name: t.speed, exact: true }),
+    ).toContainText("1.1");
+    await page.keyboard.press("ArrowDown");
+    await expect(
+      toolbar.getByRole("button", { name: t.speed, exact: true }),
+    ).toContainText("1.0×");
+  });
+
+test("appearance buttons cycle directly and the default settings fit the viewport", async ({
+  page,
+}, info) => {
+  const t = dictionaries.ru;
+  await seed(page);
+  for (const [width, height] of [
+    [1440, 900],
+    [375, 667],
+    [320, 568],
+    [844, 390],
+  ]) {
+    await page.setViewportSize({ width, height });
+    const trigger = page.locator(
+      ".app-shell > header > .top-settings > button",
+    );
+    await trigger.click();
+    const menu = page.locator(
+      `[id="${await trigger.getAttribute("aria-controls")}"]`,
+    );
+    await expect(menu).toBeVisible();
+    for (const surface of [menu, menu.locator(".settings")]) {
+      expect(
+        await surface.evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
+      ).toBe(true);
+    }
+    const bounds = await menu.boundingBox();
+    for (const control of await menu
+      .locator(".settings-language,.appearance-row,.welcome-preference,summary")
+      .all()) {
+      const r = await control.boundingBox();
+      expect(r!.y).toBeGreaterThanOrEqual(bounds!.y);
+      expect(r!.y + r!.height).toBeLessThanOrEqual(bounds!.y + bounds!.height);
+    }
+    await expect(
+      menu.getByRole("combobox", { name: t.language, exact: true }),
+    ).toBeVisible();
+    const appearance = menu.getByRole("button", {
+      name: t.readingAppearance,
+      exact: true,
+    });
+    await expect(appearance).not.toHaveAttribute("aria-haspopup");
+    await appearance.click();
+    await expect(appearance.locator("small")).toHaveText(t.light);
+    await appearance.click();
+    await expect(appearance.locator("small")).toHaveText(t.dark);
+    const theme = menu.getByRole("button", {
+      name: t.interfaceTheme,
+      exact: true,
+    });
+    await expect(theme).not.toHaveAttribute("aria-haspopup");
+    for (const state of ["light", "dark", "system"] as const) {
+      await theme.click();
+      await expect(page.locator(".app-shell")).toHaveClass(
+        new RegExp(`theme-${state}`),
+      );
+    }
+    await expect(page.locator("[popover]:popover-open")).toHaveCount(1);
+    await menu.screenshot({
+      path: info.outputPath(`settings-${width}x${height}.png`),
+    });
+    await page.keyboard.press("Escape");
+  }
+});
+
 test("folder ellipsis, transparent actions and selection dot match the refined library", async ({
   page,
 }, info) => {
@@ -622,7 +796,12 @@ test("document creation, trash restore, confirmed permanent deletion and last do
   await showLibrary(page);
   await library.getByRole("button", { name: t.openLast, exact: true }).click();
   await expect(library).toBeHidden();
+  await expect(page.locator(".reader")).toBeVisible();
   await expect(page.locator(".title-input")).toHaveValue("Новый документ");
+  await page
+    .locator(".reader")
+    .getByRole("button", { name: t.exit, exact: true })
+    .click();
   await showLibrary(page);
   await (await action(page, "Новый документ", t.delete)).click();
   await page

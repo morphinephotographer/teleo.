@@ -3856,8 +3856,56 @@ input[type="checkbox"] {
 }
 .top-settings .settings {
   padding: 12px;
-  gap: 14px;
+  gap: 10px;
   height: auto;
+}
+.top-settings .appearance-content {
+  padding: 0;
+}
+.top-settings .appearance-row > .picker-trigger {
+  min-height: 60px;
+  grid-template-columns: 44px 1fr;
+}
+@media (max-height: 600px) {
+  .top-settings .settings {
+    padding: 8px;
+    gap: 8px;
+  }
+  .top-settings .welcome-preference p {
+    margin-bottom: 0;
+  }
+}
+@media (max-height: 450px) and (min-width: 600px) {
+  .top-settings .settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .top-settings .settings > h2,
+  .top-settings .settings > .appearance-content,
+  .top-settings .settings > .welcome-preference {
+    grid-column: 1 / -1;
+  }
+  .top-settings .appearance-content {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .top-settings .appearance-row + .appearance-row {
+    border: 0;
+  }
+  .top-settings .appearance-row > .picker-trigger {
+    grid-template-columns: 32px 1fr;
+    gap: 6px;
+  }
+  .top-settings .appearance-symbol {
+    width: 32px;
+    height: 32px;
+  }
+  .top-settings .settings > details {
+    grid-row: 2;
+    grid-column: 2;
+  }
 }
 .top-settings .settings > h2 {
   font-size: 16px;

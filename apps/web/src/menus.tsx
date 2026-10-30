@@ -14,6 +14,7 @@ export function Popover({
   className = "",
   showChevron = true,
   width = 220,
+  maxHeight = 400,
   onOpenChange,
   triggerClassName = "",
 }: {
@@ -25,6 +26,7 @@ export function Popover({
   className?: string;
   showChevron?: boolean;
   width?: number;
+  maxHeight?: number;
   onOpenChange?: (open: boolean) => void;
   triggerClassName?: string;
 }) {
@@ -47,15 +49,15 @@ export function Popover({
     const popupWidth = Math.min(Math.max(r.width, width), w - 24);
     const availableBelow = y + h - r.bottom - 16,
       availableAbove = r.top - y - 16;
-    const desired = Math.min(el.scrollHeight, 400, h - 32);
+    const desired = Math.min(el.scrollHeight, maxHeight, h - 32);
     const above = availableBelow < desired && availableAbove > availableBelow;
-    const maxHeight = Math.max(
+    const availableHeight = Math.max(
       80,
-      Math.min(400, above ? availableAbove : availableBelow, h - 32),
+      Math.min(maxHeight, above ? availableAbove : availableBelow, h - 32),
     );
     el.style.width = popupWidth + "px";
-    el.style.maxHeight = maxHeight + "px";
-    const height = Math.min(el.scrollHeight, maxHeight);
+    el.style.maxHeight = availableHeight + "px";
+    const height = Math.min(el.scrollHeight, availableHeight);
     el.style.left =
       Math.max(x + 12, Math.min(r.left, x + w - popupWidth - 12)) + "px";
     el.style.top =

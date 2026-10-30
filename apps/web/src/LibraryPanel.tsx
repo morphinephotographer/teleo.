@@ -25,12 +25,12 @@ export function LibraryPanel({
   search,
   folder,
   ready,
-  lastScriptId,
   onClose,
   onCreate,
   onSearch,
   onFolder,
   onOpen,
+  onOpenLast,
   onAction,
   onImport,
   onRestore,
@@ -44,12 +44,12 @@ export function LibraryPanel({
   search: string;
   folder: string;
   ready: boolean;
-  lastScriptId: string;
   onClose: () => void;
   onCreate: () => void;
   onSearch: (value: string) => void;
   onFolder: (id: string) => void;
   onOpen: (id: string) => void;
+  onOpenLast: () => void;
   onAction: (action: LibraryAction) => void;
   onImport: (file: File) => void;
   onRestore: (id: string) => Promise<boolean>;
@@ -327,10 +327,7 @@ export function LibraryPanel({
           <Icon name="import" />
           <span>{t("import")}</span>
         </button>
-        <button
-          disabled={!ready || !scripts.some((s) => s.scriptId === lastScriptId)}
-          onClick={() => onOpen(lastScriptId)}
-        >
+        <button disabled={!ready || scripts.length === 0} onClick={onOpenLast}>
           <Icon name="book" />
           <span>{t("openLast")}</span>
         </button>

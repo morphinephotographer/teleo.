@@ -67,6 +67,7 @@ import {
 } from "./reading-anchor";
 import { scrollToTextOffset, textOffsetAtView } from "./text-position";
 import { r400Keys, r400Shortcut, bindReaderKeyboard, R400Hold } from "./r400";
+import { readerShortcut } from "./reader-keyboard";
 import {
   createReaderFullscreen,
   type FullscreenFailure,
@@ -106,6 +107,9 @@ function App() {
   const transferBusy = useRef(new Set<string>());
   const [intro, setIntro] = useState(introNeeded);
   const [libraryOpen, setLibraryOpen] = useState(() => innerWidth > 900);
+  const [lastReadScript, setLastReadScript] = useState(
+    () => localGet("teleo.lastReadScript") || "",
+  );
   const libraryBeforeReading = useRef(libraryOpen);
   const [previewAllowed, setPreviewAllowed] = useState(
     () => localGet("teleo.previewAllowed") === "true",
@@ -847,6 +851,32 @@ function App() {
         ),
       ).some((el) => el.getClientRects().length > 0);
     const hostReader = reading && route === "/studio";
+    const shortcut = readerShortcut(e, { reader: hostReader, blocked });
+    if (shortcut) {
+      e.preventDefault();
+      r400Hold.current.stop();
+      if (shortcut.action === "lineBack" || shortcut.action === "lineForward") {
+        const view = viewport.current,
+          article = content.current;
+        if (view && article) {
+          geometryHeld.current = false;
+          geometry.current = null;
+          const line = parseFloat(getComputedStyle(article).lineHeight) || 64;
+          engine.position = Math.max(
+            0,
+            Math.min(
+              engine.maximum,
+              engine.position + (shortcut.action === "lineBack" ? -line : line),
+            ),
+          );
+          syncView(view);
+          rememberGeometry();
+          showControls();
+          setFrame((value) => value + 1);
+        }
+      } else if (shortcut.action) command({ action: shortcut.action });
+      return;
+    }
     if (enabled && profile === "r400" && hostReader) {
       // Never turn the R400's alternate Escape into app exit or playback.
       if (e.code === "Escape" || e.key === "Escape") return;
@@ -1272,6 +1302,11 @@ function App() {
     if (libraryLoaded && selected) localSet("teleo.selectedScript", selected);
   }, [libraryLoaded, selected]);
   useEffect(() => {
+    if (!reading || !selected) return;
+    localSet("teleo.lastReadScript", selected);
+    setLastReadScript(selected);
+  }, [reading, selected]);
+  useEffect(() => {
     if (!libraryLoaded || route !== "/studio") return;
     void storage
       .welcome(localeRef.current, {
@@ -1378,6 +1413,27 @@ function App() {
     if (innerWidth <= 900) setLibraryOpen(false);
     setRevisions(null);
   }
+  async function openLastScript() {
+    try {
+      await writer.current!.requireSaved();
+      const available = await storage.list();
+      const last =
+        available.find((script) => script.scriptId === lastReadScript) ||
+        available.find((script) => script.scriptId === selected) ||
+        [...available].sort((a, b) =>
+          b.updatedAt.localeCompare(a.updatedAt),
+        )[0];
+      setScripts(available);
+      if (!last) {
+        setSelected("");
+        setNotice("empty");
+        return;
+      }
+      await startReader(last.scriptId);
+    } catch {
+      setNotice("saveError");
+    }
+  }
   async function restoreTrashScript(id: string) {
     const script = trash.find((s) => s.scriptId === id);
     if (!script || mutation.current) return false;
@@ -1432,8 +1488,12 @@ function App() {
     if (document.fullscreenElement)
       void document.exitFullscreen().catch(() => {});
   }
-  async function startReader() {
+  async function startReader(id = selected) {
     await flush();
+    if (!id) return;
+    setSelected(id);
+    setPanel("editor");
+    setRevisions(null);
     setFullscreenIssue(null);
     if (!reading) libraryBeforeReading.current = libraryOpen;
     setLibraryOpen(false);
@@ -1547,87 +1607,70 @@ function App() {
         {lang}
       </div>
       <section className="appearance-content">
-        <Popover
-          kind="dialog"
-          width={286}
-          className="appearance-row"
-          label={t("readingAppearance")}
-          trigger={
-            <>
-              <span className="appearance-symbol">
-                <Icon name="sun" />
-              </span>
-              <span>
-                <strong>{t("readingAppearance")}</strong>
-                <small>
-                  {t(
-                    current?.preferences.appearance === "light"
-                      ? "light"
-                      : "dark",
-                  )}
-                </small>
-              </span>
-              <Icon name="chevron" />
-            </>
-          }
-        >
-          <p>{t("readingAppearanceHelp")}</p>
-          <Segmented
-            label={t("readingAppearance")}
-            value={current?.preferences.appearance || "dark"}
-            onChange={(appearance) => pref({ appearance })}
-            options={[
-              {
-                value: "dark",
-                label: t("dark"),
-                disabled: !current,
-              },
-              {
-                value: "light",
-                label: t("light"),
-                disabled: !current,
-              },
-            ]}
-          />
-        </Popover>
-        <Popover
-          kind="dialog"
-          width={286}
-          className="appearance-row"
-          label={t("interfaceTheme")}
-          trigger={
-            <>
-              <span className="appearance-symbol">
-                <Icon name="monitor" />
-              </span>
-              <span>
-                <strong>{t("interfaceTheme")}</strong>
-                <small>
-                  {t(
-                    theme === "light"
-                      ? "light"
-                      : theme === "dark"
-                        ? "dark"
-                        : "system",
-                  )}
-                </small>
-              </span>
-              <Icon name="chevron" />
-            </>
-          }
-        >
-          <p>{t("interfaceThemeHelp")}</p>
-          <Segmented
-            label={t("interfaceTheme")}
-            value={theme}
-            onChange={setTheme}
-            options={[
-              { value: "light", label: t("light") },
-              { value: "dark", label: t("dark") },
-              { value: "system", label: t("system") },
-            ]}
-          />
-        </Popover>
+        <div className="appearance-row">
+          <button
+            type="button"
+            className="picker-trigger"
+            aria-label={t("readingAppearance")}
+            title={t("readingAppearanceHelp")}
+            disabled={!current}
+            onClick={() =>
+              pref({
+                appearance:
+                  current?.preferences.appearance === "light"
+                    ? "dark"
+                    : "light",
+              })
+            }
+          >
+            <span className="appearance-symbol">
+              <Icon name="sun" />
+            </span>
+            <span>
+              <strong>{t("readingAppearance")}</strong>
+              <small>
+                {t(
+                  current?.preferences.appearance === "light"
+                    ? "light"
+                    : "dark",
+                )}
+              </small>
+            </span>
+          </button>
+        </div>
+        <div className="appearance-row">
+          <button
+            type="button"
+            className="picker-trigger"
+            aria-label={t("interfaceTheme")}
+            title={t("interfaceThemeHelp")}
+            onClick={() =>
+              setTheme(
+                theme === "system"
+                  ? "light"
+                  : theme === "light"
+                    ? "dark"
+                    : "system",
+              )
+            }
+          >
+            <span className="appearance-symbol">
+              <Icon name="monitor" />
+            </span>
+            <span>
+              <strong>{t("interfaceTheme")}</strong>
+              <small>
+                {t(
+                  theme === "light"
+                    ? "light"
+                    : theme === "dark"
+                      ? "dark"
+                      : "system",
+                )}
+              </small>
+            </span>
+          </button>
+        </div>
       </section>
       <details>
         <summary>{t("physical")}</summary>
@@ -1688,7 +1731,11 @@ function App() {
           profile === "r400"
             ? r400Keys
             : profile === "standard"
-              ? standardKeys
+              ? {
+                  ...standardKeys,
+                  ArrowLeft: "scrollBack",
+                  ArrowRight: "scrollForward",
+                }
               : mapping,
         ).map(([key, a]) => (
           <p key={key}>
@@ -1837,6 +1884,7 @@ function App() {
             <Popover
               kind="dialog"
               width={320}
+              maxHeight={1000}
               className="top-settings"
               label={t("settings")}
               trigger={<Icon name="settings" />}
@@ -1957,12 +2005,12 @@ function App() {
               search={search}
               folder={folder}
               ready={libraryLoaded}
-              lastScriptId={selected}
               onClose={() => setLibraryOpen(false)}
               onCreate={() => void add()}
               onSearch={setSearch}
               onFolder={setFolder}
               onOpen={openLibraryScript}
+              onOpenLast={() => void openLastScript()}
               onAction={setActionDialog}
               onImport={(file) => void importFile(file)}
               onRestore={restoreTrashScript}
@@ -2131,6 +2179,7 @@ function App() {
                 <Popover
                   kind="dialog"
                   width={320}
+                  maxHeight={1000}
                   className="top-settings"
                   label={t("settings")}
                   trigger={<Icon name="settings" />}

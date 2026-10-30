@@ -156,17 +156,14 @@ test("settings own language/themes; dock hides immediately on Play and returns o
   await expect(
     menu.getByRole("combobox", { name: t.language, exact: true }),
   ).toBeVisible();
-  await menu
-    .getByRole("button", { name: t.interfaceTheme, exact: true })
-    .click();
-  await page
-    .getByRole("dialog", { name: t.interfaceTheme, exact: true })
-    .getByRole("button", { name: t.dark, exact: true })
-    .click();
-  await page.keyboard.press("Escape");
-  await page.screenshot({
-    path: `docs/screenshots/polish-${info.project.name}-settings.png`,
+  const theme = menu.getByRole("button", {
+    name: t.interfaceTheme,
+    exact: true,
   });
+  await theme.click();
+  await theme.click();
+  await expect(page.locator(".app-shell")).toHaveClass(/theme-dark/);
+  await page.screenshot({ path: info.outputPath("settings.png") });
   await page.keyboard.press("Escape");
   for (const [width, height] of [
     [1440, 900],
@@ -186,13 +183,13 @@ test("settings own language/themes; dock hides immediately on Play and returns o
       viewport,
     );
     await page.screenshot({
-      path: `docs/screenshots/polish-${info.project.name}-playing-${width}.png`,
+      path: info.outputPath(`playing-${width}.png`),
     });
     await page.locator(".reader-pause").click();
     await expect(toolbar).toBeVisible({ timeout: 500 });
     await expect(page.locator(".reader-pause")).toHaveCount(0);
     await page.screenshot({
-      path: `docs/screenshots/polish-${info.project.name}-paused-${width}.png`,
+      path: info.outputPath(`paused-${width}.png`),
     });
     await page.keyboard.press("Space");
     await expect(toolbar).toBeHidden();

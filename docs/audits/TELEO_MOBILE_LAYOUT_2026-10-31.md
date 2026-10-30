@@ -32,3 +32,12 @@ No physical iPhone verification was available. Browser emulation does not valida
 References: https://webkit.org/blog/13878/ and https://bugs.webkit.org/show_bug.cgi?id=264220.
 
 Changed implementation files: `apps/web/index.html`, `apps/web/src/ReaderDock.tsx`, `apps/web/src/main.tsx`, `apps/web/src/style.css`, `apps/web/src/ui.tsx`, `apps/web/src/welcome.ts`, `apps/web/src/i18n.ts`. Tests: `tests/welcome.test.ts`, `tests/e2e/mobile-layout.spec.ts`, `playwright.mobile-layout.config.ts`.
+
+## Follow-up: bottom spacing and symmetric actions
+
+Source `bb48882e68681aa0f9a89e91949caa20b3ad1c48`, production `be36cd8b-30da-444f-b063-46cbb01d3d6b`; previous version `1e775391-c0ca-481e-bb50-5946eb96ea19`.
+
+- Mobile editor actions are four equal 44px circular icon targets: duplicate, TXT download, versions and trash. Accessible translated names and titles retained. JSON export is hidden on mobile; desktop actions and JSON import remain available.
+- Folder selector uses the available row width. Normal mobile layout uses dynamic viewport height; focused inputs retain visual viewport behavior for the keyboard. Removed outer bottom safe-area padding, retaining it inside the editor and reader so controls stay above the home indicator.
+- Reader is positioned to the bottom of its container. Settings arrow has its own centered row; line buttons have an 8px gap. Added spacing around the timer/alignment area and before the main playback row.
+- Typecheck, ESLint, build, dry-run, 2 mobile layout checks and 8 document/settings/desktop-reader regression checks passed. Screenshots visually reviewed for editor and expanded dock. No physical iPhone verification.

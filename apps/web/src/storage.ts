@@ -200,6 +200,30 @@ export const storage = {
     for (const script of scripts) remember(script);
     return scripts.filter((s) => !s.deletedAt);
   },
+  async trash(): Promise<Script[]> {
+    const scripts: Script[] = await (await database()).getAll("scripts");
+    const deleted = scripts.filter((s) => !!s.deletedAt);
+    deleted.forEach(remember);
+    return deleted;
+  },
+  async purge(id: string) {
+    const db = await database();
+    const tx = db.transaction(["scripts", "revisions"], "readwrite");
+    const script: Script | undefined = await tx.objectStore("scripts").get(id);
+    const baseline = loaded.get(id);
+    // Never purge a restored or concurrently changed document from a stale trash view.
+    if (!script?.deletedAt || !baseline || !same(script, baseline)) {
+      await tx.done;
+      throw Error("saveConflict");
+    }
+    await tx.objectStore("scripts").delete(id);
+    for (const revision of await tx.objectStore("revisions").getAll()) {
+      if (revision.scriptId === id)
+        await tx.objectStore("revisions").delete(revision.revisionId);
+    }
+    await tx.done;
+    loaded.delete(id);
+  },
   async save(script: Script, checkpoint = false) {
     const db = await database();
     const tx = db.transaction(["scripts", "revisions"], "readwrite");

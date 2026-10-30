@@ -118,8 +118,9 @@ test("Welcome follows UI language only while pristine; edits, deletion and resto
   ).toHaveValue("My own edited Welcome — keep this text.");
   await page.locator(".script-row > button:first-child").focus();
   await page.keyboard.press("Tab");
-  await expect(page.locator(".script-trash")).toBeFocused();
+  await expect(page.locator(".library-row-menu > button")).toBeFocused();
   await page.keyboard.press("Enter");
+  await page.getByRole("menuitem", { name: t.delete, exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })
@@ -132,9 +133,9 @@ test("Welcome follows UI language only while pristine; edits, deletion and resto
   await page.keyboard.press("Escape");
   await expect(page.locator(".script-row")).toHaveCount(0);
   await language(page, "uk");
+  await page.locator(".library-options > button").click();
   await page
-    .locator(".library")
-    .getByRole("button", { name: dictionaries.uk.restoreDemo, exact: true })
+    .getByRole("menuitem", { name: dictionaries.uk.restoreDemo, exact: true })
     .click();
   await expect(
     page.getByRole("textbox", { name: dictionaries.uk.body, exact: true }),
@@ -199,7 +200,7 @@ test("settings own language/themes; dock hides immediately on Play and returns o
     await expect(page.locator(".reader-controls")).toHaveCount(0);
   }
 });
-test("script trash is subtle, keyboard reachable and deletes only the chosen script", async ({
+test("document overflow is keyboard reachable and deletes only the chosen script", async ({
   page,
 }, info) => {
   await create(page);
@@ -221,20 +222,20 @@ test("script trash is subtle, keyboard reachable and deletes only the chosen scr
   const row = page
     .locator(".script-row")
     .filter({ has: page.locator("strong", { hasText: "Script A" }) });
-  const trash = row.locator(".script-trash");
+  const overflow = row.locator(".library-row-menu > button");
   await page.mouse.move(0, 0);
-  await expect(trash).toHaveCSS("opacity", "0");
+  await expect(overflow).toBeVisible();
   const rect = await row.boundingBox();
   await row.hover();
-  await expect(trash).toHaveCSS("opacity", "1");
   expect(await row.boundingBox()).toEqual(rect);
-  await row.locator("button:first-child").focus();
+  await row.locator(".library-document").focus();
   await page.keyboard.press("Tab");
-  await expect(trash).toBeFocused();
+  await expect(overflow).toBeFocused();
   await page.screenshot({
-    path: `docs/screenshots/polish-${info.project.name}-script-trash.png`,
+    path: `test-results/library/polish-${info.project.name}-script-menu.png`,
   });
-  await trash.click();
+  await overflow.click();
+  await page.getByRole("menuitem", { name: t.delete, exact: true }).click();
   await page
     .getByRole("dialog")
     .getByRole("button", { name: t.confirm, exact: true })

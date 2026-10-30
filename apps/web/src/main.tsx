@@ -51,6 +51,7 @@ import {
   type ControlValues,
 } from "../../../packages/protocol/control";
 import { ActionDialog } from "./ActionDialog";
+import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet } from "./ui";
 import { TeleoSelect, Popover } from "./menus";
@@ -132,11 +133,8 @@ function App() {
     undefined,
   );
   const pairGeneration = useRef(0);
-  const [actionDialog, setActionDialog] = useState<{
-    kind: "newFolder" | "renameFolder" | "deleteFolder" | "deleteScript";
-    id?: string;
-    initial?: string;
-  } | null>(null);
+  const [actionDialog, setActionDialog] = useState<LibraryAction | null>(null);
+  const [trash, setTrash] = useState<Script[]>([]);
   const [immersive, setImmersive] = useState(false);
   const [fullscreenIssue, setFullscreenIssue] =
     useState<FullscreenFailure | null>(null);
@@ -565,8 +563,8 @@ function App() {
     setFrame((x) => x + 1);
   };
   useEffect(() => {
-    Promise.all([storage.list(), storage.folders()])
-      .then(async ([list, fs]) => {
+    Promise.all([storage.list(), storage.folders(), storage.trash()])
+      .then(async ([list, fs, deleted]) => {
         let preferredRecovery: string | undefined;
         // Snapshot keys: cleanup must not skip entries. One malformed draft must not block others.
         const keys: string[] = [];
@@ -618,6 +616,7 @@ function App() {
         }
         const visible = list.filter((item) => !item.deletedAt);
         setScripts(visible);
+        setTrash(deleted);
         setWelcomeSettings(initialized.settings);
         setFolders(fs);
         const selection =
@@ -1405,6 +1404,40 @@ function App() {
     persist(s);
     await completed;
   }
+  function openLibraryScript(id: string) {
+    if (!scripts.some((s) => s.scriptId === id)) return;
+    void flush();
+    setSelected(id);
+    setPanel("editor");
+    if (innerWidth <= 900) setLibraryOpen(false);
+    setRevisions(null);
+  }
+  async function restoreTrashScript(id: string) {
+    const script = trash.find((s) => s.scriptId === id);
+    if (!script || mutation.current) return false;
+    mutation.current = "*";
+    try {
+      await writer.current!.requireSaved();
+      const restored = { ...script, deletedAt: undefined };
+      await storage.save(restored);
+      setTrash((list) => list.filter((s) => s.scriptId !== id));
+      setScripts((list) => [restored, ...list]);
+      if (!selected) {
+        setSelected(id);
+        setPanel("editor");
+      }
+      return true;
+    } catch (error) {
+      setNotice(
+        error instanceof Error && error.message === "saveConflict"
+          ? "saveConflict"
+          : "saveError",
+      );
+      return false;
+    } finally {
+      mutation.current = null;
+    }
+  }
   function editMode() {
     setFullscreenIssue(null);
     engine.suspend();
@@ -1948,148 +1981,33 @@ function App() {
               (!current ? " no-script" : "")
             }
           >
-            <aside className="library">
-              <div className="section-title">
-                <h2>{t("library")}</h2>
-                <IconButton
-                  name="close"
-                  label={t("closeLibrary")}
-                  onClick={() => setLibraryOpen(false)}
-                />
-                {button("newScript", () => void add(), true)}
-              </div>
-              <input
-                aria-label={t("search")}
-                placeholder={t("search")}
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-              <Popover
-                className="folder-picker"
-                label={t("folder")}
-                trigger={
-                  <>
-                    <span>
-                      {folders.find((f) => f.folderId === folder)?.title ||
-                        t("allFolders")}
-                    </span>
-                    <span className="picker-chevron">
-                      <Icon name="chevron" />
-                    </span>
-                  </>
-                }
-              >
-                <button role="menuitem" onClick={() => setFolder("")}>
-                  {t("allFolders")}
-                </button>
-                {folders.map((f) => (
-                  <div className="folder-option" key={f.folderId}>
-                    <button
-                      role="menuitem"
-                      onClick={() => setFolder(f.folderId)}
-                    >
-                      {f.title}
-                    </button>
-                    <button
-                      type="button"
-                      role="menuitem"
-                      className="icon-button folder-trash"
-                      aria-label={`${t("deleteFolder")}: ${f.title}`}
-                      title={`${t("deleteFolder")}: ${f.title}`}
-                      onClick={() =>
-                        setActionDialog({
-                          kind: "deleteFolder",
-                          id: f.folderId,
-                        })
-                      }
-                    >
-                      <Icon name="trash" />
-                    </button>
-                  </div>
-                ))}
-              </Popover>
-              <div className="script-list">
-                {scripts
-                  .filter(
-                    (s) =>
-                      (!folder || s.folderId === folder) &&
-                      `${s.title} ${s.body}`
-                        .toLocaleLowerCase()
-                        .includes(search.toLocaleLowerCase()),
-                  )
-                  .map((s) => (
-                    <div className="script-row" key={s.scriptId}>
-                      <button
-                        className={s.scriptId === selected ? "selected" : ""}
-                        onClick={() => {
-                          void flush();
-                          setSelected(s.scriptId);
-                          setPanel("editor");
-                          if (innerWidth <= 900) setLibraryOpen(false);
-                          setRevisions(null);
-                        }}
-                      >
-                        <strong>{s.title || t("untitled")}</strong>
-                        <small>
-                          {new Intl.DateTimeFormat(locale, {
-                            dateStyle: "medium",
-                          }).format(new Date(s.updatedAt))}
-                        </small>
-                      </button>
-                      <IconButton
-                        name="trash"
-                        className="script-trash"
-                        label={`${t("delete")}: ${s.title || t("untitled")}`}
-                        onClick={() =>
-                          setActionDialog({
-                            kind: "deleteScript",
-                            id: s.scriptId,
-                          })
-                        }
-                      />
-                    </div>
-                  ))}
-              </div>
-              <label className="file-button">
-                {t("import")}
-                <input
-                  type="file"
-                  accept=".txt,.json,text/plain,application/json"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) void importFile(e.target.files[0]);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
-              <button
-                disabled={!libraryLoaded || restoringWelcome}
-                onClick={() => void restoreWelcome()}
-              >
-                {t(
-                  pristineWelcome(scripts, welcomeSettings)
-                    ? "openDemo"
-                    : "restoreDemo",
-                )}
-              </button>
-              {button("newFolder", () =>
-                setActionDialog({ kind: "newFolder" }),
-              )}
-              {folder && (
-                <>
-                  {button("renameFolder", () =>
-                    setActionDialog({
-                      kind: "renameFolder",
-                      id: folder,
-                      initial: folders.find((f) => f.folderId === folder)
-                        ?.title,
-                    }),
-                  )}
-                  {button("deleteFolder", () =>
-                    setActionDialog({ kind: "deleteFolder", id: folder }),
-                  )}
-                </>
-              )}
-            </aside>
+            <LibraryPanel
+              t={t}
+              locale={locale}
+              scripts={scripts}
+              trash={trash}
+              folders={folders}
+              selected={selected}
+              search={search}
+              folder={folder}
+              ready={libraryLoaded}
+              lastScriptId={selected}
+              demoLabel={
+                pristineWelcome(scripts, welcomeSettings)
+                  ? "openDemo"
+                  : "restoreDemo"
+              }
+              demoBusy={restoringWelcome}
+              onClose={() => setLibraryOpen(false)}
+              onCreate={() => void add()}
+              onSearch={setSearch}
+              onFolder={setFolder}
+              onOpen={openLibraryScript}
+              onAction={setActionDialog}
+              onImport={(file) => void importFile(file)}
+              onRestore={restoreTrashScript}
+              onDemo={() => void restoreWelcome()}
+            />
             {current ? (
               <>
                 <section className="editor">
@@ -2502,7 +2420,9 @@ function App() {
             title={t(
               actionDialog.kind === "deleteScript"
                 ? "confirmDelete"
-                : actionDialog.kind,
+                : actionDialog.kind === "purgeScript"
+                  ? "confirmPurge"
+                  : actionDialog.kind,
             )}
             label={
               actionDialog.kind === "newFolder" ||
@@ -2512,13 +2432,18 @@ function App() {
             }
             initial={actionDialog.initial}
             confirm={t(
-              actionDialog.kind.startsWith("delete")
-                ? "confirm"
-                : actionDialog.kind === "newFolder"
-                  ? "create"
-                  : "save",
+              actionDialog.kind === "purgeScript"
+                ? "deleteForever"
+                : actionDialog.kind.startsWith("delete")
+                  ? "confirm"
+                  : actionDialog.kind === "newFolder"
+                    ? "create"
+                    : "save",
             )}
-            danger={actionDialog.kind.startsWith("delete")}
+            danger={
+              actionDialog.kind.startsWith("delete") ||
+              actionDialog.kind === "purgeScript"
+            }
             onClose={() => setActionDialog(null)}
             onSubmit={async (value) => {
               const { kind, id } = actionDialog;
@@ -2551,6 +2476,7 @@ function App() {
                     };
                   setFolders(await storage.folders());
                   setScripts(await storage.list());
+                  setTrash(await storage.trash());
                   setFolder("");
                 } finally {
                   mutation.current = null;
@@ -2562,11 +2488,20 @@ function App() {
                 try {
                   await writer.current!.requireSaved();
                   // A failed deletion must not be retried by background autosave after Cancel.
-                  await storage.save(
-                    { ...script, deletedAt: new Date().toISOString() },
-                    true,
+                  const deleted = {
+                    ...(currentRef.current?.scriptId === id
+                      ? currentRef.current
+                      : script),
+                    deletedAt: new Date().toISOString(),
+                  };
+                  await storage.save(deleted, true);
+                  setTrash((list) => [
+                    deleted,
+                    ...list.filter((s) => s.scriptId !== id),
+                  ]);
+                  const remaining = scriptsRef.current.filter(
+                    (s) => s.scriptId !== id,
                   );
-                  const remaining = scripts.filter((s) => s.scriptId !== id);
                   setScripts(remaining);
                   if (selected === id)
                     setSelected(remaining[0]?.scriptId || "");
@@ -2578,6 +2513,9 @@ function App() {
                 } finally {
                   mutation.current = null;
                 }
+              } else if (kind === "purgeScript" && id) {
+                await storage.purge(id);
+                setTrash((list) => list.filter((s) => s.scriptId !== id));
               }
             }}
           />

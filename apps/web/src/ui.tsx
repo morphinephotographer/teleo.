@@ -1,6 +1,12 @@
 import { useEffect, useId, useRef, type ReactNode } from "react";
 
 export type IconName =
+  | "folder"
+  | "file"
+  | "search"
+  | "import"
+  | "book"
+  | "more"
   | "documentPlus"
   | "copy"
   | "alignLeft"
@@ -35,6 +41,29 @@ export type IconName =
   | "sun"
   | "trash";
 const paths: Record<IconName, ReactNode> = {
+  folder: (
+    <path d="M3 6a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+  ),
+  file: (
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6v6h6M8 12h8M8 16h6" />
+  ),
+  search: (
+    <>
+      <circle cx="10.5" cy="10.5" r="7.5" />
+      <path d="m16 16 5 5" />
+    </>
+  ),
+  import: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
+  book: (
+    <path d="M12 5c-3-2-6-2-10-1v16c4-1 7-1 10 1 3-2 6-2 10-1V4c-4-1-7-1-10 1Zm0 0v16" />
+  ),
+  more: (
+    <>
+      <circle cx="5" cy="12" r="1" />
+      <circle cx="12" cy="12" r="1" />
+      <circle cx="19" cy="12" r="1" />
+    </>
+  ),
   documentPlus: (
     <>
       <path d="M13 3H5v18h11V7l-4-4v5h4M19 13v8m-4-4h8" />

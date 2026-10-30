@@ -5093,3 +5093,106 @@ input[type="checkbox"] {
 .quick-send-review[open] {
   animation: none;
 }
+
+/* Keep document labels on desktop; mobile uses four equal icon targets. */
+.document-actions .document-action > svg {
+  display: none;
+}
+@media (max-width: 600px) {
+  .app-shell.route-studio {
+    height: 100dvh;
+    top: 0;
+    padding-bottom: 4px;
+  }
+  .app-shell.route-studio:has(input:focus, textarea:focus) {
+    height: var(--visual-height, 100dvh);
+    top: var(--visual-top, 0px);
+  }
+  .app-shell.route-studio:not(.prompting) .editor {
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .editor .document-actions {
+    width: 100%;
+    align-self: stretch;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    justify-items: center;
+    gap: 8px;
+    padding: 6px 0;
+  }
+  .document-actions .document-action {
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    display: grid;
+    place-items: center;
+    border: 0;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--subtle);
+  }
+  .document-actions .document-action > svg {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
+  .document-actions .document-action > span,
+  .document-actions .document-action-exportJSON {
+    display: none;
+  }
+  .editor > label {
+    width: 100%;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 12px;
+  }
+  .editor > label .teleo-picker {
+    width: 100%;
+  }
+  .reader {
+    bottom: 0;
+    padding-bottom: max(4px, env(safe-area-inset-bottom));
+  }
+}
+.reader-controls.mobile-reader-dock {
+  margin-bottom: 0;
+  padding: 8px 12px 12px;
+}
+.mobile-reader-dock > .dock-expand {
+  order: -1;
+  align-self: center;
+  width: 56px;
+  height: 36px;
+  min-height: 36px;
+  flex: 0 0 36px;
+  border: 0;
+}
+.mobile-reader-main {
+  gap: 12px;
+  padding-top: 12px;
+}
+.mobile-reader-options {
+  padding-bottom: 12px;
+  margin-bottom: 4px;
+}
+.mobile-reader-options .alignment-control {
+  margin-top: 14px;
+}
+.mobile-reader-options .dock-countdown {
+  margin-top: 12px;
+  gap: 8px;
+}
+.mobile-reader-dock .mobile-lines {
+  gap: 8px;
+}
+.mobile-reader-dock .mobile-lines .icon-button {
+  width: 40px;
+  flex-basis: 40px;
+}
+@media (max-width: 350px) {
+  .reader-controls.mobile-reader-dock {
+    padding-inline: 6px;
+  }
+  .mobile-reader-main {
+    gap: 6px;
+  }
+}

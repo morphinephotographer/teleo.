@@ -49,7 +49,7 @@ import {
 import { ActionDialog } from "./ActionDialog";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
-import { Icon, IconButton, Segmented, Sheet } from "./ui";
+import { Icon, IconButton, Segmented, Sheet, type IconName } from "./ui";
 import { TeleoSelect, Popover } from "./menus";
 import { RemoteController } from "./RemoteController";
 import { HostPreview } from "./host-preview";
@@ -1612,13 +1612,26 @@ function App() {
     fn: () => void,
     primary = false,
     disabled = false,
+    icon?: IconName,
   ) => (
     <button
-      className={primary ? "primary" : ""}
+      className={
+        (primary ? "primary" : "") +
+        (icon ? " document-action document-action-" + key : "")
+      }
+      aria-label={icon ? t(key) : undefined}
+      title={icon ? t(key) : undefined}
       disabled={disabled}
       onClick={fn}
     >
-      {t(key)}
+      {icon ? (
+        <>
+          <Icon name={icon} />
+          <span>{t(key)}</span>
+        </>
+      ) : (
+        t(key)
+      )}
     </button>
   );
   const lang = (
@@ -2136,31 +2149,55 @@ function App() {
                     {button(
                       "duplicate",
                       () => void add(createScript(current.title, current.body)),
+                      false,
+                      false,
+                      "copy",
                     )}
-                    {button("export", () =>
-                      download(
-                        (current.title || "teleo") + ".txt",
-                        current.body,
-                      ),
+                    {button(
+                      "export",
+                      () =>
+                        download(
+                          (current.title || "teleo") + ".txt",
+                          current.body,
+                        ),
+                      false,
+                      false,
+                      "import",
                     )}
-                    {button("exportJSON", () =>
-                      download(
-                        "teleo.json",
-                        exportBundle([current]),
-                        "application/json",
-                      ),
+                    {button(
+                      "exportJSON",
+                      () =>
+                        download(
+                          "teleo.json",
+                          exportBundle([current]),
+                          "application/json",
+                        ),
+                      false,
+                      false,
+                      "file",
                     )}
-                    {button("versions", () => {
-                      void flush()
-                        .then(() => storage.revisions(current.scriptId))
-                        .then(setRevisions)
-                        .catch(() => setStatus("saveError"));
-                    })}
-                    {button("delete", () =>
-                      setActionDialog({
-                        kind: "deleteScript",
-                        id: current.scriptId,
-                      }),
+                    {button(
+                      "versions",
+                      () => {
+                        void flush()
+                          .then(() => storage.revisions(current.scriptId))
+                          .then(setRevisions)
+                          .catch(() => setStatus("saveError"));
+                      },
+                      false,
+                      false,
+                      "restart",
+                    )}
+                    {button(
+                      "delete",
+                      () =>
+                        setActionDialog({
+                          kind: "deleteScript",
+                          id: current.scriptId,
+                        }),
+                      false,
+                      false,
+                      "trash",
                     )}
                   </div>
                   <label>

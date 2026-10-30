@@ -40,7 +40,7 @@ test("mobile editor, Welcome, reader controls and keyboard-sized viewport", asyn
       path: `test-results/mobile-layout/before-${size.width}.png`,
     });
     for (const button of await page
-      .locator(".document-actions > button")
+      .locator(".document-actions > button:visible")
       .all()) {
       const r = await button.boundingBox();
       expect(r!.x).toBeGreaterThanOrEqual(0);
@@ -48,6 +48,20 @@ test("mobile editor, Welcome, reader controls and keyboard-sized viewport", asyn
       expect(r!.y + r!.height).toBeLessThanOrEqual(size.height);
       await button.click({ trial: true });
     }
+    await expect(
+      page.locator(".document-actions > button:visible"),
+    ).toHaveCount(4);
+    await expect(page.locator(".document-action-exportJSON")).toBeHidden();
+    const bounds = await page.locator(".editor").boundingBox();
+    expect(size.height - bounds!.y - bounds!.height).toBeLessThanOrEqual(8);
+    const actions = await page
+      .locator(".document-actions > button:visible")
+      .evaluateAll((elements) =>
+        elements.map((el) => el.getBoundingClientRect().toJSON()),
+      );
+    expect(actions.every((r) => r.width === 44 && r.height === 44)).toBe(true);
+    const gaps = actions.slice(1).map((r, i) => r.x - actions[i].right);
+    expect(Math.max(...gaps) - Math.min(...gaps)).toBeLessThan(1);
     expect(
       await page.evaluate(
         () => document.documentElement.scrollWidth <= innerWidth,
@@ -74,6 +88,10 @@ test("mobile editor, Welcome, reader controls and keyboard-sized viewport", asyn
   expect(
     await dock.evaluate((el) => el.getBoundingClientRect().width),
   ).toBeGreaterThan(350);
+  const lineButtons = await dock
+    .locator(".mobile-lines button")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().toJSON()));
+  expect(lineButtons[1].left - lineButtons[0].right).toBeGreaterThanOrEqual(8);
   await dock.getByRole("button", { name: t.nextLine, exact: true }).click();
   await dock
     .getByRole("button", { name: t.expandControls, exact: true })

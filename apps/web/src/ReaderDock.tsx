@@ -375,19 +375,19 @@ export function ReaderDock({
             label={t("nextLine")}
             onClick={() => moveLine(1)}
           />
-          <button
-            className="icon-button dock-expand"
-            aria-label={t(expanded ? "collapseControls" : "expandControls")}
-            aria-expanded={expanded}
-            onClick={() => {
-              beforeLayout();
-              setExpanded(!expanded);
-            }}
-          >
-            <Icon name={expanded ? "next" : "previous"} />
-          </button>
         </div>
       </div>
+      <button
+        className="icon-button dock-expand"
+        aria-label={t(expanded ? "collapseControls" : "expandControls")}
+        aria-expanded={expanded}
+        onClick={() => {
+          beforeLayout();
+          setExpanded(!expanded);
+        }}
+      >
+        <Icon name={expanded ? "next" : "previous"} />
+      </button>
     </div>
   );
 }

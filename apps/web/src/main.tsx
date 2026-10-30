@@ -358,8 +358,21 @@ function App() {
   );
   useEffect(() => {
     const visual = window.visualViewport;
+    const installed = matchMedia(
+      "(display-mode: standalone), (display-mode: fullscreen)",
+    );
     const resize = () => {
       const root = document.documentElement;
+      const standalone =
+        installed.matches ||
+        (navigator as Navigator & { standalone?: boolean }).standalone === true;
+      root.dataset.standalone = String(standalone);
+      const editing = document.activeElement?.matches(
+        'textarea,input:not([type="range"]):not([type="checkbox"])',
+      );
+      root.dataset.keyboard = String(
+        !!editing && (visual?.height || innerHeight) < root.clientHeight - 120,
+      );
       root.style.setProperty(
         "--visual-height",
         `${visual?.height || innerHeight}px`,
@@ -372,10 +385,16 @@ function App() {
     };
     visual?.addEventListener("resize", resize);
     visual?.addEventListener("scroll", resize);
+    window.addEventListener("resize", resize);
+    installed.addEventListener("change", resize);
     resize();
     return () => {
       visual?.removeEventListener("resize", resize);
       visual?.removeEventListener("scroll", resize);
+      window.removeEventListener("resize", resize);
+      installed.removeEventListener("change", resize);
+      delete document.documentElement.dataset.standalone;
+      delete document.documentElement.dataset.keyboard;
       document.documentElement.style.removeProperty("--visual-height");
       document.documentElement.style.removeProperty("--visual-top");
       document.documentElement.style.removeProperty("--visual-bottom");

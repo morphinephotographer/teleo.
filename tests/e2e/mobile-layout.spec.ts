@@ -114,3 +114,82 @@ test("mobile editor, Welcome, reader controls and keyboard-sized viewport", asyn
   await dock.getByRole("button", { name: t.pause, exact: true }).click();
   await page.screenshot({ path: "test-results/mobile-layout/reader.png" });
 });
+
+for (const locale of ["en", "uk", "ru"] as const) {
+  test(`${locale}: installed shell fills window and Welcome controls have separate rows`, async ({
+    page,
+  }) => {
+    const text = dictionaries[locale];
+    await page.addInitScript((lang) => {
+      Object.defineProperty(navigator, "standalone", {
+        value: true,
+        configurable: true,
+      });
+      sessionStorage.setItem("teleo.intro.seen.v1", "true");
+      localStorage.setItem("teleo.locale", lang);
+      localStorage.setItem("teleo.theme", "dark");
+    }, locale);
+    await page.goto("/studio");
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-standalone",
+      "true",
+    );
+    await expect(page.locator(".app-shell")).toHaveCSS("position", "absolute");
+    const rect = await page.locator(".editor").boundingBox();
+    expect(844 - rect!.y - rect!.height).toBeLessThanOrEqual(1);
+    const body = page.getByRole("textbox", { name: text.body, exact: true });
+    await body.focus();
+    await page.evaluate(() => {
+      Object.defineProperty(visualViewport!, "height", {
+        get: () => innerHeight - 300,
+        configurable: true,
+      });
+      visualViewport!.dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator("html")).toHaveAttribute("data-keyboard", "true");
+    await expect(page.locator(".app-shell")).toHaveCSS("height", "544px");
+    await body.blur();
+    await page.evaluate(() => {
+      Reflect.deleteProperty(visualViewport!, "height");
+      visualViewport!.dispatchEvent(new Event("resize"));
+    });
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-keyboard",
+      "false",
+    );
+    await expect(page.locator(".app-shell")).toHaveCSS("height", "844px");
+    await page.locator("header .top-settings > button").click();
+    const welcome = page.locator(".top-settings .welcome-preference");
+    const label = (await welcome.locator(".check").boundingBox())!;
+    const button = (await welcome
+      .getByRole("button", { name: text.openDemo, exact: true })
+      .boundingBox())!;
+    expect(button.y).toBeGreaterThanOrEqual(label.y + label.height);
+    const checkbox = (await welcome.getByRole("checkbox").boundingBox())!;
+    expect(checkbox.y).toBeGreaterThanOrEqual(label.y);
+    expect(checkbox.y + checkbox.height).toBeLessThanOrEqual(
+      label.y + label.height,
+    );
+    await page.screenshot({
+      path: `test-results/mobile-layout/standalone-${locale}-settings.png`,
+        animations: "disabled",
+    });
+    await page.locator("header .top-settings > button").click();
+    await page.getByRole("button", { name: text.read, exact: true }).click();
+    const dock = page.locator(".mobile-reader-dock");
+    const toggle = dock.getByRole("button", {
+      name: text.expandControls,
+      exact: true,
+    });
+    await expect(toggle).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await toggle.click();
+    await expect(
+      dock.getByRole("button", { name: text.collapseControls, exact: true }),
+    ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    const bounds = (await dock.boundingBox())!;
+    expect(844 - bounds.y - bounds.height).toBeLessThanOrEqual(6);
+    await page.screenshot({
+      path: `test-results/mobile-layout/standalone-${locale}-reader.png`,
+    });
+  });
+}

@@ -5196,3 +5196,68 @@ input[type="checkbox"] {
     gap: 6px;
   }
 }
+
+/* Installed iPhone apps fill their containing web view, not Safari's toolbar viewport. */
+@media (max-width: 600px) {
+  html[data-standalone="true"] {
+    height: 100%;
+    min-height: -webkit-fill-available;
+  }
+  html[data-standalone="true"] body,
+  html[data-standalone="true"] #root {
+    height: 100%;
+    min-height: 100%;
+    position: relative;
+  }
+  html[data-standalone="true"] .app-shell.route-studio {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    padding-bottom: 0;
+  }
+  html[data-standalone="true"] .app-shell .reader,
+  html[data-standalone="true"] .app-shell.immersive .reader {
+    position: absolute;
+    bottom: 0;
+  }
+  html[data-standalone="true"][data-keyboard="true"] .app-shell.route-studio {
+    top: var(--visual-top, 0px);
+    height: var(--visual-height, 100%);
+  }
+}
+.reader-controls.mobile-reader-dock > .dock-expand,
+.reader-controls.mobile-reader-dock > .dock-expand:hover,
+.reader-controls.mobile-reader-dock > .dock-expand:active {
+  background: transparent;
+  box-shadow: none;
+}
+.top-settings .welcome-preference {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+}
+.top-settings .welcome-preference > .check {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  line-height: 1.4;
+  margin: 0;
+}
+.top-settings .welcome-preference > .check input {
+  flex: 0 0 36px;
+  margin: 0;
+}
+.top-settings .welcome-preference > p {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+}
+.top-settings .welcome-preference > button {
+  grid-column: 2;
+  grid-row: 2;
+  align-self: center;
+  white-space: nowrap;
+}

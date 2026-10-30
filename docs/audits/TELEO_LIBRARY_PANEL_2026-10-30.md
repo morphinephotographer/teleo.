@@ -137,3 +137,22 @@ The correction supersedes those details above:
   tests, typecheck, lint, production build/dry-run and diff checks passed.
 - Header/editor screenshots and geometry remain identical to the original
   baseline. No styles outside the library were changed.
+
+
+The correction is published at https://teleo.cc/studio from
+`656eb9c4cacdc9495b2b7ad2b2d7103717cfe787`, production Worker version
+`77b38620-e412-4b94-ab91-2521963e4ffa`, deployment
+`acee7259-44c5-490f-a1d7-d9f4e70864b6` at **100% traffic**.
+Staging version: `a3b933f4-f888-4036-87fb-c91bb45eeb1b`.
+
+Final public validation: **20/20** library scenarios on staging, **20/20** on
+production, **2/2** production route/security/identity checks, and **4/4** raw HTTPS
+asset hashes on each origin. Public browser screenshot crops of both sets of
+right-edge buttons were inspected and retained under `docs/screenshots/` as
+`library-script-actions-live.png` and `library-folder-actions-live.png`.
+Evidence is in `docs/audits/evidence/library-panel-fixes/`.
+
+The preceding production version for rollback is
+`52224e49-4a54-452a-acaf-d512ae9182a7`. No storage migration, dependency, domain,
+namespace, analytics-setting change or GitHub push was performed. Physical device
+behavior remains unverified; touch access was checked in browser emulation.

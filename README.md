@@ -168,3 +168,8 @@ Published on [Teleo.cc](https://teleo.cc/studio) from source `b0e1d33390f343516a
 ## Current publication — Welcome and smooth remote reading
 
 Published on [Teleo.cc](https://teleo.cc/studio) from `e4fcb251df3b6ffdf238bedf76dd03d1b07f857c`, Worker `ef94d8b5-ae38-4b60-934f-eb4fa7b3c8ba` at 100% traffic. Includes pristine Welcome localization, playback dock hide/show with a separate top Pause, script-row trash, language/themes in Settings, fixed 18 pt remote text and smooth guide-aligned scrolling. Pre-release staging found a message-budget issue; the final source removes duplicate position packets and bounds seeks to 5/s without changing server limits. Final checks: unit **34/34**, local browsers **21/21**, public staging **21/21**, public production **21/21**, route/header cohorts **2/2**, served assets **4/4**. [Publication evidence, live screenshots, rollback and device limitations](docs/audits/TELEO_READING_POLISH_PUBLICATION.md).
+
+
+## Library panel — 2026-10-30
+
+Published on [Teleo.cc](https://teleo.cc/studio) from source `7d3089ad06b433e56d92b686ab5d9a3f5e4c7047`, Worker `52224e49-4a54-452a-acaf-d512ae9182a7` at 100% traffic. Only the library panel was restyled to the approved dark reference: adjacent creation buttons, unfilled folders, document overflow menus, pinned trash and import/Open last actions. The editor, reader, header and remote design are preserved. Trash supports safe restoration and confirmed permanent deletion with the existing storage format. Local unit tests **172/172**, library browser checks **14/14** locally, **14/14** on staging and **14/14** on production; public routes/identity **2/2**. [Implementation, screenshots, validation and rollback](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md).

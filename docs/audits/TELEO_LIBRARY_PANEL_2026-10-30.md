@@ -68,6 +68,49 @@ exactly in the light theme. These checks used disposable test documents.
 - Storage tests cover preservation of revisions/preferences, scoped permanent
   deletion and protection against another tab restoring a trash entry.
 
-Browser checks use local isolated sessions. Physical-device testing and public
-deployment are outside this change. Historical release-specific browser suites
-were not run in full.
+Browser checks use isolated sessions and synthetic documents. Physical-device
+testing was not performed. Historical release-specific browser suites were not
+run in full.
+
+
+## Publication — 2026-10-30
+
+Published after the owner's explicit request to publish. Production is live at
+https://teleo.cc/studio from source
+`7d3089ad06b433e56d92b686ab5d9a3f5e4c7047`.
+
+- Production Worker version: `52224e49-4a54-452a-acaf-d512ae9182a7`.
+- Cloudflare deployment: `cdc7d097-5edd-47a2-8319-1f47abeb464b`;
+  readback confirms **100% traffic**.
+- Staging Worker version: `83b1dd9f-6e49-485a-bfa8-49925534d89f`.
+- Previous production version for rollback:
+  `c717575e-f7f4-4a7f-a04b-055140ab8fc3` (source `3170960`).
+
+The existing interactive `npm run deploy:production` workflow ran from the clean
+source commit. Production build and Cloudflare dry-run passed. Domain routes,
+Durable Object namespaces, storage schemas and dependencies were unchanged.
+
+Public validation:
+
+- Staging library scenarios: **14/14**, Chromium and WebKit.
+- Production library scenarios: **14/14**, Chromium and WebKit.
+- Production routes, HTTPS, security headers, Origin checks, www redirect and
+  exact source/version identity: **2/2**, Chromium and WebKit.
+- HTML, CSS, JavaScript and service-worker raw HTTPS hashes: **4/4** match the
+  checked local build on staging and production.
+- Browser CSS/JS/service-worker bytes match too. Cloudflare adds a beacon script
+  to production browser HTML; removing only that precisely identified insertion
+  reproduces the original HTML bytes. The initial raw browser HTML hash mismatch
+  was investigated rather than reported as an exact match. No Cloudflare
+  analytics or CSP settings were changed.
+
+Public screenshots were inspected:
+`docs/screenshots/library-panel-live-ru-1024.png` and
+`docs/screenshots/library-panel-live-ru-375.png`.
+Release identity, traffic and asset checks are retained under
+`docs/audits/evidence/library-panel-publication/`.
+
+For rollback, use the existing `wrangler rollback` workflow with the previous
+production version above, without deleting namespaces or stored data. No rollback
+was needed. A subsequent documentation commit does not change the published
+application source. No GitHub push was performed.

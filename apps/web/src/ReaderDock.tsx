@@ -328,10 +328,12 @@ export function ReaderDock({
             {[0, 3, 5, 10].map((n) => (
               <button
                 key={n}
+                aria-label={n ? `${n} ${t("seconds")}` : t("off")}
+                title={n ? `${n} ${t("seconds")}` : t("off")}
                 aria-pressed={p.countdownSeconds === n}
                 onClick={() => preference({ countdownSeconds: n })}
               >
-                {n ? n + "s" : t("off")}
+                {n ? n + "s" : t("offShort")}
               </button>
             ))}
           </div>

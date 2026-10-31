@@ -1,4 +1,5 @@
 export const en = {
+  offShort: "Off",
   letterSpacing: "Letter spacing",
   previousLine: "Previous line",
   nextLine: "Next line",
@@ -300,6 +301,7 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  offShort: "Вимк.",
   letterSpacing: "Міжлітерний інтервал",
   previousLine: "Попередній рядок",
   nextLine: "Наступний рядок",
@@ -600,6 +602,7 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  offShort: "Выкл.",
   letterSpacing: "Межбуквенный интервал",
   previousLine: "Предыдущая строка",
   nextLine: "Следующая строка",

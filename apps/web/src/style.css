@@ -5197,30 +5197,35 @@ input[type="checkbox"] {
   }
 }
 
-/* Installed iPhone apps fill their containing web view, not Safari's toolbar viewport. */
+/* Mobile shells fill their available window; browser tabs track Safari chrome via visualViewport. */
 @media (max-width: 600px) {
-  html[data-standalone="true"] {
+  html[data-standalone] {
     height: 100%;
     min-height: -webkit-fill-available;
   }
-  html[data-standalone="true"] body,
-  html[data-standalone="true"] #root {
+  html[data-standalone] body,
+  html[data-standalone] #root {
     height: 100%;
     min-height: 100%;
     position: relative;
   }
-  html[data-standalone="true"] .app-shell.route-studio {
+  html[data-standalone] .app-shell.route-studio {
     position: absolute;
     inset: 0;
     height: 100%;
     padding-bottom: 0;
   }
-  html[data-standalone="true"] .app-shell .reader,
-  html[data-standalone="true"] .app-shell.immersive .reader {
+  html[data-standalone] .app-shell .reader,
+  html[data-standalone] .app-shell.immersive .reader {
     position: absolute;
     bottom: 0;
   }
-  html[data-standalone="true"][data-keyboard="true"] .app-shell.route-studio {
+  html[data-standalone="false"] .app-shell.route-studio {
+    top: var(--visual-top, 0px);
+    bottom: auto;
+    height: var(--visual-height, 100%);
+  }
+  html[data-standalone][data-keyboard="true"] .app-shell.route-studio {
     top: var(--visual-top, 0px);
     height: var(--visual-height, 100%);
   }
@@ -5260,4 +5265,120 @@ input[type="checkbox"] {
   grid-row: 2;
   align-self: center;
   white-space: nowrap;
+}
+
+/* Individual mobile playback controls remain circles, including selected states. */
+.reader-controls.mobile-reader-dock .icon-button,
+.reader-controls.mobile-reader-dock > .dock-expand,
+.reader-controls.mobile-reader-dock .dock-countdown button,
+.reader-controls.mobile-reader-dock .alignment-control button {
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  flex: 0 0 44px;
+  padding: 0;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.reader-controls.mobile-reader-dock .mobile-reader-main .dock-play {
+  width: 52px;
+  min-width: 52px;
+  max-width: 52px;
+  height: 52px;
+  min-height: 52px;
+  max-height: 52px;
+  flex-basis: 52px;
+}
+.mobile-reader-dock .mobile-speed output {
+  min-width: 28px;
+  font-size: 11px;
+}
+.reader-controls.mobile-reader-dock .alignment-control {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  box-shadow: none;
+}
+.mobile-reader-dock .alignment-control .segment-selection {
+  display: none;
+}
+.reader-controls.mobile-reader-dock .alignment-control button {
+  background: #303132;
+  color: #eee;
+}
+.reader-controls.mobile-reader-dock
+  .alignment-control
+  button[aria-pressed="true"] {
+  background: #eee;
+  color: #111;
+}
+.reader.light .mobile-reader-dock .alignment-control button {
+  background: #dedee1;
+  color: #111;
+}
+.reader.light
+  .mobile-reader-dock
+  .alignment-control
+  button[aria-pressed="true"] {
+  background: #111;
+  color: #fff;
+}
+@media (max-width: 350px) {
+  .reader-controls.mobile-reader-dock {
+    padding-inline: 4px;
+  }
+  .mobile-reader-main {
+    gap: 4px;
+  }
+}
+.mobile-reader-slider input[type="range"] {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  height: 44px;
+  margin: 0;
+}
+.mobile-reader-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #888;
+}
+.mobile-reader-slider input[type="range"]::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin-top: -9px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f7;
+}
+.mobile-reader-slider input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #888;
+}
+.mobile-reader-slider input[type="range"]::-moz-range-thumb {
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: #f5f5f7;
+}
+.reader.light .mobile-reader-slider input[type="range"]::-webkit-slider-thumb {
+  background: #111;
+}
+.reader.light .mobile-reader-slider input[type="range"]::-moz-range-thumb {
+  background: #111;
 }

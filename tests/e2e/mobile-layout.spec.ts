@@ -1,6 +1,21 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Locator } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
 const t = dictionaries.en;
+async function expectCircles(dock: Locator) {
+  for (const button of await dock.locator("button:visible").all()) {
+    const shape = await button.evaluate((el) => {
+      const rect = el.getBoundingClientRect();
+      return {
+        width: rect.width,
+        height: rect.height,
+        radius: getComputedStyle(el).borderRadius,
+      };
+    });
+    expect(shape.width).toBeGreaterThanOrEqual(44);
+    expect(Math.abs(shape.width - shape.height)).toBeLessThan(0.1);
+    expect(shape.radius).toBe("50%");
+  }
+}
 test.use({ viewport: { width: 390, height: 844 } });
 test("mobile editor, Welcome, reader controls and keyboard-sized viewport", async ({
   page,
@@ -96,6 +111,18 @@ test("mobile editor, Welcome, reader controls and keyboard-sized viewport", asyn
   await dock
     .getByRole("button", { name: t.expandControls, exact: true })
     .click();
+  await expectCircles(dock);
+  for (const width of [320, 390]) {
+    await page.setViewportSize({ width, height: 844 });
+    const buttons = await dock
+      .locator(".mobile-reader-main button")
+      .evaluateAll((els) =>
+        els.map((el) => el.getBoundingClientRect().toJSON()),
+      );
+    expect(buttons.every((r) => r.left >= 0 && r.right <= width)).toBe(true);
+    const play = buttons[2];
+    expect(Math.abs(play.x + play.width / 2 - width / 2)).toBeLessThan(1);
+  }
   for (const label of [t.fontSize, t.lineHeight, t.letterSpacing])
     await expect(
       dock.getByRole("slider", { name: label, exact: true }),
@@ -172,7 +199,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     );
     await page.screenshot({
       path: `test-results/mobile-layout/standalone-${locale}-settings.png`,
-        animations: "disabled",
+      animations: "disabled",
     });
     await page.locator("header .top-settings > button").click();
     await page.getByRole("button", { name: text.read, exact: true }).click();
@@ -187,9 +214,44 @@ for (const locale of ["en", "uk", "ru"] as const) {
       dock.getByRole("button", { name: text.collapseControls, exact: true }),
     ).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
     const bounds = (await dock.boundingBox())!;
+    await expectCircles(dock);
     expect(844 - bounds.y - bounds.height).toBeLessThanOrEqual(6);
     await page.screenshot({
       path: `test-results/mobile-layout/standalone-${locale}-reader.png`,
     });
   });
 }
+
+test("Safari tab follows the visible viewport as browser controls change height", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(navigator, "standalone", {
+      value: false,
+      configurable: true,
+    });
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+  });
+  await page.goto("/studio");
+  await expect(page.locator("html")).toHaveAttribute(
+    "data-standalone",
+    "false",
+  );
+  await expect(page.locator(".app-shell")).toHaveCSS("position", "absolute");
+  await page.evaluate(() => {
+    Object.defineProperty(visualViewport!, "height", {
+      get: () => innerHeight - 100,
+      configurable: true,
+    });
+    visualViewport!.dispatchEvent(new Event("resize"));
+  });
+  await expect(page.locator(".app-shell")).toHaveCSS("height", "744px");
+  await expect(page.locator("html")).toHaveAttribute("data-keyboard", "false");
+  const bounds = (await page.locator(".editor").boundingBox())!;
+  expect(bounds.y + bounds.height).toBeLessThanOrEqual(744);
+  await page.evaluate(() => {
+    Reflect.deleteProperty(visualViewport!, "height");
+    visualViewport!.dispatchEvent(new Event("resize"));
+  });
+  await expect(page.locator(".app-shell")).toHaveCSS("height", "844px");
+});

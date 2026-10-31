@@ -2107,25 +2107,6 @@ function App() {
             }
           >
             <LibraryPanel
-              modeControl={
-                <div className="desktop-workspace-mode">
-                  <Segmented
-                    label={t("workspaceMode")}
-                    value={reading ? "prompt" : "script"}
-                    onChange={(mode) =>
-                      mode === "prompt" ? void startReader() : editMode()
-                    }
-                    options={[
-                      {
-                        value: "script",
-                        label: t("editor"),
-                        disabled: !current,
-                      },
-                      { value: "prompt", label: t("read"), disabled: !current },
-                    ]}
-                  />
-                </div>
-              }
               t={t}
               locale={locale}
               scripts={scripts}

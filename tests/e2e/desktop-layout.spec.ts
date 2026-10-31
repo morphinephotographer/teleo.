@@ -7,7 +7,7 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem("teleo.locale", "en");
   });
 });
-test("wide desktop keeps library and moves modes above creation actions", async ({
+test("wide desktop keeps library and aligns header modes to editor", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 1000, height: 900 });
@@ -26,30 +26,22 @@ test("wide desktop keeps library and moves modes above creation actions", async 
     await expect(
       page.getByRole("button", { name: t.closeLibrary, exact: true }),
     ).toBeHidden();
-    await expect(page.locator("header > .segmented")).toBeHidden();
-    const modes = library.getByRole("group", {
-      name: t.workspaceMode,
-      exact: true,
-    });
+    await expect(page.locator("header > .script-selector")).toBeHidden();
+    const modes = page.locator("header > .segmented");
     await expect(modes).toBeVisible();
     const modeRect = (await modes.boundingBox())!,
-      create = (await library.locator(".library-create").boundingBox())!;
-    expect(modeRect.y + modeRect.height).toBeLessThanOrEqual(create.y);
-    const logo = await page.locator("header > .brand").evaluate((el) => {
-      const r = document.createRange();
-      r.selectNodeContents(el);
-      return {
-        text: r.getBoundingClientRect().width,
-        box: el.getBoundingClientRect().width,
-      };
-    });
-    const side = (await library.boundingBox())!;
-    expect(logo.box).toBeCloseTo(side.width, 0);
-    expect(Math.abs(logo.text - side.width)).toBeLessThan(2);
+      editor = (await page.locator(".editor").boundingBox())!;
+    expect(Math.abs(modeRect.x - editor.x)).toBeLessThan(1);
+    expect(
+      await page
+        .locator("header > .brand")
+        .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
+    ).toBe(30);
+    await expect(page.locator(".desktop-workspace-mode")).toHaveCount(0);
   }
   await page.screenshot({ path: "test-results/desktop-layout/wide.png" });
   await page
-    .locator(".desktop-workspace-mode")
+    .locator("header > .segmented")
     .getByRole("button", { name: t.read, exact: true })
     .click();
   await expect(page.locator(".reader")).toBeVisible();

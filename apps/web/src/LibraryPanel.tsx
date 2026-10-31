@@ -1,4 +1,4 @@
-import { useId, useRef, useState, type ReactNode } from "react";
+import { useId, useRef, useState } from "react";
 import type { Folder, Script } from "../../../packages/protocol/domain";
 import type { Key, Locale } from "./i18n";
 import { Icon, IconButton } from "./ui";
@@ -34,7 +34,6 @@ export function LibraryPanel({
   onAction,
   onImport,
   onRestore,
-  modeControl,
 }: {
   t: (key: Key) => string;
   locale: Locale;
@@ -54,7 +53,6 @@ export function LibraryPanel({
   onAction: (action: LibraryAction) => void;
   onImport: (file: File) => void;
   onRestore: (id: string) => Promise<boolean>;
-  modeControl?: ReactNode;
 }) {
   const [trashOpen, setTrashOpen] = useState(false);
   const [foldersExpanded, setFoldersExpanded] = useState(true);
@@ -165,7 +163,6 @@ export function LibraryPanel({
         <h2>{t("library")}</h2>
         <IconButton name="close" label={t("closeLibrary")} onClick={onClose} />
       </div>
-      {modeControl}
       <div className="library-create">
         <button disabled={!ready} onClick={onCreate}>
           {t("newScript")}

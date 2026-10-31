@@ -5383,25 +5383,23 @@ input[type="checkbox"] {
   background: #111;
 }
 
-.desktop-workspace-mode {
-  display: none;
-}
-/* Wide desktop only: keep touch tablets and their existing navigation unchanged. */
+/* Wide desktop navigation aligns with the editor column. */
 @media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
   .app-shell.route-studio {
-    --toolbar: 124px;
     --desktop-library-width: 230px;
   }
+  .app-shell.route-studio > header {
+    display: grid;
+    grid-template-columns:
+      var(--desktop-library-width) auto minmax(0, 1fr)
+      44px 44px;
+    column-gap: 16px;
+  }
   .app-shell.route-studio > header > .brand {
-    width: var(--desktop-library-width);
-    flex: 0 0 var(--desktop-library-width);
-    font-size: 107px;
-    line-height: 1;
-    letter-spacing: -0.065em;
-    margin: 0;
+    justify-self: start;
   }
   .app-shell.route-studio > header > .icon-button:first-of-type,
-  .app-shell.route-studio > header > .segmented,
+  .app-shell.route-studio > header > .script-selector,
   .app-shell.route-studio .library-heading > .icon-button {
     display: none;
   }
@@ -5411,14 +5409,14 @@ input[type="checkbox"] {
   .app-shell.route-studio .library {
     display: flex;
   }
-  .app-shell.route-studio .desktop-workspace-mode {
-    display: block;
-    width: 100%;
+}
+@media (min-width: 1600px) and (hover: hover) and (pointer: fine) {
+  .app-shell.route-studio > header {
+    column-gap: 20px;
   }
-  .desktop-workspace-mode > .segmented {
-    width: 100%;
-  }
-  .desktop-workspace-mode .segmented button {
-    padding-inline: 6px;
+}
+@media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
+  .app-shell.route-studio > header > .segmented {
+    margin-left: 0;
   }
 }

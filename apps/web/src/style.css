@@ -5387,6 +5387,7 @@ input[type="checkbox"] {
 @media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
   .app-shell.route-studio {
     --desktop-library-width: 230px;
+    --toolbar: 52px;
   }
   .app-shell.route-studio > header {
     display: grid;
@@ -5394,9 +5395,16 @@ input[type="checkbox"] {
       var(--desktop-library-width) auto minmax(0, 1fr)
       44px 44px;
     column-gap: 16px;
+    height: 52px;
+    min-height: 52px;
+    max-height: 52px;
+    padding: 4px 0;
   }
   .app-shell.route-studio > header > .brand {
     justify-self: start;
+    font-size: 44px;
+    line-height: 44px;
+    margin: 0;
   }
   .app-shell.route-studio > header > .icon-button:first-of-type,
   .app-shell.route-studio > header > .script-selector,

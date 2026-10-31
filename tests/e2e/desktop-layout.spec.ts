@@ -36,7 +36,10 @@ test("wide desktop keeps library and aligns header modes to editor", async ({
       await page
         .locator("header > .brand")
         .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
-    ).toBe(30);
+    ).toBe(44);
+    expect(
+      (await page.locator(".app-shell > header").boundingBox())!.height,
+    ).toBe(52);
     await expect(page.locator(".desktop-workspace-mode")).toHaveCount(0);
   }
   await page.screenshot({ path: "test-results/desktop-layout/wide.png" });

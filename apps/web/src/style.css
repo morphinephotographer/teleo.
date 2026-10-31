@@ -5383,6 +5383,14 @@ input[type="checkbox"] {
   background: #111;
 }
 
+/* iPad standalone windows draw beneath the status bar in both orientations. */
+@media (min-width: 601px) {
+  .app-shell.route-studio > header,
+  .app-shell.route-studio:not(.immersive) > .reader {
+    margin-top: env(safe-area-inset-top);
+  }
+}
+
 /* Wide desktop navigation aligns with the editor column. */
 @media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
   .app-shell.route-studio {

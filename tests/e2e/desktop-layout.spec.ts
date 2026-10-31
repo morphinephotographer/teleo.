@@ -85,3 +85,83 @@ test("touch tablets and phones retain header modes, logo and sidebar controls", 
     await context.close();
   }
 });
+
+test("iPad status bar leaves room above the editor and windowed reader after rotation", async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ hasTouch: true });
+  const page = await context.newPage();
+  // Desktop browser runners report zero safe-area insets. Substitute a controllable
+  // inset in the served stylesheet to exercise the installed iPad layout.
+  await page.route("**/src/style.css", async (route) => {
+    const response = await route.fetch();
+    await route.fulfill({
+      response,
+      body: (await response.text()).replaceAll(
+        "env(safe-area-inset-top)",
+        "var(--test-safe-area-top, 0px)",
+      ),
+    });
+  });
+  await page.addInitScript(() => {
+    sessionStorage.setItem("teleo.intro.seen.v1", "true");
+    localStorage.setItem("teleo.locale", "en");
+  });
+  try {
+    for (const [width, height] of [
+      [1390, 970],
+      [970, 1390],
+      [820, 1180],
+    ]) {
+      await page.setViewportSize({ width, height });
+      await page.goto("/studio");
+      await expect(page.locator(".editor textarea")).toHaveValue(/Welcome/);
+      const header = page.locator(".app-shell > header");
+      const editor = page.locator(".editor");
+      const originalHeader = (await header.boundingBox())!;
+      const originalEditor = (await editor.boundingBox())!;
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty(
+          "--test-safe-area-top",
+          "24px",
+        ),
+      );
+      const shiftedHeader = (await header.boundingBox())!;
+      const shiftedEditor = (await editor.boundingBox())!;
+      expect(shiftedHeader.y - originalHeader.y).toBe(24);
+      expect(shiftedEditor.y - originalEditor.y).toBe(24);
+      expect(shiftedEditor.y + shiftedEditor.height).toBeLessThanOrEqual(
+        height,
+      );
+      await header.getByRole("button", { name: t.read, exact: true }).click();
+      const reader = page.locator(".reader");
+      await expect(reader).toBeVisible();
+      if (await page.locator(".app-shell.immersive").count()) {
+        await page
+          .locator(".reader-top")
+          .getByRole("button", { name: t.fullscreen, exact: true })
+          .click();
+      }
+      await expect(reader).toHaveCSS("margin-top", "24px");
+      const shiftedReader = (await reader.boundingBox())!;
+      expect(shiftedReader.y).toBeGreaterThanOrEqual(
+        shiftedHeader.y + shiftedHeader.height,
+      );
+      expect(shiftedReader.y + shiftedReader.height).toBeLessThanOrEqual(
+        height,
+      );
+      await page.evaluate(() =>
+        document.documentElement.style.setProperty(
+          "--test-safe-area-top",
+          "0px",
+        ),
+      );
+      await expect(reader).toHaveCSS("margin-top", "0px");
+      await expect
+        .poll(async () => shiftedReader.y - (await reader.boundingBox())!.y)
+        .toBe(24);
+    }
+  } finally {
+    await context.close();
+  }
+});

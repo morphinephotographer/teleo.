@@ -51,3 +51,12 @@ Source `a22ad5167a612b87fbc2a633bd0a0bd8360ac463`, production `daa34c51-f323-489
 - Welcome setting label and switch use an explicit full-width flex row. Explanation and Open Welcome occupy separate columns in the following row, preventing the switch from floating above its label.
 - Typecheck, ESLint, production build and Wrangler dry-run passed. Eight mobile tests passed (normal mobile flow plus EN/UK/RU standalone-mode simulation in Chromium and WebKit); two settings viewport regression checks passed. Simulated keyboard shrink/restore and transparent arrow states are covered. Settled screenshots inspected after disabling transitional animations.
 - Tests emulate the installed-mode signal and visual viewport reduction; they do not launch an actual iPhone home-screen app. No physical iPhone validation is available. The system-owned bottom strip described in https://bugs.webkit.org/show_bug.cgi?id=313800 may remain outside the drawable page. Do not claim this release proves removal of that native strip.
+
+## Follow-up: Safari tab layout and circular controls
+
+Final source `3368f67fdb9407400ec238d0b409e7f8db6903ac`, production `5f2a5474-3e3c-4a3c-aae1-30d7f2386149`. Prior stable version `daa34c51-f323-4899-8274-2332db5e1405`; intermediate circle-style publication `fe316b84-257c-40a2-ae2f-6982cb66b42c` was followed by localized timer-label refinement.
+
+- Shared mobile root/absolute positioning now also applies to browser tabs. Tabs track visual viewport height/top to account for Safari controls; installed mode retains containing-window sizing and keyboard handling.
+- Every individual mobile playback button has equal width/height and 50% radius: 44px controls, 52px play/pause. Timer and alignment selected backgrounds are circles; alignment no longer uses an elongated selection strip. Expansion arrow remains transparent, now with a circular hit target. Slider thumbs are also circular (22px within 44px input targets).
+- Short localized Off labels fit circle buttons while full names remain available through aria-label/title. At 320px the symmetric main row fits without moving play/pause away from the horizontal center.
+- Ten mobile tests passed in Chromium/WebKit: circular dimensions for all visible controls, 320/390px bounds and centered play button, browser-toolbar height changes, installed signals, keyboard shrink/restore and EN/UK/RU settings. Typecheck, lint, build and dry-run passed; screenshots reviewed. Actual iPhone Safari chrome and native standalone strip remain unverified.

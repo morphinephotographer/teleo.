@@ -5388,6 +5388,7 @@ input[type="checkbox"] {
   .app-shell.route-studio {
     --desktop-library-width: 230px;
     --toolbar: 52px;
+    padding-top: 8px;
   }
   .app-shell.route-studio > header {
     display: grid;

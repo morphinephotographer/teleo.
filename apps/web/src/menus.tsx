@@ -17,6 +17,7 @@ export function Popover({
   maxHeight = 400,
   onOpenChange,
   triggerClassName = "",
+  align = "start",
 }: {
   label: string;
   children: ReactNode;
@@ -29,6 +30,8 @@ export function Popover({
   maxHeight?: number;
   onOpenChange?: (open: boolean) => void;
   triggerClassName?: string;
+  /** "end" lines the popup's right edge up with the trigger's. */
+  align?: "start" | "end";
 }) {
   const id = useId();
   const anchor = useRef<HTMLButtonElement>(null),
@@ -58,8 +61,9 @@ export function Popover({
     el.style.width = popupWidth + "px";
     el.style.maxHeight = availableHeight + "px";
     const height = Math.min(el.scrollHeight, availableHeight);
+    const start = align === "end" ? r.right - popupWidth : r.left;
     el.style.left =
-      Math.max(x + 12, Math.min(r.left, x + w - popupWidth - 12)) + "px";
+      Math.max(x + 12, Math.min(start, x + w - popupWidth - 12)) + "px";
     el.style.top =
       Math.max(
         y + 12,

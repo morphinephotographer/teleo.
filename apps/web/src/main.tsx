@@ -47,6 +47,8 @@ import {
   type ControlValues,
 } from "../../../packages/protocol/control";
 import { ActionDialog } from "./ActionDialog";
+import { EditorTools, FindBar } from "./EditorTools";
+import { version as appVersion } from "../../../package.json";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
 import { Icon, IconButton, Segmented, Sheet, type IconName } from "./ui";
@@ -575,6 +577,33 @@ function App() {
     });
     registry.set(voiceHighlight, new HighlightClass(...ranges));
   };
+  /** Reading cues in [brackets] are dimmed in Reader (text nodes stay untouched). */
+  useLayoutEffect(() => {
+    const registry = highlightRegistry();
+    const HighlightClass = (
+      globalThis as unknown as {
+        Highlight?: new (...ranges: Range[]) => unknown;
+      }
+    ).Highlight;
+    const view = content.current;
+    if (!registry || !HighlightClass) return;
+    if (!reading || !view) {
+      registry.delete("teleo-cue");
+      return;
+    }
+    const ranges: Range[] = [];
+    view.querySelectorAll<HTMLElement>("[data-paragraph]").forEach((p) => {
+      const node = p.firstChild;
+      if (!(node instanceof Text)) return;
+      for (const m of node.data.matchAll(/\[[^\]\n]*\]/g)) {
+        const range = document.createRange();
+        range.setStart(node, m.index!);
+        range.setEnd(node, m.index! + m[0].length);
+        ranges.push(range);
+      }
+    });
+    registry.set("teleo-cue", new HighlightClass(...ranges));
+  }, [reading, bodyParagraphs]);
   const stopVoice = () => {
     voice.stop();
     voiceTarget.current = null;
@@ -731,6 +760,16 @@ function App() {
   const persist = (script: Script) => writer.current!.enqueue(script);
   const flush = () => writer.current!.flush();
   const mutation = useRef<string | null>(null);
+  const bodyArea = useRef<HTMLTextAreaElement>(null);
+  const [findOpen, setFindOpen] = useState(false);
+  const openFind = () => {
+    if (!findOpen) setFindOpen(true);
+    else {
+      const field = document.querySelector<HTMLInputElement>(".find-bar input");
+      field?.focus();
+      field?.select();
+    }
+  };
   const edit = (patch: Partial<Script>) => {
     if (!currentRef.current) return;
     if (
@@ -2130,6 +2169,13 @@ function App() {
         </label>
         <p>{t("autoDemoHelp")}</p>
       </section>
+      <footer className="settings-about">
+        <p className="settings-version">
+          <span>{t("version")}</span>
+          <span>{appVersion}</span>
+        </p>
+        <p className="settings-credit">Developed by MORPHINE</p>
+      </footer>
     </aside>
   );
 
@@ -2388,12 +2434,21 @@ function App() {
                     >
                       {t(status)}
                     </span>
-                    <span className="document-metrics">
-                      {new Intl.NumberFormat(locale).format(wordCount)}{" "}
-                      {t("words")}
-                      <span>·</span>
-                      {duration} {t("minutes")}
-                    </span>
+                    <div className="editor-top-end">
+                      <span className="document-metrics">
+                        {new Intl.NumberFormat(locale).format(wordCount)}{" "}
+                        {t("words")}
+                        <span>·</span>
+                        {duration} {t("minutes")}
+                      </span>
+                      <EditorTools
+                        area={bodyArea}
+                        t={t}
+                        locale={locale}
+                        speed={current.preferences.speed || 1}
+                        onFind={openFind}
+                      />
+                    </div>
                   </div>
                   <input
                     className="title-input"
@@ -2401,12 +2456,31 @@ function App() {
                     value={current.title}
                     onChange={(e) => edit({ title: e.target.value })}
                   />
+                  {findOpen && (
+                    <FindBar
+                      key={current.scriptId}
+                      area={bodyArea}
+                      t={t}
+                      onClose={() => setFindOpen(false)}
+                    />
+                  )}
                   <textarea
+                    ref={bodyArea}
                     aria-label={t("body")}
                     placeholder={t("body")}
                     value={current.body}
                     onChange={(e) => edit({ body: e.target.value })}
                     onBlur={() => void flush()}
+                    onKeyDown={(e) => {
+                      if (
+                        (e.metaKey || e.ctrlKey) &&
+                        !e.altKey &&
+                        e.key.toLowerCase() === "f"
+                      ) {
+                        e.preventDefault();
+                        openFind();
+                      }
+                    }}
                   />
                   <div
                     className="document-actions"

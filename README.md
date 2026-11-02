@@ -29,9 +29,11 @@ npm run test:e2e         # starts local dev/relay + built preview at 5174
 
 The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Production is live on `https://teleo.cc`, served by the same-origin Worker in root `wrangler.jsonc`. The split relay configuration is for local development; see the release records below. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
 
-## Voice follow (branch `claude/voice-follow`, not deployed)
+## 1.3.0 — voice follow and editor text tools
 
 Reader → microphone button: the text follows your voice, read text dims, tap a word to continue from it, `[cues]` are skipped. Browser speech recognition (Chrome, Edge, Safari); language auto-detected or chosen in Settings. teleo. sends no audio or transcripts; the browser's speech service may. Alignment adapted from Textream (MIT, [notices](THIRD_PARTY_NOTICES.md)). [Behaviour, design, privacy and verification](docs/VOICE_FOLLOW.md).
+
+Editor → round **⋯** button beside the word count: clean up pasted text (broken lines, bullets, extra spaces), one sentence per paragraph, join lines, reading cues (`[pause]` chips, wrap selection; cues are dimmed in Reader), case, and Find and replace (⌘F / Ctrl+F in the editor). Every tool is a normal edit — ⌘Z / Ctrl+Z undoes it and autosave keeps it. Logic: `packages/protocol/text-tools.ts`. Settings end with the version and the credit line. Tests: `npm run test:voice` (includes `editor-tools.spec.ts`).
 
 ## Native iPhone and Mac
 
@@ -128,7 +130,6 @@ A genuine new, empty Studio library receives one localized **Welcome** script. R
 
 `npx playwright test --config playwright.welcome.config.ts` exercises fresh/legacy libraries, concurrent tabs, preferences, restoration, locale, reload and playback in Chromium and iPhone-profile WebKit. This feature is included in the v1.0.2 audit release. Current deployment identity and public verification are recorded in the audit verification report.
 
-
 ## v1.0.2 — Welcome and reliability audit — historical release
 
 Published on [teleo.cc](https://teleo.cc/studio), source `ed6df817f6f53dae6ad266ee62374357a61239ef`, release tag `v1.0.2`. Public validation: **50/50 staging** and **62/62 production** scenarios. The production Worker version is `29f1cd38-6f4e-4374-8993-c3b7bfab0c20`.
@@ -163,27 +164,21 @@ Reading settings → Physical remote → Profile → Logitech R400. Period toggl
 
 Published on [Teleo.cc](https://teleo.cc/studio) on 2026-10-28 from corrected source `0396bba0b01cf5dc743aecfc8fdece4e1d8063b4`, Worker version `ccdbbb4c-40e5-432a-89fe-62ab11645b85`. The existing preview permission is in the QR/connection dialog, with a saved privacy-safe choice, immediate revocation and reuse of the relay's session/epoch authorization. Reopening connection settings preserves the active remote. R400 arrows change speed while playing and scroll by rendered lines on pause, with bounded native repeats and interruption cleanup. Firefox preview follow also reconciles font reflow. Approved v1.2 screens and user scripts are preserved. No GitHub push or storage migration. [Feature implementation](docs/audits/TELEO_REMOTE_PERMISSIONS_R400_CONTEXT.md) · [Correction, final public checks and screenshots](docs/audits/TELEO_PREVIEW_FOLLOW_FIX.md).
 
-
 ## Previous publication — approved controls and remote scrolling
 
 Published on [Teleo.cc](https://teleo.cc/studio) from source `b0e1d33390f343516a7a4804bf2e2d7801fade27`, production Worker `58b4993f-f74c-45b7-b50d-e84af332e8ed` at 100% traffic. This release removes playback controls from Editor, adds the approved desktop/iPad Reading toolbar, separates Settings and Appearance popovers, places Welcome restoration in Library and adds folder hover/focus trash. The existing phone UI and top remote button are preserved; phone scrubbing and text scrolling synchronize continuous reading position. Public staging **9/9**, production functional **9/9**, route/header cohorts **2/2**, and served asset hashes **4/4** passed. No GitHub push or storage migration. [Publication evidence, live screenshots, rollback and device limitations](docs/audits/TELEO_APPROVED_V3_PUBLICATION.md).
-
 
 ## Current publication — Welcome and smooth remote reading
 
 Published on [Teleo.cc](https://teleo.cc/studio) from `e4fcb251df3b6ffdf238bedf76dd03d1b07f857c`, Worker `ef94d8b5-ae38-4b60-934f-eb4fa7b3c8ba` at 100% traffic. Includes pristine Welcome localization, playback dock hide/show with a separate top Pause, script-row trash, language/themes in Settings, fixed 18 pt remote text and smooth guide-aligned scrolling. Pre-release staging found a message-budget issue; the final source removes duplicate position packets and bounds seeks to 5/s without changing server limits. Final checks: unit **34/34**, local browsers **21/21**, public staging **21/21**, public production **21/21**, route/header cohorts **2/2**, served assets **4/4**. [Publication evidence, live screenshots, rollback and device limitations](docs/audits/TELEO_READING_POLISH_PUBLICATION.md).
 
-
 ## Library panel — 2026-10-30
 
 Published on [Teleo.cc](https://teleo.cc/studio) from source `7d3089ad06b433e56d92b686ab5d9a3f5e4c7047`, Worker `52224e49-4a54-452a-acaf-d512ae9182a7` at 100% traffic. Only the library panel was restyled to the approved dark reference: adjacent creation buttons, unfilled folders, document overflow menus, pinned trash and import/Open last actions. The editor, reader, header and remote design are preserved. Trash supports safe restoration and confirmed permanent deletion with the existing storage format. Local unit tests **172/172**, library browser checks **14/14** locally, **14/14** on staging and **14/14** on production; public routes/identity **2/2**. [Implementation, screenshots, validation and rollback](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md).
 
-
 Library interaction correction: live source `656eb9c4cacdc9495b2b7ad2b2d7103717cfe787`, Worker `77b38620-e412-4b94-ab91-2521963e4ffa` at 100% traffic. All folders now collapses the folder group, with no Welcome menu. Direct Rename/Trash buttons appear at the right edge of folder/document rows and remain keyboard/touch accessible. Script renaming preserves current text and selection. Public staging and production library checks each passed **20/20**. [Correction details and release evidence](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md#follow-up-row-actions-and-folder-disclosure).
 
-
 Six visual refinements are live from `873a480fa5dcd1d191ea76cb72b49c459eeffe50`, Worker `9f96a6e5-2c9f-4e59-b000-066413a4b292` at 100% traffic: folder ellipsis, transparent row actions, a circular selected-document marker, a single Reader alignment outline, removal of Reader's Connect phone button, and round Appearance symbols in Settings. Editor phone pairing is preserved. Public staging and production checks each passed **24/24**. [Release evidence and screenshots](docs/audits/TELEO_LIBRARY_PANEL_2026-10-30.md#follow-up-six-visual-refinements).
-
 
 ## Reader actions — 2026-10-30
 

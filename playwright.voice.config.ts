@@ -6,6 +6,7 @@ export default defineConfig({
     "voice-follow.spec.ts",
     "reader-keys.spec.ts",
     "ui-alignment.spec.ts",
+    "editor-tools.spec.ts",
   ],
   outputDir: "test-results/voice-follow",
   workers: 1,

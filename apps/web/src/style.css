@@ -3871,6 +3871,15 @@ input[type="checkbox"] {
     padding: 8px;
     gap: 8px;
   }
+  /* Version and credit share one line on short screens. */
+  .top-settings .settings > .settings-about {
+    flex-direction: row;
+    justify-content: space-between;
+    padding-top: 6px;
+  }
+  .top-settings .settings-version {
+    gap: 6px;
+  }
   .top-settings .welcome-preference p {
     margin-bottom: 0;
   }
@@ -3881,7 +3890,6 @@ input[type="checkbox"] {
     grid-template-columns: 1fr 1fr;
     align-items: start;
   }
-  .top-settings .settings > h2,
   .top-settings .settings > .appearance-content,
   .top-settings .settings > .welcome-preference {
     grid-column: 1 / -1;
@@ -3902,9 +3910,45 @@ input[type="checkbox"] {
     width: 32px;
     height: 32px;
   }
+  /* Title beside the language; the two expandable sections share a row. */
+  .top-settings .settings > h2 {
+    grid-column: 1;
+    grid-row: 1;
+    align-self: center;
+  }
+  .top-settings .settings > .settings-language {
+    grid-column: 2;
+    grid-row: 1;
+  }
   .top-settings .settings > details {
     grid-row: 2;
-    grid-column: 2;
+  }
+  .top-settings .settings {
+    row-gap: 4px;
+  }
+  .top-settings .welcome-preference {
+    padding-top: 8px;
+  }
+  .top-settings .settings > .settings-about {
+    grid-column: 1 / -1;
+  }
+  .top-settings .settings > details {
+    padding: 6px 8px;
+  }
+  .top-settings .settings > .settings-language {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+  .top-settings .settings > .settings-language > span {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .top-settings .settings > details:not([open]) > summary {
+    min-height: 26px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 11px;
   }
 }
 .top-settings .settings > h2 {
@@ -5577,5 +5621,304 @@ input[type="checkbox"] {
   }
   .approved-reader-toolbar .approved-pill > .picker-trigger svg:last-child {
     display: none;
+  }
+}
+
+/* Reading cues: [bracketed] directions are dimmed in Reader. */
+.reading-viewport ::highlight(teleo-cue) {
+  color: #f8f8fa80;
+}
+.reader.light .reading-viewport ::highlight(teleo-cue) {
+  color: #11111180;
+}
+
+/* Editor text tools: a quiet round "⋯" button beside the word count. */
+.editor-top-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.editor-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.editor-tools-note {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.editor-tools-note:empty {
+  display: none;
+}
+.editor-tools-picker {
+  width: auto;
+}
+.editor-tools .picker-trigger.editor-tools-trigger {
+  width: 32px;
+  min-height: 32px;
+  height: 32px;
+  margin: -5px -6px -5px 0;
+  padding: 0;
+  justify-content: center;
+  border-radius: 50%;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+}
+.editor-tools .picker-trigger.editor-tools-trigger:hover,
+.editor-tools .picker-trigger.editor-tools-trigger[aria-expanded="true"] {
+  background: var(--subtle);
+  color: var(--ink);
+}
+.editor-tools-trigger svg {
+  width: 18px;
+  height: 18px;
+}
+.editor-tools .teleo-popover {
+  padding: 6px;
+}
+.editor-tools .tools-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.editor-tools .tools-heading small {
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.35;
+}
+.editor-tools .teleo-popover > .tools-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border-radius: 14px;
+}
+.editor-tools .tools-item strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.editor-tools .tools-item small {
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+.editor-tools .teleo-popover > .tools-item-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+}
+.editor-tools .tools-item kbd {
+  font: inherit;
+  font-size: 10px;
+  color: var(--muted);
+  padding: 2px 7px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.editor-tools .teleo-popover > button:disabled,
+.editor-tools .tools-chip:disabled {
+  opacity: 0.4;
+  cursor: default;
+  background: transparent;
+}
+.editor-tools .tools-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 2px 10px 8px;
+}
+.editor-tools .tools-chip {
+  min-height: 32px;
+  padding: 5px 11px;
+  font-size: 11px;
+  font-weight: 450;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill, 999px);
+  background: transparent;
+  color: inherit;
+}
+.editor-tools .tools-chip:not(:disabled):hover,
+.editor-tools .tools-chip:focus-visible {
+  background: var(--subtle);
+  outline-offset: -2px;
+}
+.editor-tools .tools-separator {
+  height: 1px;
+  margin: 4px 8px;
+  background: var(--line);
+}
+.editor-tools .tools-footer {
+  margin: 4px -6px -6px;
+  padding: 10px 18px;
+  border-top: 1px solid var(--line);
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* Find and replace bar above the script text. */
+.find-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-base);
+  background: var(--surface);
+  flex-shrink: 0;
+  width: 100%;
+  max-width: 640px;
+}
+.find-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+.find-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  min-height: 36px;
+  border-radius: 999px;
+  background: var(--subtle);
+  border: 1px solid var(--line);
+}
+.find-field svg {
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+.find-bar .find-field input:not([type="checkbox"]) {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  font-size: 13px;
+}
+.editor .find-bar .find-field input[aria-label] {
+  padding: 6px 0 !important;
+  border-radius: 0 !important;
+  min-height: 34px;
+}
+.editor .find-bar .find-field input:focus-visible {
+  outline: 0;
+  box-shadow: none;
+}
+.find-field:focus-within {
+  border-color: var(--ink);
+}
+.find-count {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.find-bar .icon-button {
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+}
+.find-bar .icon-button svg {
+  width: 16px;
+  height: 16px;
+}
+.find-bar .find-previous svg {
+  transform: rotate(180deg);
+}
+.find-bar .find-action {
+  min-height: 36px;
+  padding: 6px 14px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.find-options {
+  justify-content: space-between;
+  padding: 0 6px;
+}
+.find-case {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+  cursor: pointer;
+}
+.find-note {
+  font-size: 10px;
+  color: var(--muted);
+}
+@media (max-width: 700px) {
+  .editor-tools .picker-trigger.editor-tools-trigger {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    margin: -8px -8px -8px 0;
+  }
+  .find-row:nth-child(2) {
+    flex-wrap: wrap;
+  }
+  .find-row:nth-child(2) .find-field {
+    flex-basis: 100%;
+  }
+  .find-row:nth-child(2) .find-action {
+    flex: 1;
+  }
+}
+
+/* Settings: version and credit at the very end. */
+.settings-about {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.settings-about p {
+  margin: 0;
+}
+.settings-version {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-version span:last-child {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+.settings-credit {
+  letter-spacing: 0.02em;
+}
+
+/* Very short windows (phone landscape): the library scrolls as one column
+   instead of squeezing the list until Trash slides under Import. */
+@media (max-height: 520px) {
+  .library {
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .library .library-content {
+    flex: 0 0 auto;
   }
 }

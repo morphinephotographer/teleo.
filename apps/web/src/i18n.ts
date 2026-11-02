@@ -74,6 +74,28 @@ export const en = {
     "Create a welcome script when starting with a new, empty library.",
   restoreDemo: "Restore demo script",
   openDemo: "Open Welcome",
+  tourReplay: "Show the quick tour",
+  tourNext: "Next",
+  tourBack: "Back",
+  tourSkip: "Skip",
+  tourFinish: "Start",
+  tourEditorTitle: "Editor",
+  tourEditorBody:
+    "Write or paste your script. It saves by itself, and the reading time updates as you type.",
+  tourToolsTitle: "Text tools",
+  tourToolsBody:
+    "The ⋯ button tidies pasted text, splits sentences into paragraphs, adds [cues] you won’t read aloud, and finds and replaces. ⌘Z undoes any of it.",
+  tourPhoneTitle: "Phone as a remote",
+  tourPhoneBody:
+    "Scan the QR code with your phone and allow the connection. You get Play, speed and paragraphs — and can send text from the phone straight into Teleo.",
+  tourReadTitle: "Reading mode",
+  tourReadBody:
+    "The text scrolls under the guide line. Speed, size and mirroring are in the bottom bar; Space pauses.",
+  tourVoiceTitle: "Follow my voice",
+  tourVoiceBody:
+    "Tap the microphone and read aloud. The text moves with you and read words fade. Skip ahead or go back — Teleo finds the place.",
+  tourVoiceUnsupported:
+    "In Chrome, Edge or Safari a microphone appears here: read aloud and the text moves with your voice.",
 
   pairTitle: "Connect your phone",
   pairHelper: "Scan this QR code with your iPhone.",
@@ -438,6 +460,28 @@ export const uk: Record<Key, string> = {
   autoDemoHelp: "Створювати вступний сценарій для нової порожньої бібліотеки.",
   restoreDemo: "Відновити приклад",
   openDemo: "Відкрити Welcome",
+  tourReplay: "Показати навчання",
+  tourNext: "Далі",
+  tourBack: "Назад",
+  tourSkip: "Пропустити",
+  tourFinish: "Почати",
+  tourEditorTitle: "Редактор",
+  tourEditorBody:
+    "Пишіть або вставте сценарій. Він зберігається сам, а час читання оновлюється, поки ви друкуєте.",
+  tourToolsTitle: "Інструменти тексту",
+  tourToolsBody:
+    "Кнопка ⋯ прибере зайве у вставленому тексті, розіб’є речення на абзаци, додасть [позначки], які не читаються вголос, знайде й замінить. ⌘Z скасує будь-що.",
+  tourPhoneTitle: "Телефон як пульт",
+  tourPhoneBody:
+    "Відскануйте QR-код телефоном і дозвольте підключення. На телефоні — Play, швидкість і абзаци, а ще можна надіслати текст із телефона просто в Teleo.",
+  tourReadTitle: "Режим читання",
+  tourReadBody:
+    "Текст пливе під напрямною. Швидкість, розмір і дзеркало — на нижній панелі; пробіл ставить на паузу.",
+  tourVoiceTitle: "Стежити за голосом",
+  tourVoiceBody:
+    "Натисніть мікрофон і читайте вголос. Текст рухається за вами, прочитане тьмяніє. Перескочили чи повернулися — Teleo знайде місце.",
+  tourVoiceUnsupported:
+    "У Chrome, Edge чи Safari тут з’явиться мікрофон: читайте вголос — і текст рухатиметься за голосом.",
 
   pairTitle: "Підключіть телефон",
   pairHelper: "Відскануйте QR-код камерою iPhone.",
@@ -802,6 +846,28 @@ export const ru: Record<Key, string> = {
     "Создавать приветственный сценарий для новой пустой библиотеки.",
   restoreDemo: "Восстановить пример",
   openDemo: "Открыть Welcome",
+  tourReplay: "Показать обучение",
+  tourNext: "Дальше",
+  tourBack: "Назад",
+  tourSkip: "Пропустить",
+  tourFinish: "Начать",
+  tourEditorTitle: "Редактор",
+  tourEditorBody:
+    "Пишите или вставьте сценарий. Он сохраняется сам, а время чтения обновляется, пока вы печатаете.",
+  tourToolsTitle: "Инструменты текста",
+  tourToolsBody:
+    "Кнопка ⋯ уберёт лишнее во вставленном тексте, разобьёт предложения на абзацы, добавит [пометки], которые не читаются вслух, найдёт и заменит. ⌘Z отменит что угодно.",
+  tourPhoneTitle: "Телефон как пульт",
+  tourPhoneBody:
+    "Отсканируйте QR-код телефоном и разрешите подключение. На телефоне — Play, скорость и абзацы, а ещё можно отправить текст с телефона прямо в Teleo.",
+  tourReadTitle: "Режим чтения",
+  tourReadBody:
+    "Текст плывёт под направляющей. Скорость, размер и зеркало — на нижней панели; пробел ставит на паузу.",
+  tourVoiceTitle: "Следить за голосом",
+  tourVoiceBody:
+    "Нажмите микрофон и читайте вслух. Текст двигается за вами, прочитанное тускнеет. Перескочили или вернулись — Teleo найдёт место.",
+  tourVoiceUnsupported:
+    "В Chrome, Edge или Safari здесь появится микрофон: читайте вслух — и текст будет двигаться за голосом.",
 
   pairTitle: "Подключите телефон",
   pairHelper: "Отсканируйте QR-код камерой iPhone.",

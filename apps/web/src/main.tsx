@@ -51,6 +51,7 @@ import { EditorTools, FindBar } from "./EditorTools";
 import { version as appVersion } from "../../../package.json";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
+import { Tour, tourNeeded } from "./Tour";
 import { Icon, IconButton, Segmented, Sheet, type IconName } from "./ui";
 import { TeleoSelect, Popover } from "./menus";
 import { RemoteController } from "./RemoteController";
@@ -391,6 +392,18 @@ function App() {
     [],
   );
   const current = scripts.find((s) => s.scriptId === selected) ?? null;
+  const [tour, setTour] = useState(false);
+  const tourChecked = useRef(false);
+  const tourOpenedReader = useRef(false);
+  useEffect(() => {
+    if (intro || !libraryLoaded || !current || route !== "/studio") return;
+    if (reading || tourChecked.current) return;
+    tourChecked.current = true;
+    if (!tourNeeded()) return;
+    // Let the workspace settle after the brand intro before pointing at it.
+    const timer = setTimeout(() => setTour(true), 700);
+    return () => clearTimeout(timer);
+  }, [intro, libraryLoaded, current, route, reading]);
   const wordCount = useMemo(
     () => current?.body.trim().split(/\s+/u).filter(Boolean).length || 0,
     [current?.body],
@@ -2148,6 +2161,20 @@ function App() {
         >
           {t("openDemo")}
         </button>
+        <button
+          disabled={!current}
+          onClick={() => {
+            document
+              .querySelectorAll<HTMLElement>(
+                ".top-settings [popover]:popover-open",
+              )
+              .forEach((el) => el.hidePopover());
+            if (reading) editMode();
+            setTour(true);
+          }}
+        >
+          {t("tourReplay")}
+        </button>
         <label className="check">
           <input
             type="checkbox"
@@ -2276,7 +2303,8 @@ function App() {
 
                 <IconButton
                   className={
-                    remoteStatus === "connected" ? "has-connection" : ""
+                    "tour-remote" +
+                    (remoteStatus === "connected" ? " has-connection" : "")
                   }
                   name="remote"
                   label={t("remoteConnection")}
@@ -3046,6 +3074,25 @@ function App() {
               } else if (kind === "purgeScript" && id) {
                 await storage.purge(id);
                 setTrash((list) => list.filter((s) => s.scriptId !== id));
+              }
+            }}
+          />
+        )}
+        {tour && current && route === "/studio" && (
+          <Tour
+            t={t}
+            reading={reading}
+            onReader={(open) => {
+              if (open) {
+                tourOpenedReader.current = true;
+                void startReader();
+              } else editMode();
+            }}
+            onClose={() => {
+              setTour(false);
+              if (tourOpenedReader.current) {
+                tourOpenedReader.current = false;
+                editMode();
               }
             }}
           />

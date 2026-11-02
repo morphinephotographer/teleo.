@@ -146,6 +146,9 @@ describe("voice follow alignment", () => {
     expect(fuzzyWordMatch("кіт", "кит")).toBe(true);
     expect(fuzzyWordMatch("teleprompter", "teleprompters")).toBe(true);
     expect(fuzzyWordMatch("table", "chair")).toBe(false);
+    expect(fuzzyWordMatch("розділ", "розповімо")).toBe(false);
+    expect(fuzzyWordMatch("приходить", "при")).toBe(false);
+    expect(fuzzyWordMatch("рука", "руки")).toBe(true);
   });
 
   it("guesses the speech language of a script", () => {
@@ -156,5 +159,111 @@ describe("voice follow alignment", () => {
     expect(speechLanguage("Hello and welcome", "ru")).toBe("en-US");
     expect(speechLanguage("Добрий день", "uk")).toBe("uk-UA");
     expect(speechLanguage("", "ru")).toBe("ru-RU");
+  });
+});
+
+describe("voice follow jumps (skip ahead, other paragraph, go back)", () => {
+  const story = [
+    "Добрий вечір, шановні глядачі.",
+    "Сьогодні ми розповімо про нову версію застосунку для суфлера. Вона працює швидше і стежить за голосом ведучого.",
+    "Другий розділ присвячений налаштуванням шрифту, ширини рядка та дзеркального відображення тексту.",
+    "Третій розділ пояснює підключення телефона як пульта через QR-код.",
+    "На завершення подякуємо команді та відповімо на запитання глядачів.",
+  ].join("\n\n");
+  const words = (from: string, count: number) => {
+    const start = story.indexOf(from);
+    return story
+      .slice(start)
+      .replace(/[.,]/g, "")
+      .toLowerCase()
+      .split(/\s+/)
+      .slice(0, count);
+  };
+  /** Continue one recognizer session with more words. */
+  const continueSaying = (
+    f: SpeechFollower,
+    transcript: string,
+    more: string[],
+    from: number,
+  ) => {
+    let now = from;
+    for (const word of more) {
+      transcript = transcript ? `${transcript} ${word}` : word;
+      now += 100;
+      f.match(transcript, now);
+    }
+    return transcript;
+  };
+
+  it("skips the rest of a sentence and continues further in the paragraph", () => {
+    const f = new SpeechFollower(story);
+    let said = continueSaying(f, "", words("Добрий", 4), 0);
+    said = continueSaying(f, said, words("Сьогодні", 3), 1000); // stops mid-line
+    continueSaying(f, said, words("стежить", 4), 2000);
+    expect(f.position).toBe(at(story, "Другий"));
+  });
+
+  it("jumps forward to another paragraph", () => {
+    const f = new SpeechFollower(story);
+    const said = continueSaying(f, "", words("Добрий", 4), 0);
+    continueSaying(f, said, words("Третій", 4), 1000);
+    expect(f.position).toBe(at(story, "телефона"));
+  });
+
+  it("goes back and re-reads an earlier paragraph", () => {
+    const f = new SpeechFollower(story);
+    let said = continueSaying(f, "", words("Добрий", 4), 0);
+    said = continueSaying(f, said, words("Сьогодні", 30), 1000);
+    expect(f.position).toBeGreaterThan(at(story, "Другий"));
+    continueSaying(f, said, words("Сьогодні", 5), 5000);
+    expect(f.position).toBe(at(story, "версію"));
+  });
+
+  it("keeps following normally after a jump", () => {
+    const f = new SpeechFollower(story);
+    let said = continueSaying(f, "", words("Добрий", 4), 0);
+    said = continueSaying(f, said, words("Другий", 4), 1000);
+    continueSaying(f, said, ["ширини", "рядка"], 2000);
+    expect(f.position).toBe(at(story, "та дзеркального"));
+  });
+
+  it("does not jump on off-script talk", () => {
+    const f = new SpeechFollower(story);
+    const said = continueSaying(f, "", words("Добрий", 4), 0);
+    const reached = f.position;
+    continueSaying(
+      f,
+      said,
+      ["зараз", "трохи", "відволічуся", "на", "каву", "і", "повернуся"],
+      1000,
+    );
+    expect(f.position).toBe(reached);
+  });
+
+  it("needs one more matching word before jumping far", () => {
+    const f = new SpeechFollower(story);
+    const said = continueSaying(f, "", words("Добрий", 4), 0);
+    const reached = f.position;
+    continueSaying(f, said, words("Третій", 3), 1000);
+    expect(f.position).toBe(reached);
+  });
+
+  it("chooses the nearest occurrence of a repeated phrase", () => {
+    const repeated = [
+      "Вступ до теми сьогоднішньої зустрічі.",
+      "Дякуємо всім за увагу та підтримку.",
+      "Основна частина про нові можливості продукту.",
+      "Дякуємо всім за увагу та підтримку.",
+      "Фінал.",
+    ].join("\n\n");
+    const f = new SpeechFollower(repeated);
+    const said = continueSaying(
+      f,
+      "",
+      ["вступ", "до", "теми", "сьогоднішньої", "зустрічі"],
+      0,
+    );
+    continueSaying(f, said, ["дякуємо", "всім", "за", "увагу"], 1000);
+    expect(f.position).toBe(at(repeated, "та підтримку"));
   });
 });

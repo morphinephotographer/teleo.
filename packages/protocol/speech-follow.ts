@@ -78,12 +78,15 @@ export function fuzzyWordMatch(a: string, b: string) {
   if (a === b) return true;
   const shorter = Math.min([...a].length, [...b].length);
   if (shorter <= 2) return false;
-  if (a.startsWith(b) || b.startsWith(a)) return true;
+  // A partially recognized word ("telepro" → "teleprompters").
+  if (shorter >= 4 && (a.startsWith(b) || b.startsWith(a))) return true;
   let shared = 0;
   const x = [...a],
     y = [...b];
   while (shared < shorter && x[shared] === y[shared]) shared++;
-  if (shared >= Math.max(3, Math.floor((shorter * 3) / 5))) return true;
+  // Same stem, different ending ("презентация" / "презентации"). At least 4
+  // letters: Slavic prefixes such as "роз-" or "при-" alone are not a match.
+  if (shared >= Math.max(4, Math.ceil((shorter * 3) / 5))) return true;
   const distance = editDistance(a, b);
   if (shorter <= 4) return distance <= 1;
   if (shorter <= 8) return distance <= 2;
@@ -100,6 +103,11 @@ export function bestOffset(_characterResult: number, wordResult: number) {
   return Math.max(0, wordResult);
 }
 
+/** Spoken words that must fail to continue the text before searching elsewhere. */
+const RELOCATE_WORDS = 3;
+/** …and their minimum combined letters, so short common words never trigger a jump. */
+const RELOCATE_LETTERS = 10;
+
 export class SpeechFollower {
   readonly text: string;
   private ranges: [number, number][];
@@ -110,6 +118,10 @@ export class SpeechFollower {
   private anchor = "";
   private lastTranscript = "";
   private lastJumpAt = -Infinity;
+  /** Spoken words (after the anchor) when the position last moved. */
+  private wordsAtAdvance = 0;
+  /** A distant phrase match waiting for the next spoken word to confirm it. */
+  private pending: { last: number } | null = null;
 
   constructor(text: string, start = 0) {
     this.text = text;
@@ -130,6 +142,8 @@ export class SpeechFollower {
     this.recent = [];
     this.anchor = "";
     this.lastTranscript = "";
+    this.wordsAtAdvance = 0;
+    this.pending = null;
   }
 
   /** Manual move (tap, scroll). Keeps the session; ignores speech said before the jump. */
@@ -139,6 +153,8 @@ export class SpeechFollower {
     this.recent = [];
     this.anchor = this.lastTranscript;
     this.lastJumpAt = now;
+    this.wordsAtAdvance = 0;
+    this.pending = null;
     return this.confirmed;
   }
 
@@ -163,9 +179,22 @@ export class SpeechFollower {
       );
       spoken = transcript.slice(trim);
     }
-    if (!spoken.trim() || this.matchStart >= this.text.length)
-      return this.confirmed;
+    if (!spoken.trim()) return this.confirmed;
+    const words = spoken.split(/\s+/).map(wordKey).filter(Boolean);
+    const before = this.confirmed;
+    if (this.matchStart < this.text.length) this.followNearby(spoken);
+    if (this.confirmed !== before) {
+      this.wordsAtAdvance = words.length;
+      this.pending = null;
+    } else if (words.length - this.wordsAtAdvance >= RELOCATE_WORDS)
+      this.relocate(words, transcript);
+    else if (words.length < this.wordsAtAdvance)
+      this.wordsAtAdvance = words.length; // the recognizer revised its text
+    return this.confirmed;
+  }
 
+  /** In-order tracking from the last confirmed position (Textream's approach). */
+  private followNearby(spoken: string) {
     const characterResult = this.characterMatch(spoken) - this.matchStart;
     const wordResult = this.wordMatch(spoken) - this.matchStart;
     const raw = Math.min(
@@ -173,7 +202,7 @@ export class SpeechFollower {
       this.text.length,
     );
     const candidate = this.advancePastAnnotations(raw);
-    if (candidate <= this.confirmed) return this.confirmed;
+    if (candidate <= this.confirmed) return;
 
     this.recent.push(candidate);
     if (this.recent.length > 3) this.recent.shift();
@@ -184,7 +213,77 @@ export class SpeechFollower {
     const smallStep = candidate - this.confirmed <= 15;
     if (bothProgressed || skippedAnnotation || agreed || smallStep)
       this.confirmed = candidate;
-    return this.confirmed;
+  }
+
+  /**
+   * The reader skipped ahead, jumped to another paragraph or went back:
+   * the last few spoken words did not continue the text here. Find them as a
+   * consecutive phrase anywhere in the script (nearest occurrence wins) and
+   * move there once the following spoken word confirms the same place.
+   */
+  private relocate(words: string[], transcript: string) {
+    const tail = words.slice(-RELOCATE_WORDS);
+    if (tail.join("").length < RELOCATE_LETTERS) return;
+    const here = this.tokenIndexAt(this.confirmed);
+    let best: number | null = null;
+    for (const last of this.findPhrase(tail)) {
+      const target = this.after(last);
+      if (target === this.confirmed) continue; // that is where we already are
+      if (
+        best === null ||
+        Math.abs(last - here) < Math.abs(best - here) ||
+        (Math.abs(last - here) === Math.abs(best - here) && last > best)
+      )
+        best = last;
+    }
+    if (best === null) {
+      this.pending = null;
+      return;
+    }
+    const pending = this.pending;
+    if (pending && best === pending.last) return; // same words, revised
+    if (pending && best > pending.last && best - pending.last <= 4) {
+      this.confirmed = this.advancePastAnnotations(this.after(best));
+      this.matchStart = this.confirmed;
+      this.recent = [];
+      this.anchor = transcript;
+      this.wordsAtAdvance = 0;
+      this.pending = null;
+      return;
+    }
+    this.pending = { last: best };
+  }
+
+  /** Token indices where `keys` occur as consecutive spoken words (cues skipped). */
+  private findPhrase(keys: string[]) {
+    const ends: number[] = [];
+    const tokens = this.tokens;
+    for (let i = 0; i < tokens.length; i++) {
+      if (tokens[i].skip || !fuzzyWordMatch(tokens[i].key, keys[0])) continue;
+      let j = i,
+        k = 1;
+      while (k < keys.length) {
+        j++;
+        while (j < tokens.length && tokens[j].skip) j++;
+        if (j >= tokens.length || !fuzzyWordMatch(tokens[j].key, keys[k]))
+          break;
+        k++;
+      }
+      if (k === keys.length) ends.push(j);
+    }
+    return ends;
+  }
+
+  private tokenIndexAt(offset: number) {
+    const index = this.tokens.findIndex((t) => t.start >= offset);
+    return index < 0 ? this.tokens.length : index;
+  }
+
+  /** Offset of the word following token `index`. */
+  private after(index: number) {
+    return index + 1 < this.tokens.length
+      ? this.tokens[index + 1].start
+      : this.tokens[index].end;
   }
 
   /** Clamps to the text and snaps an offset inside a word back to that word's start. */

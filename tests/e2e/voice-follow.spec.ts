@@ -232,6 +232,41 @@ test("reader follows the voice, dims read text, jumps on tap and stops", async (
   expect(await readText(page)).toBeNull();
 });
 
+test("speaking another paragraph jumps there, forward and back", async ({
+  page,
+}) => {
+  await openReader(page);
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true })
+    .click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  const atGuide = () =>
+    page.evaluate(() => {
+      const v = document.querySelector(".reading-viewport")!;
+      const y = v.getBoundingClientRect().top + (v.clientHeight * 35) / 100;
+      const p = [...document.querySelectorAll("[data-paragraph]")].find((p) => {
+        const b = p.getBoundingClientRect();
+        return b.top - 4 <= y && b.bottom + 4 >= y;
+      });
+      return p?.textContent?.match(/Абзац (\d+)/)?.[1] || "";
+    });
+  let said = await say(page, spokenWords(1, 1));
+  // Leave paragraph 2 unfinished and continue with paragraph 8.
+  said = await say(page, spokenWords(2, 2).slice(0, 4), said);
+  said = await say(page, spokenWords(8, 8).slice(0, 6), said);
+  await expect.poll(atGuide, { timeout: 5000 }).toBe("8");
+  await expect
+    .poll(async () => (await readText(page)) || "")
+    .toMatch(/Абзац 8\. Сьогодні ми говоримо про $/);
+  // Go back and re-read paragraph 3.
+  await say(page, spokenWords(3, 3).slice(0, 6), said);
+  await expect.poll(atGuide, { timeout: 5000 }).toBe("3");
+  await expect
+    .poll(async () => (await readText(page)) || "")
+    .toMatch(/Абзац 3\. Сьогодні ми говоримо про $/);
+});
+
 test("permission denial is explained and Play turns voice follow off", async ({
   page,
 }) => {

@@ -66,6 +66,13 @@ import {
   type ReadingAnchor,
 } from "./reading-anchor";
 import { scrollToTextOffset, textOffsetAtView } from "./text-position";
+import {
+  VoiceFollow,
+  voiceFollowSupported,
+  type VoiceError,
+  type VoiceStatus,
+} from "./voice-follow";
+import { speechLanguage } from "../../../packages/protocol/speech-follow";
 import { r400Keys, r400Shortcut, bindReaderKeyboard, R400Hold } from "./r400";
 import { readerShortcut } from "./reader-keyboard";
 import {
@@ -233,6 +240,43 @@ function App() {
   const lastHostState = useRef("");
   const focusPositionRef = useRef(focusPosition);
   focusPositionRef.current = focusPosition;
+  // Voice follow: browser speech recognition moves the reading position.
+  const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("off");
+  const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
+  const [voiceLanguage, setVoiceLanguage] = useState(
+    () => localGet("teleo.voiceLanguage") || "auto",
+  );
+  useEffect(
+    () => localSet("teleo.voiceLanguage", voiceLanguage),
+    [voiceLanguage],
+  );
+  const voiceTarget = useRef<number | null>(null);
+  const voiceScroll = useRef({
+    desired: -1,
+    measured: 0,
+    value: -1,
+    userAt: 0,
+    painted: -1,
+    last: 0,
+  });
+  const [voice] = useState(
+    () =>
+      new VoiceFollow(
+        (offset) => {
+          voiceTarget.current = offset;
+          voiceScroll.current.desired = -1;
+        },
+        (status, error) => {
+          setVoiceStatus(status);
+          setVoiceError(error ?? null);
+        },
+      ),
+  );
+  const voiceOn = voiceStatus === "starting" || voiceStatus === "listening";
+  /** A deliberate move (wheel, swipe, line/paragraph controls): follow resumes from the guide once it settles. */
+  const voiceManual = () => {
+    if (voice.running) voiceScroll.current.userAt = performance.now();
+  };
   const geometry = useRef<{
     script: string;
     anchor: ReadingAnchor;
@@ -499,6 +543,162 @@ function App() {
     () => previewParagraphs(current?.body || ""),
     [current?.body],
   );
+  const previewOffsetsRef = useRef(previewOffsets);
+  previewOffsetsRef.current = previewOffsets;
+  const voiceHighlight = "teleo-voice-read";
+  const highlightRegistry = () =>
+    (
+      globalThis as unknown as {
+        CSS?: { highlights?: Map<string, unknown> };
+      }
+    ).CSS?.highlights;
+  /** Dims already-read text without touching the paragraph text nodes. */
+  const paintVoiceHighlight = (view: HTMLElement, offset: number) => {
+    const registry = highlightRegistry();
+    const HighlightClass = (
+      globalThis as unknown as {
+        Highlight?: new (...ranges: Range[]) => unknown;
+      }
+    ).Highlight;
+    if (!registry || !HighlightClass) return;
+    const nodes = view.querySelectorAll<HTMLElement>("[data-paragraph]");
+    const ranges: Range[] = [];
+    previewOffsetsRef.current.forEach((block, index) => {
+      const node = nodes[index]?.firstChild;
+      if (block.offset >= offset || !(node instanceof Text)) return;
+      const end = Math.min(node.length, offset - block.offset);
+      if (end <= 0) return;
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, end);
+      ranges.push(range);
+    });
+    registry.set(voiceHighlight, new HighlightClass(...ranges));
+  };
+  const stopVoice = () => {
+    voice.stop();
+    voiceTarget.current = null;
+    voiceScroll.current = { ...voiceScroll.current, painted: -1, value: -1 };
+    highlightRegistry()?.delete(voiceHighlight);
+  };
+  const startVoice = () => {
+    const view = viewport.current,
+      script = currentRef.current;
+    if (!view || !script) return;
+    if (engine.playing) command({ action: "pause" });
+    engine.countdown = 0;
+    const from = Math.round(
+      textOffsetAtView(
+        view,
+        previewOffsetsRef.current,
+        focusPositionRef.current,
+      ),
+    );
+    voiceScroll.current = {
+      desired: -1,
+      measured: 0,
+      value: -1,
+      userAt: 0,
+      painted: -1,
+      last: 0,
+    };
+    voice.start(
+      script.body,
+      voiceLanguage === "auto"
+        ? speechLanguage(script.body, locale)
+        : voiceLanguage,
+      from,
+    );
+    showControls();
+  };
+  const voiceStepRef = useRef((_view: HTMLElement, _now: number) => {});
+  /** Called every frame while voice follow is on: ease the guide to the spoken position. */
+  voiceStepRef.current = (view, now) => {
+    const s = voiceScroll.current;
+    const dt = s.last ? Math.min(0.1, (now - s.last) / 1000) : 0;
+    s.last = now;
+    if (s.userAt) {
+      // Manual scrolling wins; once it settles, continue from the guide line.
+      if (now - s.userAt < 1200) return;
+      s.userAt = 0;
+      s.value = -1;
+      voice.jump(
+        textOffsetAtView(
+          view,
+          previewOffsetsRef.current,
+          focusPositionRef.current,
+        ),
+      );
+    }
+    const target = voiceTarget.current;
+    if (target === null) return;
+    if (s.painted !== target) {
+      paintVoiceHighlight(view, target);
+      s.painted = target;
+    }
+    if (s.desired < 0 || now - s.measured > 300) {
+      const keep = view.scrollTop;
+      scrollToTextOffset(
+        view,
+        previewOffsetsRef.current,
+        target,
+        focusPositionRef.current,
+      );
+      s.desired = view.scrollTop;
+      view.scrollTop = keep;
+      s.measured = now;
+    }
+    if (s.value < 0 || Math.abs(view.scrollTop - s.value) > 2)
+      s.value = view.scrollTop;
+    const gap = s.desired - s.value;
+    s.value =
+      Math.abs(gap) < 0.5 ? s.desired : s.value + gap * (1 - Math.exp(-dt * 4));
+    view.scrollTop = s.value;
+    engine.position = viewPosition(view);
+  };
+  /** Tap a word while voice follow is on to continue reading from it. */
+  const voiceTap = (x: number, y: number) => {
+    const view = viewport.current;
+    if (!voice.running || !view) return;
+    const doc = document as Document & {
+      caretPositionFromPoint?: (
+        x: number,
+        y: number,
+      ) => { offsetNode: Node; offset: number } | null;
+      caretRangeFromPoint?: (x: number, y: number) => Range | null;
+    };
+    let node: Node | null | undefined,
+      offset = 0;
+    if (doc.caretPositionFromPoint) {
+      const p = doc.caretPositionFromPoint(x, y);
+      node = p?.offsetNode;
+      offset = p?.offset || 0;
+    } else if (doc.caretRangeFromPoint) {
+      const r = doc.caretRangeFromPoint(x, y);
+      node = r?.startContainer;
+      offset = r?.startOffset || 0;
+    }
+    const paragraph =
+      node instanceof Text
+        ? node.parentElement?.closest("[data-paragraph]")
+        : null;
+    if (!paragraph || !(node instanceof Text)) return;
+    const index = Array.from(view.querySelectorAll("[data-paragraph]")).indexOf(
+      paragraph,
+    );
+    const block = previewOffsetsRef.current[index];
+    if (!block) return;
+    // Snap back to the start of the tapped word.
+    while (offset > 0 && /[\p{L}\p{N}'’ʼ-]/u.test(node.data[offset - 1]))
+      offset--;
+    voiceScroll.current.userAt = 0;
+    voiceScroll.current.value = -1;
+    voice.jump(block.offset + offset);
+  };
+  useEffect(() => {
+    if (!reading) return;
+    return () => stopVoice();
+  }, [reading, selected, current?.body]);
   useEffect(() => {
     void sender.current?.script(current);
   }, [current?.scriptId, current?.title, current?.body]);
@@ -577,6 +777,7 @@ function App() {
     ) {
       geometryHeld.current = false;
       geometry.current = null;
+      voiceManual();
     }
     if (
       (c.action === "nextParagraph" || c.action === "previousParagraph") &&
@@ -802,7 +1003,11 @@ function App() {
           ? Math.max(0, view.scrollHeight - view.clientHeight)
           : 0;
         engine.tick(now);
-        if (engine.playing) syncView(view);
+        if (engine.playing) {
+          // Play switches back to steady scrolling.
+          if (voice.running) stopVoice();
+          syncView(view);
+        } else if (voice.running) voiceStepRef.current(view, now);
         if (now - lastSave >= 250) {
           localSet("teleo.position." + selected, String(engine.position));
           lastSave = now;
@@ -833,7 +1038,7 @@ function App() {
     };
   }, [reading, selected]);
   useEffect(() => {
-    const playing = reading && engine.playing;
+    const playing = reading && (engine.playing || voiceOn);
     let cancelled = false;
     if (playing && "wakeLock" in navigator)
       navigator.wakeLock
@@ -852,7 +1057,7 @@ function App() {
       void wake.current?.release();
       wake.current = null;
     };
-  }, [reading, engine.playing]);
+  }, [reading, engine.playing, voiceOn]);
   useEffect(() => {
     localSet("teleo.profile", profile);
     localSet("teleo.mapping", JSON.stringify(mapping));
@@ -1756,6 +1961,31 @@ function App() {
           </button>
         </div>
       </section>
+      <details className="voice-settings">
+        <summary>{t("voiceFollow")}</summary>
+        <p>{t(voiceFollowSupported() ? "voiceHelp" : "voiceUnsupported")}</p>
+        {voiceFollowSupported() && (
+          <label>
+            {t("voiceLanguage")}
+            <TeleoSelect
+              label={t("voiceLanguage")}
+              value={voiceLanguage}
+              onChange={(value) => {
+                setVoiceLanguage(value);
+                if (voice.running) stopVoice();
+              }}
+              options={[
+                { value: "auto", label: t("voiceAuto") },
+                { value: "uk-UA", label: "Українська" },
+                { value: "ru-RU", label: "Русский" },
+                { value: "en-US", label: "English (US)" },
+                { value: "en-GB", label: "English (UK)" },
+              ]}
+            />
+          </label>
+        )}
+        <p className="voice-privacy">{t("voicePrivacy")}</p>
+      </details>
       <details>
         <summary>{t("physical")}</summary>
         <p>{t("keyHelp")}</p>
@@ -2074,6 +2304,7 @@ function App() {
             <h1>{t(route === "/help" ? "helpTitle" : "privacyTitle")}</h1>
             <p>{t(route === "/help" ? "helpBody" : "privacyBody")}</p>
             <p>{t(route === "/help" ? "helpRemote" : "privacyRemote")}</p>
+            <p>{t(route === "/help" ? "helpVoice" : "privacyVoice")}</p>
             {button("launch", () => navigate("/studio"), true)}
           </main>
         ) : route === "/remote" ? (
@@ -2304,6 +2535,25 @@ function App() {
                   onClick={() => command({ action: "pause" })}
                 />
               )}
+              {voiceOn && (
+                <span className={"voice-status " + voiceStatus} role="status">
+                  <span className="voice-dot" aria-hidden="true" />
+                  {t(
+                    voiceStatus === "listening"
+                      ? "voiceListening"
+                      : "voiceStarting",
+                  )}
+                </span>
+              )}
+              {voiceFollowSupported() && (
+                <IconButton
+                  name="microphone"
+                  label={t(voiceOn ? "voiceFollowStop" : "voiceFollow")}
+                  active={voiceOn}
+                  className="reader-voice"
+                  onClick={() => (voiceOn ? stopVoice() : startVoice())}
+                />
+              )}
               <IconButton
                 name="fullscreen"
                 label={t("fullscreen")}
@@ -2340,6 +2590,11 @@ function App() {
                 )}
               </p>
             )}
+            {voiceError && (
+              <p className="reader-fullscreen-feedback" role="alert">
+                {t(voiceError)}
+              </p>
+            )}
             <div className="reader-stage">
               <div
                 className={
@@ -2363,12 +2618,15 @@ function App() {
                   geometryHeld.current = false;
                   geometry.current = null;
                   command({ action: "pause" });
+                  voiceManual();
                 }}
                 onTouchStart={() => {
                   geometryHeld.current = false;
                   geometry.current = null;
                   command({ action: "pause" });
                 }}
+                onTouchMove={voiceManual}
+                onClick={(e) => voiceTap(e.clientX, e.clientY)}
                 onScroll={(e) => {
                   if (!engine.playing && !geometryHeld.current)
                     engine.position = viewPosition(e.currentTarget);
@@ -2406,6 +2664,7 @@ function App() {
                 if (!viewport.current || !content.current) return;
                 geometryHeld.current = false;
                 geometry.current = null;
+                voiceManual();
                 const line =
                   parseFloat(getComputedStyle(content.current).lineHeight) ||
                   64;
@@ -2432,6 +2691,7 @@ function App() {
               seek={(position) => {
                 geometryHeld.current = false;
                 geometry.current = null;
+                voiceManual();
                 engine.command({ action: "pause" });
                 engine.position = position;
                 if (viewport.current) syncView(viewport.current);

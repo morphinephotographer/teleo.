@@ -40,6 +40,7 @@ export type IconName =
   | "next"
   | "text"
   | "sun"
+  | "microphone"
   | "trash";
 const paths: Record<IconName, ReactNode> = {
   pencil: <path d="m16 3 5 5-12 12-6 1 1-6L16 3Zm-2 2 5 5M4 15l5 5" />,
@@ -180,6 +181,12 @@ const paths: Record<IconName, ReactNode> = {
   previous: <path d="m6 14 6-6 6 6" />,
   next: <path d="m6 10 6 6 6-6" />,
   text: <path d="m3 19 6-14 6 14M5 14h8M16 9h6M19 9v10" />,
+  microphone: (
+    <>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+    </>
+  ),
 };
 export function Icon({ name }: { name: IconName }) {
   return (

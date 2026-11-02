@@ -29,6 +29,10 @@ npm run test:e2e         # starts local dev/relay + built preview at 5174
 
 The production service worker caches the app shell and all UI translations after an initial successful visit. Offline editing is available after caching. Production is live on `https://teleo.cc`, served by the same-origin Worker in root `wrangler.jsonc`. The split relay configuration is for local development; see the release records below. [Cloudflare instructions](docs/CLOUDFLARE_DEPLOYMENT.md).
 
+## Voice follow (branch `claude/voice-follow`, not deployed)
+
+Reader → microphone button: the text follows your voice, read text dims, tap a word to continue from it, `[cues]` are skipped. Browser speech recognition (Chrome, Edge, Safari); language auto-detected or chosen in Settings. teleo. sends no audio or transcripts; the browser's speech service may. Alignment adapted from Textream (MIT, [notices](THIRD_PARTY_NOTICES.md)). [Behaviour, design, privacy and verification](docs/VOICE_FOLLOW.md).
+
 ## Native iPhone and Mac
 
 Prerequisites: Mac with Xcode 15+ capable of iOS 17/macOS 14 APIs; development verified with Xcode 27.1 / Swift 6.4. Open `apps/apple/Teleo.xcodeproj`, choose `Teleo-iOS` or `Teleo-macOS`. No external Swift packages. Project regeneration: `python3 scripts/generate-xcode.py` (do not run over intentional manual Xcode changes without reviewing its generator).

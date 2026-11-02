@@ -1,4 +1,28 @@
 export const en = {
+  voiceFollow: "Follow my voice",
+  voiceFollowStop: "Stop following my voice",
+  voiceStarting: "Starting microphone…",
+  voiceListening: "Listening",
+  voiceLanguage: "Speech language",
+  voiceAuto: "Automatic (from the text)",
+  voiceHelp:
+    "In Reader, press the microphone and read aloud: the text follows the words you say and already-read text dims. Tap a word to continue from it. Scroll manually to catch up. Play switches back to steady scrolling. Text in [square brackets] never needs to be spoken.",
+  voicePrivacy:
+    "Speech recognition is done by your browser. Depending on the browser, audio may be processed by its speech service (for example, Google in Chrome or Apple in Safari). teleo. never receives or stores audio or transcripts.",
+  voiceUnsupported:
+    "This browser does not support speech recognition. Use Chrome, Edge or Safari for voice follow.",
+  voicePermission:
+    "Microphone or speech recognition access was denied. Allow it in the browser's site settings, then try again.",
+  voiceMicrophone: "No microphone was found.",
+  voiceNetwork:
+    "The browser's speech service is unreachable. Check the connection, then try again.",
+  voiceFailed: "Voice follow stopped. Press the microphone to try again.",
+  helpVoice:
+    "Voice follow: in Reader, press the microphone and read aloud. The text follows your voice, read text dims, and tapping a word continues from it. Choose the speech language in Settings → Follow my voice. Works in browsers with speech recognition (Chrome, Edge, Safari).",
+  privacyVoice:
+    "Voice follow stays off until you turn it on in Reader. While it is on, your browser's speech recognition listens to the microphone; depending on the browser, audio may be processed by its provider's speech service. teleo. itself never receives, sends or stores audio or transcripts.",
+  voiceLanguageError:
+    "The browser cannot recognize this language. Choose another speech language in Settings → Follow my voice.",
   offShort: "Off",
   letterSpacing: "Letter spacing",
   previousLine: "Previous line",
@@ -301,6 +325,31 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  voiceFollow: "Стежити за голосом",
+  voiceFollowStop: "Вимкнути стеження за голосом",
+  voiceStarting: "Вмикаю мікрофон…",
+  voiceListening: "Слухаю",
+  voiceLanguage: "Мова мовлення",
+  voiceAuto: "Автоматично (за текстом)",
+  voiceHelp:
+    "У режимі читання натисніть мікрофон і читайте вголос: текст рухається за вашими словами, а прочитане тьмяніє. Торкніться слова, щоб продовжити з нього. Прокрутіть вручну, щоб наздогнати. Кнопка відтворення повертає рівномірну прокрутку. Текст у [квадратних дужках] вимовляти не потрібно.",
+  voicePrivacy:
+    "Мовлення розпізнає ваш браузер. Залежно від браузера звук може оброблятися його сервісом розпізнавання (наприклад, Google у Chrome або Apple у Safari). teleo. ніколи не отримує й не зберігає звук або розпізнаний текст.",
+  voiceUnsupported:
+    "Цей браузер не підтримує розпізнавання мовлення. Для стеження за голосом використовуйте Chrome, Edge або Safari.",
+  voicePermission:
+    "Доступ до мікрофона або розпізнавання мовлення заборонено. Дозвольте його в налаштуваннях сайту в браузері й спробуйте знову.",
+  voiceMicrophone: "Мікрофон не знайдено.",
+  voiceNetwork:
+    "Сервіс розпізнавання браузера недоступний. Перевірте з’єднання й спробуйте знову.",
+  voiceFailed:
+    "Стеження за голосом зупинилося. Натисніть мікрофон, щоб спробувати знову.",
+  helpVoice:
+    "Стеження за голосом: у режимі читання натисніть мікрофон і читайте вголос. Текст рухається за голосом, прочитане тьмяніє, а дотик до слова продовжує з нього. Мову мовлення можна вибрати в Налаштуваннях → Стежити за голосом. Працює в браузерах із розпізнаванням мовлення (Chrome, Edge, Safari).",
+  privacyVoice:
+    "Стеження за голосом вимкнене, доки ви не ввімкнете його в режимі читання. Поки воно ввімкнене, розпізнавання мовлення браузера слухає мікрофон; залежно від браузера звук може оброблятися сервісом його постачальника. Сам teleo. ніколи не отримує, не надсилає й не зберігає звук або розпізнаний текст.",
+  voiceLanguageError:
+    "Браузер не розпізнає цю мову. Виберіть іншу мову мовлення в Налаштуваннях → Стежити за голосом.",
   offShort: "Вимк.",
   letterSpacing: "Міжлітерний інтервал",
   previousLine: "Попередній рядок",
@@ -602,6 +651,31 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  voiceFollow: "Следить за голосом",
+  voiceFollowStop: "Выключить слежение за голосом",
+  voiceStarting: "Включаю микрофон…",
+  voiceListening: "Слушаю",
+  voiceLanguage: "Язык речи",
+  voiceAuto: "Автоматически (по тексту)",
+  voiceHelp:
+    "В режиме чтения нажмите микрофон и читайте вслух: текст движется за вашими словами, а прочитанное тускнеет. Коснитесь слова, чтобы продолжить с него. Прокрутите вручную, чтобы догнать. Кнопка воспроизведения возвращает равномерную прокрутку. Текст в [квадратных скобках] произносить не нужно.",
+  voicePrivacy:
+    "Речь распознаёт ваш браузер. В зависимости от браузера звук может обрабатываться его сервисом распознавания (например, Google в Chrome или Apple в Safari). teleo. никогда не получает и не хранит звук или распознанный текст.",
+  voiceUnsupported:
+    "Этот браузер не поддерживает распознавание речи. Для слежения за голосом используйте Chrome, Edge или Safari.",
+  voicePermission:
+    "Доступ к микрофону или распознаванию речи запрещён. Разрешите его в настройках сайта в браузере и попробуйте снова.",
+  voiceMicrophone: "Микрофон не найден.",
+  voiceNetwork:
+    "Сервис распознавания браузера недоступен. Проверьте соединение и попробуйте снова.",
+  voiceFailed:
+    "Слежение за голосом остановилось. Нажмите микрофон, чтобы попробовать снова.",
+  helpVoice:
+    "Слежение за голосом: в режиме чтения нажмите микрофон и читайте вслух. Текст движется за голосом, прочитанное тускнеет, а касание слова продолжает с него. Язык речи можно выбрать в Настройках → Следить за голосом. Работает в браузерах с распознаванием речи (Chrome, Edge, Safari).",
+  privacyVoice:
+    "Слежение за голосом выключено, пока вы не включите его в режиме чтения. Пока оно включено, распознавание речи браузера слушает микрофон; в зависимости от браузера звук может обрабатываться сервисом его поставщика. Сам teleo. никогда не получает, не отправляет и не хранит звук или распознанный текст.",
+  voiceLanguageError:
+    "Браузер не распознаёт этот язык. Выберите другой язык речи в Настройках → Следить за голосом.",
   offShort: "Выкл.",
   letterSpacing: "Межбуквенный интервал",
   previousLine: "Предыдущая строка",

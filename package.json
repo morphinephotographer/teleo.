@@ -10,6 +10,8 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:voice": "playwright test --config playwright.voice.config.ts",
+    "test:voice:safari": "playwright install webkit && playwright test --config playwright.voice.config.ts --project=voice-safari --project=voice-iphone-safari --reporter=list",
     "relay": "WRANGLER_SEND_METRICS=false wrangler dev --config services/remote-relay/wrangler.jsonc --port 8787",
     "apple:test": "swift test --package-path apps/apple",
     "build:staging": "npm run typecheck && node scripts/build-staging.mjs",

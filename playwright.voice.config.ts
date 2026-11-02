@@ -23,5 +23,8 @@ export default defineConfig({
       name: "voice-phone",
       use: { ...devices["iPhone 13"], defaultBrowserType: "chromium" },
     },
+    // Safari's engine (needs `npx playwright install webkit`, e.g. on a Mac).
+    { name: "voice-safari", use: { ...devices["Desktop Safari"] } },
+    { name: "voice-iphone-safari", use: { ...devices["iPhone 13"] } },
   ],
 });

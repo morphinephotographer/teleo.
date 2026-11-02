@@ -2519,7 +2519,8 @@ function App() {
               "reader " +
               current.preferences.appearance +
               (controlsVisible ? "" : " quiet") +
-              (engine.playing ? " is-playing" : "")
+              (engine.playing ? " is-playing" : "") +
+              (voiceOn ? " is-listening" : "")
             }
             aria-label={t("read")}
             onPointerMove={showControls}
@@ -2661,6 +2662,7 @@ function App() {
               )}
             </div>
             <ReaderDock
+              hidden={voiceOn}
               letterSpacing={letterSpacing}
               setLetterSpacing={setLetterSpacing}
               moveLine={(direction) => {

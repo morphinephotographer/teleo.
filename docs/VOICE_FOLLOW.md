@@ -9,6 +9,7 @@ Status: implemented on branch `claude/voice-follow`, verified locally with a sim
 - Text in `[square brackets]` is never expected to be spoken and is skipped.
 - **Skip and go back by voice:** stop mid-sentence and continue further on, start another paragraph, or go back and re-read. When the latest spoken words (at least 3, ≥ 10 letters; up to 8 compared) occur together elsewhere in the script but not where you are, the Reader jumps there after one more confirming word. The longest matching run wins, then the occurrence nearest the current position. Off-script talk does not move it.
 - Tap a word to continue from it. Wheel/swipe, arrow keys, Logitech R400, line/paragraph/seek controls and phone-remote seeks take over; ~1.2 s after they stop, tracking continues from the word at the guide.
+- While listening, the playback dock is hidden (desktop and phone, layout kept so the guide never moves) and inert; the top-bar microphone stops voice follow and brings the dock back.
 - Play (button, Space, remote) switches back to steady scrolling and turns voice follow off. Leaving Reader or changing the script turns it off.
 - Settings → Follow my voice: speech language (Automatic from the script's letters — Ukrainian ґ є і ї vs Russian ы э ъ ё vs Latin — or explicit uk-UA / ru-RU / en-US / en-GB). Stored per device as `teleo.voiceLanguage`.
 - Screen stays awake while listening (Wake Lock, as during playback).

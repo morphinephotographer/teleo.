@@ -342,6 +342,34 @@ test("keyboard line moves are not undone while listening", async ({ page }) => {
   expect(Math.abs((await scrollTop(page)) - moved)).toBeLessThan(40);
 });
 
+test("the playback dock hides while listening and returns after", async ({
+  page,
+}) => {
+  await openReader(page);
+  const dock = page.locator(".reader-controls");
+  await expect(dock).toBeVisible();
+  const guideBefore = await page.locator(".guide").boundingBox();
+  const mic = page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true });
+  await mic.click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await expect(dock).toBeHidden();
+  await expect(dock).toHaveAttribute("inert", "");
+  // Hiding never moves the reading guide.
+  expect(await page.locator(".guide").boundingBox()).toEqual(guideBefore);
+  // Pointer activity does not bring it back while listening.
+  await page.mouse.move(200, 300);
+  await page.mouse.move(220, 320);
+  await expect(dock).toBeHidden();
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollowStop, exact: true })
+    .click();
+  await expect(dock).toBeVisible();
+  await expect(dock).not.toHaveAttribute("inert");
+});
+
 test("unsupported browsers show no microphone button", async ({ page }) => {
   await page.addInitScript(() => {
     const w = window as unknown as Record<string, unknown>;

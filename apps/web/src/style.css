@@ -5505,3 +5505,11 @@ input[type="checkbox"] {
   font-size: 12px;
   opacity: 0.7;
 }
+
+/* Voice follow: the playback dock hides while listening (layout kept, so the
+   guide never moves). The top-bar microphone stops it. */
+.reader.is-listening .reader-controls,
+.reader.is-listening .reader-controls.mobile-reader-dock {
+  visibility: hidden;
+  pointer-events: none;
+}

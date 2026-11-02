@@ -25,6 +25,7 @@ export function ReaderDock({
   moveLine,
   letterSpacing,
   setLetterSpacing,
+  hidden = false,
 }: {
   engine: Playback;
   preferences: Preferences;
@@ -41,7 +42,10 @@ export function ReaderDock({
   moveLine: (direction: number) => void;
   letterSpacing: number;
   setLetterSpacing: (value: number) => void;
+  /** Voice follow is listening: the dock is hidden like during playback. */
+  hidden?: boolean;
 }) {
+  const away = engine.playing || hidden;
   const [compact, setCompact] = useState(
       () =>
         matchMedia(
@@ -63,11 +67,11 @@ export function ReaderDock({
     return () => mq.removeEventListener("change", update);
   }, []);
   useEffect(() => {
-    if (engine.playing)
+    if (away)
       dock.current
         ?.querySelectorAll<HTMLElement>("[popover]:popover-open")
         .forEach((el) => el.hidePopover());
-  }, [engine.playing]);
+  }, [away]);
   if (!compact) {
     const slider = (
       key: Typography | "speed",
@@ -135,8 +139,8 @@ export function ReaderDock({
     return (
       <div
         ref={dock}
-        inert={engine.playing}
-        aria-hidden={engine.playing || undefined}
+        inert={away}
+        aria-hidden={away || undefined}
         className="reader-controls approved-reader-toolbar"
         role="toolbar"
         aria-label={t("playbackSettings")}
@@ -243,6 +247,8 @@ export function ReaderDock({
   return (
     <div
       ref={dock}
+      inert={hidden}
+      aria-hidden={hidden || undefined}
       className="reader-controls reader-dock mobile-reader-dock"
       role="toolbar"
       aria-label={t("playbackSettings")}

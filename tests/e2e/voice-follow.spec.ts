@@ -185,18 +185,42 @@ test("reader follows the voice, dims read text, jumps on tap and stops", async (
     const guide = v.getBoundingClientRect().top + (v.clientHeight * 35) / 100;
     return p.getBoundingClientRect().top - guide + 4;
   });
-  for (let moved = 0; moved < distance; moved += 120)
-    await page.mouse.wheel(0, Math.min(120, distance - moved));
+  try {
+    for (let moved = 0; moved < distance; moved += 120)
+      await page.mouse.wheel(0, Math.min(120, distance - moved));
+  } catch {
+    // Mobile WebKit has no wheel: move by lines with the keyboard instead.
+    for (let i = 0; i < 12; i++) await page.keyboard.press("ArrowRight");
+  }
   const scrolled = await scrollTop(page);
+  expect(scrolled).toBeGreaterThan(scrolledFrom + 40);
   await page.waitForTimeout(1800);
   // The view is not pulled back to the spoken position; read text now
   // reaches the scrolled-to place. (Layout may shift a little on phones.)
   expect(await scrollTop(page)).toBeGreaterThan(
     scrolledFrom + (scrolled - scrolledFrom) / 2,
   );
+  // Read text now ends at the paragraph on the guide line (or just before it
+  // when the guide sits on a paragraph start). Scroll distance per wheel
+  // step differs between browsers, so compare places, not character counts.
+  const guideParagraph = () =>
+    page.evaluate(() => {
+      const v = document.querySelector(".reading-viewport")!;
+      const y = v.getBoundingClientRect().top + (v.clientHeight * 35) / 100;
+      const all = [...document.querySelectorAll("[data-paragraph]")];
+      const p = all.find((p) => p.getBoundingClientRect().bottom >= y - 4);
+      return Number(p?.textContent?.match(/Абзац (\d+)/)?.[1] || 0);
+    });
+  const lastRead = async () => {
+    const read = (await readText(page)) || "";
+    return Number([...read.matchAll(/Абзац (\d+)/g)].pop()?.[1] || 0);
+  };
   await expect
     .poll(async () => ((await readText(page)) || "").length)
-    .toBeGreaterThan(readBeforeWheel + 100);
+    .toBeGreaterThan(readBeforeWheel);
+  const atGuide = await guideParagraph();
+  expect(atGuide).toBeGreaterThan(5);
+  expect([atGuide - 1, atGuide]).toContain(await lastRead());
 
   // Tap a visible word two lines below the guide: tracking continues from it.
   const readBeforeTap = (await readText(page)) || "";

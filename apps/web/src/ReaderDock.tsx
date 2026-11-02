@@ -239,6 +239,7 @@ export function ReaderDock({
         <IconButton
           name="fullscreen"
           label={t("fullscreen")}
+          className="dock-fullscreen"
           onClick={fullscreen}
         />
       </div>

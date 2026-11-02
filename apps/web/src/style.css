@@ -5513,3 +5513,61 @@ input[type="checkbox"] {
   visibility: hidden;
   pointer-events: none;
 }
+
+/* Library footer: Trash, Import and Open last share one icon column. */
+.library .library-trash-row {
+  padding-left: 18px;
+  padding-right: 12px;
+}
+.library-footer > button {
+  justify-content: flex-start;
+  gap: 12px;
+  padding-left: 17px;
+  padding-right: 12px;
+}
+.library-footer > button > svg {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+
+/* Reader covers the workspace; hide it so its panel edges never peek out
+   above the Reader (they did in Safari). */
+.app-shell.prompting > main.workspace {
+  visibility: hidden;
+}
+
+/* Reader toolbar: the Left / Center / Right control keeps its size; the
+   text pills shrink (with ellipsis) instead. */
+.approved-reader-toolbar > .approved-pill.approved-alignment {
+  flex: 0 0 auto;
+  width: calc(3 * clamp(30px, 3.3vw, 40px) + 8px);
+  min-width: 98px;
+}
+.approved-reader-toolbar .approved-alignment .alignment-control {
+  padding: 4px;
+}
+.approved-reader-toolbar .approved-alignment .alignment-control button {
+  flex: 1 1 0;
+}
+/* Narrow Reader toolbars: drop the pills' chevrons so their values stay
+   readable next to the full-size alignment control. */
+@media (max-width: 860px) {
+  .approved-reader-toolbar .approved-pill > .picker-trigger svg:last-child {
+    display: none;
+  }
+}
+/* Between the phone dock (<= 600px) and ~700px: the dock's fullscreen button
+   duplicates the Reader top bar's, so it yields its space to the values. */
+@media (max-width: 700px) {
+  .approved-reader-toolbar > .dock-fullscreen {
+    display: none;
+  }
+  .approved-reader-toolbar .approved-pill > .picker-trigger {
+    padding: 0 4px;
+  }
+  .approved-reader-toolbar > .approved-pill.approved-alignment {
+    width: 96px;
+    min-width: 96px;
+  }
+}

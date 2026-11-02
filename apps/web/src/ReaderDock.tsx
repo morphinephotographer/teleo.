@@ -8,8 +8,22 @@ import { formatSpeed, stepSpeed } from "../../../packages/protocol/speed";
 import { type Key } from "./i18n";
 import { Icon, IconButton } from "./ui";
 import { AlignmentControl } from "./AlignmentControl";
-import { Popover, TeleoMenu } from "./menus";
+import { Popover } from "./menus";
 type Typography = "fontSize" | "lineHeight" | "textWidth";
+const countdownSteps = [0, 3, 5, 10];
+/** Off → 3 → 5 → 10 s → Off; an imported off-grid value moves to the next step. */
+export function nextCountdown(value: number) {
+  return countdownSteps.find((n) => n > value) ?? 0;
+}
+const alignmentCycle = ["left", "center", "right"] as const;
+const alignmentLabels = {
+  left: "alignLeft",
+  center: "alignCenter",
+  right: "alignRight",
+} as const;
+export function nextAlignment(value: Preferences["alignment"]) {
+  return alignmentCycle[(alignmentCycle.indexOf(value) + 1) % 3];
+}
 export function ReaderDock({
   engine,
   preferences: p,
@@ -46,6 +60,9 @@ export function ReaderDock({
   hidden?: boolean;
 }) {
   const away = engine.playing || hidden;
+  const countdownLabel = p.countdownSeconds
+    ? `${p.countdownSeconds} ${t("seconds")}`
+    : t("off");
   const [compact, setCompact] = useState(
       () =>
         matchMedia(
@@ -188,24 +205,25 @@ export function ReaderDock({
             />
           </label>
         </Popover>
-        <TeleoMenu
-          className="approved-pill"
-          label={t("timer")}
-          closeLabel={t("close")}
-          trigger={
-            <>
-              <Icon name="timer" />
-              <span>
-                {p.countdownSeconds ? p.countdownSeconds + "s" : t("off")}
-              </span>
-              <Icon name="chevron" />
-            </>
+        <button
+          type="button"
+          className={
+            "icon-button dock-cycle dock-timer" +
+            (p.countdownSeconds ? " active" : "")
           }
-          items={[0, 3, 5, 10].map((n) => ({
-            label: n ? `${n} ${t("seconds")}` : t("off"),
-            action: () => preference({ countdownSeconds: n }),
-          }))}
-        />
+          aria-label={`${t("timer")}: ${countdownLabel}`}
+          title={`${t("timer")}: ${countdownLabel}`}
+          onClick={() =>
+            preference({ countdownSeconds: nextCountdown(p.countdownSeconds) })
+          }
+        >
+          <Icon name="timer" />
+          {p.countdownSeconds > 0 && (
+            <span className="dock-cycle-badge" aria-hidden="true">
+              {p.countdownSeconds}
+            </span>
+          )}
+        </button>
         {slider("textWidth", "width", 280, 1600, 20)}
         {slider("fontSize", "size", 16, 100, 1)}
         <IconButton
@@ -216,13 +234,15 @@ export function ReaderDock({
         />
         {slider("speed", "timer", 0.5, 3, 0.1)}
         {slider("lineHeight", "spacing", 1, 3, 0.1)}
-        <div className="approved-pill approved-alignment">
-          <AlignmentControl
-            t={t}
-            value={p.alignment}
-            onChange={(alignment) => preference({ alignment })}
-          />
-        </div>
+        <button
+          type="button"
+          className="icon-button dock-cycle dock-alignment-cycle"
+          aria-label={`${t("alignment")}: ${t(alignmentLabels[p.alignment])}`}
+          title={`${t("alignment")}: ${t(alignmentLabels[p.alignment])}`}
+          onClick={() => preference({ alignment: nextAlignment(p.alignment) })}
+        >
+          <Icon name={alignmentLabels[p.alignment]} />
+        </button>
         <IconButton
           name="mirror"
           label={t("mirrorHorizontal")}

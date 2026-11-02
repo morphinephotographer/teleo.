@@ -5537,37 +5537,45 @@ input[type="checkbox"] {
   visibility: hidden;
 }
 
-/* Reader toolbar: the Left / Center / Right control keeps its size; the
-   text pills shrink (with ellipsis) instead. */
-.approved-reader-toolbar > .approved-pill.approved-alignment {
-  flex: 0 0 auto;
-  width: calc(3 * clamp(30px, 3.3vw, 40px) + 8px);
-  min-width: 98px;
+/* Reader toolbar: Timer and Alignment are single round buttons that cycle
+   their value on each press (Off/3/5/10 s; left/center/right). */
+.approved-reader-toolbar > .dock-cycle {
+  position: relative;
+  display: grid;
+  place-items: center;
 }
-.approved-reader-toolbar .approved-alignment .alignment-control {
-  padding: 4px;
+.approved-reader-toolbar > .dock-cycle.active {
+  color: var(--ink);
+  border-color: var(--ink);
 }
-.approved-reader-toolbar .approved-alignment .alignment-control button {
-  flex: 1 1 0;
+.dock-cycle-badge {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 3px;
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
-/* Narrow Reader toolbars: drop the pills' chevrons so their values stay
-   readable next to the full-size alignment control. */
-@media (max-width: 860px) {
-  .approved-reader-toolbar .approved-pill > .picker-trigger svg:last-child {
-    display: none;
-  }
-}
-/* Between the phone dock (<= 600px) and ~700px: the dock's fullscreen button
-   duplicates the Reader top bar's, so it yields its space to the values. */
+/* Very narrow Reader toolbars (601-700px): the pills drop their chevrons so
+   their values stay readable. */
 @media (max-width: 700px) {
-  .approved-reader-toolbar > .dock-fullscreen {
-    display: none;
+  .approved-reader-toolbar {
+    gap: 2px;
+    padding: 8px;
   }
   .approved-reader-toolbar .approved-pill > .picker-trigger {
     padding: 0 4px;
   }
-  .approved-reader-toolbar > .approved-pill.approved-alignment {
-    width: 96px;
-    min-width: 96px;
+  .approved-reader-toolbar .approved-pill > .picker-trigger svg:last-child {
+    display: none;
   }
 }

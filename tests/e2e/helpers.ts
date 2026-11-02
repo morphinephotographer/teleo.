@@ -107,14 +107,14 @@ export async function setTimer(
       .click();
     return;
   }
-  await page
-    .locator(".reader-controls")
-    .getByRole("button", { name: t.timer, exact: true })
-    .click();
-  await page
-    .getByRole("menuitem")
-    .filter({ hasText: n ? `${n} ${t.seconds}` : t.off })
-    .click();
+  // Desktop toolbar: one round button cycles Off → 3 → 5 → 10 s.
+  const target = `${t.timer}: ${n ? `${n} ${t.seconds}` : t.off}`;
+  const cycle = page.locator(".reader-controls .dock-timer");
+  for (let i = 0; i < 4; i++) {
+    if ((await cycle.getAttribute("aria-label")) === target) return;
+    await cycle.click();
+  }
+  await expect(cycle).toHaveAttribute("aria-label", target);
 }
 
 /** Legacy workspace scenarios deliberately use windowed Reader; dedicated v1.2 tests cover viewport fill. */

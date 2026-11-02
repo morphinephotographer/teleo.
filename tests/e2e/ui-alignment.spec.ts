@@ -42,8 +42,62 @@ test("Reader hides the editor workspace behind it", async ({ page }) => {
   await expect(workspace).toBeVisible();
 });
 
-for (const width of [1440, 1024, 860, 720, 660])
-  test(`Reader toolbar keeps alignment and values readable at ${width}px`, async ({
+test("Timer and Alignment are round buttons that cycle on each press", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await openStudio(page);
+  await page.getByRole("button", { name: t.read, exact: true }).first().click();
+  const toolbar = page.locator(".approved-reader-toolbar");
+  await expect(toolbar).toBeVisible();
+  // The old wide controls are gone from the desktop toolbar.
+  await expect(toolbar.locator(".alignment-control")).toHaveCount(0);
+  await expect(toolbar.getByRole("menuitem")).toHaveCount(0);
+
+  const timer = toolbar.locator(".dock-timer");
+  const label = (n: number) => `${t.timer}: ${n ? `${n} ${t.seconds}` : t.off}`;
+  await expect(timer).toHaveAttribute("aria-label", label(0));
+  for (const n of [3, 5, 10, 0]) {
+    await timer.click();
+    await expect(timer).toHaveAttribute("aria-label", label(n));
+    if (n)
+      await expect(timer.locator(".dock-cycle-badge")).toHaveText(String(n));
+    else await expect(timer.locator(".dock-cycle-badge")).toHaveCount(0);
+  }
+  const round = await timer.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return (
+      Math.abs(r.width - r.height) < 1 && getComputedStyle(el).borderRadius
+    );
+  });
+  expect(round).toBe("50%");
+
+  const alignment = toolbar.locator(".dock-alignment-cycle");
+  const text = page.locator(".reading-viewport article");
+  for (const [name, css] of [
+    [t.alignCenter, "center"],
+    [t.alignRight, "right"],
+    [t.alignLeft, "left"],
+  ] as const) {
+    await alignment.click();
+    await expect(alignment).toHaveAttribute(
+      "aria-label",
+      `${t.alignment}: ${name}`,
+    );
+    await expect(text).toHaveCSS("text-align", css);
+  }
+  // The choice is kept with the script.
+  await alignment.click();
+  await page.reload();
+  await page.getByRole("button", { name: t.read, exact: true }).first().click();
+  await expect(page.locator(".reading-viewport article")).toHaveCSS(
+    "text-align",
+    "center",
+  );
+});
+
+for (const width of [1440, 1024, 860, 720, 660, 620, 601])
+  test(`Reader toolbar values stay readable at ${width}px`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 900 });
@@ -54,16 +108,13 @@ for (const width of [1440, 1024, 860, 720, 660])
       .click();
     const toolbar = page.locator(".approved-reader-toolbar");
     await expect(toolbar).toBeVisible();
-    const buttons = await toolbar
-      .locator(".alignment-control button")
-      .evaluateAll((list) => list.map((b) => b.getBoundingClientRect().width));
-    expect(buttons).toHaveLength(3);
-    for (const w of buttons) expect(w).toBeGreaterThanOrEqual(28);
+    for (const cycle of [".dock-timer", ".dock-alignment-cycle"])
+      await expect(toolbar.locator(cycle)).toBeVisible();
     const clipped = await toolbar
       .locator(".approved-pill > .picker-trigger span")
       .evaluateAll((list) =>
         list
-          .filter((s) => s.scrollWidth > s.clientWidth + 1)
+          .filter((s) => s.scrollWidth > s.clientWidth)
           .map((s) => s.textContent),
       );
     expect(clipped).toEqual([]);
@@ -71,5 +122,5 @@ for (const width of [1440, 1024, 860, 720, 660])
     const overflow = await toolbar.evaluate(
       (el) => el.scrollWidth - el.clientWidth,
     );
-    expect(overflow).toBeLessThanOrEqual(1);
+    expect(overflow).toBeLessThanOrEqual(0);
   });

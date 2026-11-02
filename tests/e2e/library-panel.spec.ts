@@ -360,23 +360,20 @@ test("reader has one alignment outline, no phone button and round appearance sym
   await expect(
     reader.getByRole("button", { name: t.connection, exact: true }),
   ).toHaveCount(0);
-  await expect(toolbar.locator(".approved-alignment")).toHaveCSS(
-    "border-width",
-    "0px",
+  // Alignment is one round button that cycles left → center → right.
+  const alignment = toolbar.locator(".dock-alignment-cycle");
+  await expect(alignment).toHaveAttribute(
+    "aria-label",
+    `${t.alignment}: ${t.alignLeft}`,
   );
-  await expect(toolbar.locator(".alignment-control")).toHaveCSS(
-    "border-width",
-    "1px",
+  await alignment.click();
+  await expect(alignment).toHaveAttribute(
+    "aria-label",
+    `${t.alignment}: ${t.alignCenter}`,
   );
-  await toolbar
-    .getByRole("button", { name: t.alignCenter, exact: true })
-    .click();
-  await expect(
-    toolbar.getByRole("button", { name: t.alignCenter, exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
-  await toolbar
-    .locator(".approved-alignment")
-    .screenshot({ path: info.outputPath("single-alignment-outline.png") });
+  await alignment.screenshot({
+    path: info.outputPath("single-alignment-outline.png"),
+  });
   await reader
     .locator(".reader-top")
     .screenshot({ path: info.outputPath("reader-without-phone.png") });

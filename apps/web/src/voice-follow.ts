@@ -54,6 +54,9 @@ export class VoiceFollow {
   private quickEnds = 0;
   private sessionStarted = 0;
   private heardInSession = false;
+  /** A session has started at least once (later starts are automatic restarts). */
+  private listened = false;
+  private networkErrors = 0;
 
   constructor(
     private onPosition: (offset: number) => void,
@@ -78,6 +81,8 @@ export class VoiceFollow {
     this.follower = new SpeechFollower(text, from);
     this.active = true;
     this.quickEnds = 0;
+    this.listened = false;
+    this.networkErrors = 0;
     this.onStatus("starting");
     this.onPosition(this.follower.position);
     const recognition = new Constructor();
@@ -89,12 +94,14 @@ export class VoiceFollow {
       if (this.recognition !== recognition) return;
       this.sessionStarted = performance.now();
       this.heardInSession = false;
-      this.onStatus("listening");
+      if (!this.listened) this.onStatus("listening");
+      this.listened = true;
     };
     recognition.onresult = (event) => {
       if (this.recognition !== recognition || !this.follower) return;
       this.heardInSession = true;
       this.quickEnds = 0;
+      this.networkErrors = 0;
       const parts: string[] = [];
       for (let i = 0; i < event.results.length; i++)
         parts.push(event.results[i][0]?.transcript || "");
@@ -107,16 +114,22 @@ export class VoiceFollow {
     };
     recognition.onerror = (event) => {
       if (this.recognition !== recognition) return;
+      // A brief network loss: the session ends and restarts on its own.
+      if (event.error === "network" && ++this.networkErrors <= 3) return;
+      const denied =
+        event.error === "not-allowed" || event.error === "service-not-allowed";
       const error: VoiceError | undefined =
-        event.error === "not-allowed" || event.error === "service-not-allowed"
-          ? "voicePermission"
-          : event.error === "audio-capture"
-            ? "voiceMicrophone"
-            : event.error === "network"
-              ? "voiceNetwork"
-              : event.error === "language-not-supported"
-                ? "voiceLanguageError"
-                : undefined; // no-speech / aborted: the session just restarts
+        denied && this.listened
+          ? "voiceFailed" // an automatic restart was refused (e.g. iPhone): press the microphone again
+          : denied
+            ? "voicePermission"
+            : event.error === "audio-capture"
+              ? "voiceMicrophone"
+              : event.error === "network"
+                ? "voiceNetwork"
+                : event.error === "language-not-supported"
+                  ? "voiceLanguageError"
+                  : undefined; // no-speech / aborted: the session just restarts
       if (error) this.fail(error);
     };
     recognition.onend = () => {
@@ -124,7 +137,7 @@ export class VoiceFollow {
       const short = performance.now() - this.sessionStarted < 1500;
       this.quickEnds = short && !this.heardInSession ? this.quickEnds + 1 : 0;
       if (this.quickEnds > 5) return this.fail("voiceFailed");
-      this.onStatus("starting");
+      // Keep showing "Listening" across automatic restarts.
       this.restartTimer = setTimeout(
         () => this.begin(recognition),
         Math.min(1500, 200 * (this.quickEnds + 1)),

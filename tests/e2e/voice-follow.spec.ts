@@ -43,7 +43,14 @@ test.beforeEach(async ({ page }) => {
         w.__recognition = this;
         w.__lang = this.lang;
         w.__starts = ((w.__starts as number) || 0) + 1;
-        setTimeout(() => this.onstart?.({}), 10);
+        // Like Chrome: a refused start reports an error and ends, never starts.
+        const deny = w.__deny as string | undefined;
+        if (deny)
+          setTimeout(() => {
+            this.onerror?.({ error: deny });
+            this.onend?.({});
+          }, 10);
+        else setTimeout(() => this.onstart?.({}), 10);
       }
       stop() {
         setTimeout(() => this.onend?.({}), 10);
@@ -168,6 +175,7 @@ test("reader follows the voice, dims read text, jumps on tap and stops", async (
 
   // Manual wheel scrolling wins; once it settles, follow continues from the guide.
   const readBeforeWheel = ((await readText(page)) || "").length;
+  const scrolledFrom = await scrollTop(page);
   const view = page.locator(".reading-viewport");
   const vbox = (await view.boundingBox())!;
   await page.mouse.move(vbox.x + vbox.width / 2, vbox.y + vbox.height / 2);
@@ -181,47 +189,52 @@ test("reader follows the voice, dims read text, jumps on tap and stops", async (
     await page.mouse.wheel(0, Math.min(120, distance - moved));
   const scrolled = await scrollTop(page);
   await page.waitForTimeout(1800);
-  // The view stays where the reader scrolled it; read text now reaches it.
-  expect(Math.abs((await scrollTop(page)) - scrolled)).toBeLessThan(60);
+  // The view is not pulled back to the spoken position; read text now
+  // reaches the scrolled-to place. (Layout may shift a little on phones.)
+  expect(await scrollTop(page)).toBeGreaterThan(
+    scrolledFrom + (scrolled - scrolledFrom) / 2,
+  );
   await expect
     .poll(async () => ((await readText(page)) || "").length)
     .toBeGreaterThan(readBeforeWheel + 100);
 
-  // Tap a visible paragraph start: tracking continues from it.
-  const tapped = await page.evaluate(() => {
+  // Tap a visible word two lines below the guide: tracking continues from it.
+  const readBeforeTap = (await readText(page)) || "";
+  const point = await page.evaluate(() => {
     const v = document.querySelector(".reading-viewport")!;
     const r = v.getBoundingClientRect();
-    const guide = r.top + (v.clientHeight * 35) / 100;
-    const visible = [...document.querySelectorAll("[data-paragraph]")].filter(
-      (p) => {
-        const b = p.getBoundingClientRect();
-        return b.top > r.top + 8 && b.top + 20 < r.bottom;
-      },
-    );
-    // Prefer a paragraph below the guide; otherwise jump back to a visible start.
-    const p =
-      visible.find((p) => p.getBoundingClientRect().top > guide + 8) ||
-      visible[visible.length - 1];
-    const b = p.getBoundingClientRect();
+    const article = v.querySelector("article")!;
+    const line = parseFloat(getComputedStyle(article).lineHeight);
+    const p = article.querySelector("[data-paragraph]")!;
     return {
-      n: Number(p.textContent!.match(/Абзац (\d+)/)![1]),
-      x: b.left + 10,
-      y: b.top + 10,
+      x: p.getBoundingClientRect().left + 12,
+      y: r.top + (v.clientHeight * 35) / 100 + line * 2.5,
     };
   });
-  await page.mouse.click(tapped.x, tapped.y);
+  await page.mouse.click(point.x, point.y);
   await page.waitForTimeout(400);
+  const tappedText = (await readText(page)) || "";
+  expect(tappedText).not.toBe(readBeforeTap);
+  expect(text.startsWith(tappedText)).toBe(true);
+  // Position = start of the next word after the read text.
+  const tappedAt =
+    tappedText.length + text.slice(tappedText.length).match(/^\s*/)![0].length;
+  // Read the next five words aloud from there.
+  const ahead = [...text.slice(tappedAt).matchAll(/\S+/g)]
+    .filter((m) => !m[0].startsWith("[") && !m[0].endsWith("]"))
+    .slice(0, 6);
   await say(
     page,
-    ["абзац", String(tapped.n), "сьогодні", "ми", "говоримо", "про", "нові"],
+    ahead.slice(0, 5).map((m) => m[0].replace(/[.,]/g, "").toLowerCase()),
     session,
   );
+  // Read text ends right before the sixth word (blank lines between
+  // paragraphs are never highlighted, so compare without trailing space).
   await expect
-    .poll(async () => (await readText(page)) || "", { timeout: 5000 })
-    .toMatch(
-      new RegExp(`Абзац ${tapped.n}\\. Сьогодні ми говоримо про нові $`),
-    );
-  expect(tapped.n).toBeGreaterThan(5);
+    .poll(async () => ((await readText(page)) || "").trimEnd(), {
+      timeout: 5000,
+    })
+    .toBe(text.slice(0, tappedAt + ahead[5].index!).trimEnd());
 
   // Turning it off clears the highlight and keeps the position.
   await page
@@ -274,18 +287,59 @@ test("permission denial is explained and Play turns voice follow off", async ({
   const mic = page
     .locator(".reader-top")
     .getByRole("button", { name: t.voiceFollow, exact: true });
+  const w = (key: string, value: unknown) =>
+    page.evaluate(
+      ([k, v]) => ((window as unknown as Record<string, unknown>)[k] = v),
+      [key, value] as const,
+    );
+  // The browser refuses microphone access on the first start.
+  await w("__deny", "not-allowed");
   await mic.click();
-  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
-  await page.evaluate(() =>
-    (window as never as { __fail: (e: string) => void }).__fail("not-allowed"),
-  );
   await expect(page.getByRole("alert")).toContainText(t.voicePermission);
   await expect(page.locator(".voice-status")).toHaveCount(0);
 
+  // Allowed now; later an automatic restart is refused (as on iPhone).
+  await w("__deny", undefined);
   await mic.click();
   await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await w("__deny", "not-allowed");
+  await page.evaluate(() => (window as never as { __end: () => void }).__end());
+  await expect(page.getByRole("alert")).toContainText(t.voiceFailed);
+  await expect(page.locator(".voice-status")).toHaveCount(0);
+
+  // A short network loss does not stop listening.
+  await w("__deny", undefined);
+  await mic.click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await page.evaluate(() =>
+    (window as never as { __fail: (e: string) => void }).__fail("network"),
+  );
+  await page.evaluate(() => (window as never as { __end: () => void }).__end());
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+
   await page.keyboard.press("Space");
   await expect(page.locator(".voice-status")).toHaveCount(0);
+});
+
+test("keyboard line moves are not undone while listening", async ({ page }) => {
+  await openReader(page);
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true })
+    .click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await say(page, spokenWords(1, 2));
+  await page.waitForTimeout(1500);
+  const settled = await scrollTop(page);
+  await page.locator(".reading-viewport").focus();
+  for (let i = 0; i < 6; i++) await page.keyboard.press("ArrowRight");
+  await page.waitForTimeout(300);
+  const moved = await scrollTop(page);
+  expect(moved).toBeGreaterThan(settled + 100);
+  // Not pulled back after the move settles.
+  await page.waitForTimeout(2000);
+  expect(Math.abs((await scrollTop(page)) - moved)).toBeLessThan(40);
 });
 
 test("unsupported browsers show no microphone button", async ({ page }) => {

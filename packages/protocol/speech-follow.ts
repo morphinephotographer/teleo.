@@ -36,10 +36,9 @@ export function normalizeSpoken(text: string) {
   return out;
 }
 
+const nonWordChars = /[^\p{L}\p{N}]+/gu;
 function wordKey(word: string) {
-  let key = "";
-  for (const c of word) if (isWordChar(c)) key += [...c].map(fold).join("");
-  return key;
+  return word.toLowerCase().replace(nonWordChars, "").replace(/ё/g, "е");
 }
 
 /** Closed `[...]` cues; they are never expected to be spoken. */
@@ -103,23 +102,25 @@ export function bestOffset(_characterResult: number, wordResult: number) {
   return Math.max(0, wordResult);
 }
 
-/** Spoken words that must fail to continue the text before searching elsewhere. */
+/** Shortest run of spoken words searched across the whole script. */
 const RELOCATE_WORDS = 3;
 /** …and their minimum combined letters, so short common words never trigger a jump. */
 const RELOCATE_LETTERS = 10;
+/** Longest run of recent words compared when a phrase occurs in several places. */
+const RELOCATE_LONGEST = 8;
 
 export class SpeechFollower {
   readonly text: string;
   private ranges: [number, number][];
   private tokens: Token[];
+  /** Token indices per distinct spoken word, for whole-script phrase search. */
+  private byKey = new Map<string, number[]>();
   private confirmed: number;
   private matchStart: number;
   private recent: number[] = [];
   private anchor = "";
   private lastTranscript = "";
   private lastJumpAt = -Infinity;
-  /** Spoken words (after the anchor) when the position last moved. */
-  private wordsAtAdvance = 0;
   /** A distant phrase match waiting for the next spoken word to confirm it. */
   private pending: { last: number } | null = null;
 
@@ -127,6 +128,12 @@ export class SpeechFollower {
     this.text = text;
     this.ranges = annotationRanges(text);
     this.tokens = this.tokenize();
+    this.tokens.forEach((token, index) => {
+      if (token.skip) return;
+      const list = this.byKey.get(token.key);
+      if (list) list.push(index);
+      else this.byKey.set(token.key, [index]);
+    });
     this.confirmed = this.advancePastAnnotations(this.clamp(start));
     this.matchStart = this.confirmed;
   }
@@ -142,7 +149,6 @@ export class SpeechFollower {
     this.recent = [];
     this.anchor = "";
     this.lastTranscript = "";
-    this.wordsAtAdvance = 0;
     this.pending = null;
   }
 
@@ -153,7 +159,6 @@ export class SpeechFollower {
     this.recent = [];
     this.anchor = this.lastTranscript;
     this.lastJumpAt = now;
-    this.wordsAtAdvance = 0;
     this.pending = null;
     return this.confirmed;
   }
@@ -181,15 +186,8 @@ export class SpeechFollower {
     }
     if (!spoken.trim()) return this.confirmed;
     const words = spoken.split(/\s+/).map(wordKey).filter(Boolean);
-    const before = this.confirmed;
     if (this.matchStart < this.text.length) this.followNearby(spoken);
-    if (this.confirmed !== before) {
-      this.wordsAtAdvance = words.length;
-      this.pending = null;
-    } else if (words.length - this.wordsAtAdvance >= RELOCATE_WORDS)
-      this.relocate(words, transcript);
-    else if (words.length < this.wordsAtAdvance)
-      this.wordsAtAdvance = words.length; // the recognizer revised its text
+    if (words.length >= RELOCATE_WORDS) this.relocate(words, transcript);
     return this.confirmed;
   }
 
@@ -216,30 +214,38 @@ export class SpeechFollower {
   }
 
   /**
-   * The reader skipped ahead, jumped to another paragraph or went back:
-   * the last few spoken words did not continue the text here. Find them as a
-   * consecutive phrase anywhere in the script (nearest occurrence wins) and
-   * move there once the following spoken word confirms the same place.
+   * The reader skipped ahead, jumped to another paragraph or went back.
+   * Find the longest run of the latest spoken words (up to 8) as consecutive
+   * script words. If that run is not where the reader currently is, the
+   * occurrence nearest the current position becomes a candidate, and the
+   * position moves there once the next spoken word continues at that place.
+   * Runs include words the in-order tracker already took: it tolerates single
+   * mismatched words and can otherwise follow a repetitive script into the
+   * wrong section.
    */
   private relocate(words: string[], transcript: string) {
-    const tail = words.slice(-RELOCATE_WORDS);
-    if (tail.join("").length < RELOCATE_LETTERS) return;
-    const here = this.tokenIndexAt(this.confirmed);
-    let best: number | null = null;
-    for (const last of this.findPhrase(tail)) {
-      const target = this.after(last);
-      if (target === this.confirmed) continue; // that is where we already are
+    let places: number[] = [];
+    for (
+      let length = Math.min(words.length, RELOCATE_LONGEST);
+      length >= RELOCATE_WORDS && !places.length;
+      length--
+    ) {
+      const tail = words.slice(-length);
+      if (tail.join("").length < RELOCATE_LETTERS) break;
+      places = this.findPhrase(tail);
+    }
+    const here = this.tokenIndexAt(this.confirmed) - 1; // last word read
+    if (!places.length || places.some((last) => Math.abs(last - here) <= 2)) {
+      this.pending = null; // nothing found, or the reader is already there
+      return;
+    }
+    let best = places[0];
+    for (const last of places)
       if (
-        best === null ||
         Math.abs(last - here) < Math.abs(best - here) ||
         (Math.abs(last - here) === Math.abs(best - here) && last > best)
       )
         best = last;
-    }
-    if (best === null) {
-      this.pending = null;
-      return;
-    }
     const pending = this.pending;
     if (pending && best === pending.last) return; // same words, revised
     if (pending && best > pending.last && best - pending.last <= 4) {
@@ -247,7 +253,6 @@ export class SpeechFollower {
       this.matchStart = this.confirmed;
       this.recent = [];
       this.anchor = transcript;
-      this.wordsAtAdvance = 0;
       this.pending = null;
       return;
     }
@@ -258,8 +263,12 @@ export class SpeechFollower {
   private findPhrase(keys: string[]) {
     const ends: number[] = [];
     const tokens = this.tokens;
-    for (let i = 0; i < tokens.length; i++) {
-      if (tokens[i].skip || !fuzzyWordMatch(tokens[i].key, keys[0])) continue;
+    // Compare each distinct word once instead of every occurrence.
+    const starts: number[] = [];
+    for (const [key, indices] of this.byKey)
+      if (fuzzyWordMatch(key, keys[0])) starts.push(...indices);
+    starts.sort((a, b) => a - b);
+    for (const i of starts) {
       let j = i,
         k = 1;
       while (k < keys.length) {
@@ -331,9 +340,12 @@ export class SpeechFollower {
       const start = m.index,
         end = start + m[0].length;
       // Only the part of the word outside `[...]` cues is ever spoken.
-      let spokenPart = "";
-      for (let i = start; i < end; i++)
-        if (!this.annotationAt(i)) spokenPart += this.text[i];
+      let spokenPart = m[0];
+      if (this.ranges.some(([a, b]) => a < end && b > start)) {
+        spokenPart = "";
+        for (let i = start; i < end; i++)
+          if (!this.annotationAt(i)) spokenPart += this.text[i];
+      }
       const key = wordKey(spokenPart);
       tokens.push({ start, end, key, skip: !key });
     }

@@ -1120,6 +1120,7 @@ function App() {
         if (view && article) {
           geometryHeld.current = false;
           geometry.current = null;
+          voiceManual();
           const line = parseFloat(getComputedStyle(article).lineHeight) || 64;
           engine.position = Math.max(
             0,
@@ -1159,6 +1160,7 @@ function App() {
           if (lines && view && article) {
             geometryHeld.current = false;
             geometry.current = null;
+            voiceManual();
             const line = parseFloat(getComputedStyle(article).lineHeight) || 64;
             engine.position = Math.max(
               0,
@@ -1449,6 +1451,7 @@ function App() {
             if (requested.action === "seek") {
               geometryHeld.current = false;
               geometry.current = null;
+              voiceManual();
               if (
                 requested.anchor !== undefined &&
                 viewport.current &&

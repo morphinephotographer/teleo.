@@ -267,3 +267,63 @@ describe("voice follow jumps (skip ahead, other paragraph, go back)", () => {
     expect(f.position).toBe(at(repeated, "та підтримку"));
   });
 });
+
+describe("voice follow jumps in repetitive scripts", () => {
+  it("uses the longest matching run when a short phrase repeats", () => {
+    const line = (n: string) =>
+      `Дякуємо всім за увагу. Розділ ${n} розповідає про нашу роботу.`;
+    const names = [
+      "перший",
+      "другий",
+      "третій",
+      "четвертий",
+      "п'ятий",
+      "шостий",
+    ];
+    const text = names.map(line).join("\n\n");
+    const f = new SpeechFollower(text);
+    let said = "";
+    let now = 0;
+    const say = (words: string[]) => {
+      for (const word of words) {
+        said = said ? `${said} ${word}` : word;
+        now += 100;
+        f.match(said, now);
+      }
+    };
+    say(["дякуємо", "всім", "за", "увагу", "розділ", "перший"]);
+    // Skip to section five: its first words repeat in every section.
+    say(["дякуємо", "всім", "за", "увагу", "розділ", "п'ятий", "розповідає"]);
+    say(["про", "нашу"]);
+    const fifth = text.indexOf("Розділ п'ятий");
+    expect(f.position).toBe(text.indexOf("роботу", fifth));
+  });
+});
+
+describe("voice follow stays put while reading normally", () => {
+  it("does not jump on recognizer mistakes in a script with repeated lines", () => {
+    const line = (n: string) =>
+      `Дякуємо всім за увагу. Розділ ${n} розповідає про нашу роботу і плани на рік.`;
+    const text = ["перший", "другий", "третій", "четвертий"]
+      .map(line)
+      .join("\n\n");
+    const f = new SpeechFollower(text);
+    const spoken = text
+      .replace(/[.,]/g, "")
+      .toLowerCase()
+      .split(/\s+/)
+      // Recognizer mistakes: one wrong word per section.
+      .map((w, i) => (i % 15 === 7 ? "щось" : w));
+    let said = "";
+    let now = 0;
+    let previous = 0;
+    for (const word of spoken) {
+      said = said ? `${said} ${word}` : word;
+      now += 100;
+      const position = f.match(said, now);
+      expect(position).toBeGreaterThanOrEqual(previous);
+      previous = position;
+    }
+    expect(f.position).toBe(text.length);
+  });
+});

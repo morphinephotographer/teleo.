@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { MATRIX_LANDED, startMatrixIntro } from "./intro-matrix";
 
 const sessionKey = "teleo.intro.seen.v1";
 export function introNeeded() {
@@ -14,6 +15,9 @@ export function introNeeded() {
     return !reduced;
   }
 }
+/** The word stays on screen this long after the last letter lands. */
+const HOLD = 700,
+  FADE = 300;
 export function Intro({
   skipLabel,
   onDone,
@@ -22,6 +26,8 @@ export function Intro({
   onDone: () => void;
 }) {
   const skip = useRef<HTMLButtonElement>(null);
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const word = useRef<HTMLSpanElement>(null);
   const [leaving, setLeaving] = useState(false);
   const [resolved, setResolved] = useState(false);
   useEffect(() => {
@@ -31,18 +37,23 @@ export function Intro({
       /* One mount still plays only once. */
     }
     skip.current?.focus();
-    // The final brand must not depend on six filtered/composited animation layers.
-    const resolve = setTimeout(() => setResolved(true), 2100);
-    const fade = setTimeout(() => setLeaving(true), 3150);
-    const done = setTimeout(onDone, 3450);
+    const stop =
+      canvas.current && word.current
+        ? startMatrixIntro(canvas.current, word.current)
+        : () => {};
+    // The final word is guaranteed visible even if a frame was missed.
+    const resolve = setTimeout(() => setResolved(true), MATRIX_LANDED + 60);
+    const fade = setTimeout(() => setLeaving(true), MATRIX_LANDED + HOLD);
+    const done = setTimeout(onDone, MATRIX_LANDED + HOLD + FADE);
     const motion = matchMedia("(prefers-reduced-motion: reduce)");
     const change = () => {
       if (motion.matches) onDone();
     };
     motion.addEventListener("change", change);
     return () => {
-      clearTimeout(fade);
+      stop();
       clearTimeout(resolve);
+      clearTimeout(fade);
       clearTimeout(done);
       motion.removeEventListener("change", change);
     };
@@ -54,52 +65,19 @@ export function Intro({
       aria-modal="true"
       aria-label="teleo."
     >
-      <div className="letter-field" aria-hidden="true">
-        {Array.from({ length: 18 }, (_, i) => (
-          <span
-            key={i}
-            className="drift-letter"
-            style={
-              {
-                "--x": `${((i * 37) % 96) - 48}vw`,
-                "--y": `${((i * 23) % 84) - 42}vh`,
-                "--size": `${18 + ((i * 11) % 42)}px`,
-                "--delay": `${i * 22}ms`,
-                "--tilt": `${i % 2 ? 8 : -8}deg`,
-              } as React.CSSProperties
-            }
-          >
-            {"teleo."[i % 6]}
-          </span>
-        ))}
-      </div>
+      <canvas ref={canvas} className="intro-rain" aria-hidden="true" />
       <div
         className={"intro-wordmark" + (resolved ? " resolved" : "")}
         aria-hidden="true"
       >
-        <span className="intro-static">teleo.</span>
-        {!resolved && (
-          <div className="intro-assembly">
-            {[..."teleo."].map((letter, i) => (
-              <span
-                key={i}
-                style={
-                  {
-                    "--from-x": `${[-32, 26, -18, 31, -26, 19][i]}vw`,
-                    "--from-y": `${[-24, -31, 24, 27, -9, 16][i]}vh`,
-                    "--delay": `${i * 65}ms`,
-                  } as React.CSSProperties
-                }
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
-        )}
+        <span ref={word} className="intro-static" translate="no">
+          {[..."teleo."].map((letter, i) => (
+            <span key={i}>{letter}</span>
+          ))}
+        </span>
       </div>
       <button ref={skip} className="intro-skip" onClick={onDone}>
         {skipLabel}
-        <span aria-hidden="true">↗</span>
       </button>
     </div>
   );

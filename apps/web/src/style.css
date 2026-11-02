@@ -970,7 +970,7 @@ output {
   padding-bottom: env(safe-area-inset-bottom);
   z-index: 30;
 }
-/* A quiet letter field resolves into the wordmark, then yields the workspace. */
+/* Intro #1: letters fall in columns; "teleo." is snatched out of the rain. */
 .brand-intro {
   position: fixed;
   inset: 0;
@@ -978,14 +978,21 @@ output {
   overflow: hidden;
   display: grid;
   place-items: center;
-  background: #f5f5f7;
-  color: #111;
+  background: #0a0a0b;
+  color: #f5f5f7;
+  color-scheme: dark;
   opacity: 1;
   transition: opacity 0.3s ease;
 }
 .brand-intro.leaving {
   opacity: 0;
   pointer-events: none;
+}
+.intro-rain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 .intro-wordmark {
   position: relative;
@@ -995,87 +1002,37 @@ output {
   letter-spacing: -0.08em;
   line-height: 1;
 }
-.intro-static {
+/* Each letter appears when its flying copy lands on it. */
+.intro-static > span {
   visibility: hidden;
+  text-shadow: 0 0 10px #ffffff8c;
 }
-.intro-wordmark.resolved .intro-static {
+.intro-static > span[data-landed],
+.intro-wordmark.resolved .intro-static > span {
   visibility: visible;
-}
-.intro-assembly {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  justify-content: center;
-}
-.intro-assembly > span {
-  display: inline-block;
-  opacity: 0;
-  animation: letter-resolve 2.5s cubic-bezier(0.22, 0.75, 0.22, 1) var(--delay)
-    forwards;
-  will-change: transform, opacity;
-}
-.letter-field {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-.drift-letter {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  font-size: var(--size);
-  font-weight: 450;
-  opacity: 0;
-  animation: letter-drift 2.1s ease-in-out var(--delay) forwards;
-  will-change: transform, opacity;
 }
 .intro-skip {
   position: absolute;
+  left: 50%;
   bottom: max(28px, env(safe-area-inset-bottom));
-  right: max(28px, env(safe-area-inset-right));
-  display: flex;
-  align-items: center;
-  gap: 22px;
-  background: #ffffff99;
-  border-color: #dcdcdf;
+  transform: translateX(-50%);
+  min-width: 150px;
+  background: #16161899;
+  border-color: #ffffff26;
+  color: #f5f5f7;
   font-size: 12px;
-  min-width: 130px;
-  justify-content: space-between;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
-.intro-skip span {
-  font-size: 18px;
+.intro-skip:hover {
+  background: #222225cc;
 }
-@keyframes letter-resolve {
-  0% {
-    opacity: 0;
-    transform: translate(var(--from-x), var(--from-y)) rotate(-8deg) scale(0.6);
-  }
-  18% {
-    opacity: 0.5;
-  }
-  72%,
-  100% {
-    opacity: 1;
-    transform: translate(0, 0) rotate(0) scale(1);
-  }
+.intro-skip:active {
+  transform: translateX(-50%) scale(0.96);
 }
-@keyframes letter-drift {
-  0% {
-    opacity: 0;
-    filter: blur(3px);
-    transform: translate(var(--x), var(--y)) rotate(var(--tilt));
-  }
-  20% {
-    opacity: 0.23;
-  }
-  60% {
-    opacity: 0.1;
-  }
-  100% {
-    opacity: 0;
-    filter: blur(0);
-    transform: translate(0, 0) scale(0.3);
-  }
+.intro-skip:focus-visible {
+  outline: 1px solid #ffffff80;
+  outline-offset: 3px;
 }
 @keyframes panel-in {
   from {
@@ -1517,11 +1474,7 @@ output {
   .remote-buttons {
     min-height: 220px;
   }
-  .brand-intro .drift-letter:nth-child(n + 11) {
-    display: none;
-  }
   .intro-skip {
-    right: 20px;
     bottom: max(24px, env(safe-area-inset-bottom));
   }
   @keyframes sheet-up {
@@ -1643,9 +1596,6 @@ output {
     animation-delay: 0ms !important;
     transition-duration: 0.001ms !important;
     scroll-behavior: auto !important;
-  }
-  .brand-intro .letter-field {
-    display: none;
   }
 }
 .reader-stage {

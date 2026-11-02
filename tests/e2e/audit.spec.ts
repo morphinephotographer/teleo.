@@ -10,23 +10,19 @@ for (const locale of ["en", "uk", "ru"])
     await page.emulateMedia({ reducedMotion: "no-preference" });
     await page.clock.install();
     await page.goto("/studio?lang=" + locale);
-    await page.addStyleTag({
-      content: ".intro-assembly *, .drift-letter {animation:none!important}",
-    });
     await expect(
       page.getByRole("dialog", { name: "teleo.", exact: true }),
     ).toBeVisible();
-    await page.clock.runFor(2250);
+    await page.clock.runFor(4500); // the last letter has landed
     const word = page.locator(".intro-static");
     await expect(word).toHaveText("teleo.");
     await expect(word).toBeVisible();
-    await expect(page.locator(".intro-assembly")).toHaveCount(0);
     const box = (await word.boundingBox())!;
     expect(box.width).toBeGreaterThan(120);
     await page.screenshot({
       path: `docs/screenshots/audit-${info.project.name}-${locale}-intro.png`,
     });
-    await page.clock.runFor(1300);
+    await page.clock.runFor(1000);
     await expect(page.locator(".brand-intro")).toHaveCount(0);
     await expect(page.locator(".app-shell")).not.toHaveAttribute("inert", "");
     if (!(await page.locator(".empty-mark").isVisible()))

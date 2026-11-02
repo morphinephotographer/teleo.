@@ -133,3 +133,68 @@ test("keyboard while following the voice", async ({ page }) => {
   await page.keyboard.press("Space");
   await expect(reader).not.toHaveClass(/is-playing/);
 });
+
+test("mouse wheel and trackpad scroll the text without shaking", async ({
+  page,
+  isMobile,
+  browserName,
+}) => {
+  test.skip(isMobile && browserName === "webkit", "No wheel in mobile WebKit");
+  await openReader(page);
+  const view = page.locator(".reading-viewport");
+  // The wheel acts where the pointer is: keep it over the text.
+  const overText = async () => {
+    const box = (await view.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  };
+  // Trackpad-like small steps: every step moves forward, nothing is undone.
+  const scrollDown = async (phase = "") => {
+    await overText();
+    const seen = [await scrollTop(page)];
+    for (let i = 0; i < 20; i++) {
+      await page.mouse.wheel(0, 12);
+      seen.push(await scrollTop(page));
+    }
+    for (let i = 1; i < seen.length; i++)
+      expect(seen[i], phase).toBeGreaterThanOrEqual(seen[i - 1] - 1);
+    expect(seen.at(-1)!, phase).toBeGreaterThan(seen[0] + 150);
+    return seen.at(-1)!;
+  };
+  const scrollUp = async () => {
+    await overText();
+    const seen = [await scrollTop(page)];
+    for (let i = 0; i < 8; i++) {
+      await page.mouse.wheel(0, -12);
+      seen.push(await scrollTop(page));
+    }
+    for (let i = 1; i < seen.length; i++)
+      expect(seen[i]).toBeLessThanOrEqual(seen[i - 1] + 1);
+    expect(seen.at(-1)!).toBeLessThan(seen[0] - 60);
+  };
+
+  // Paused.
+  let reached = await scrollDown("paused");
+  await page.waitForTimeout(500);
+  expect(Math.abs((await scrollTop(page)) - reached)).toBeLessThanOrEqual(13);
+  await scrollUp();
+
+  // Playing: the wheel pauses where the text was scrolled to.
+  await page.keyboard.press("Space");
+  await expect(page.locator(".reader")).toHaveClass(/is-playing/);
+  await page.waitForTimeout(600);
+  reached = await scrollDown("playing");
+  await expect(page.locator(".reader")).not.toHaveClass(/is-playing/);
+  await page.waitForTimeout(500);
+  expect(Math.abs((await scrollTop(page)) - reached)).toBeLessThanOrEqual(13);
+
+  // Following the voice: manual scrolling is not pulled back.
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true })
+    .click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  reached = await scrollDown("voice");
+  await page.waitForTimeout(1600);
+  expect(Math.abs((await scrollTop(page)) - reached)).toBeLessThan(40);
+  await scrollUp();
+});

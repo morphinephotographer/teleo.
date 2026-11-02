@@ -656,6 +656,20 @@ function App() {
     view.scrollTop = s.value;
     engine.position = viewPosition(view);
   };
+  /**
+   * The reader takes the scroll over (wheel, trackpad, touch, pointer).
+   * Playback pauses at the place actually shown. The browser may already
+   * have applied this wheel step when the event arrives, so the position is
+   * read from the view first: writing the older engine position back would
+   * undo the step and make the text shake in place. When nothing is playing
+   * the view is left entirely to the browser.
+   */
+  const takeOverScroll = (view: HTMLElement) => {
+    geometryHeld.current = false;
+    geometry.current = null;
+    engine.position = viewPosition(view);
+    if (engine.playing || engine.countdown > 0) command({ action: "pause" });
+  };
   /** Tap a word while voice follow is on to continue reading from it. */
   const voiceTap = (x: number, y: number) => {
     const view = viewport.current;
@@ -2613,22 +2627,12 @@ function App() {
                   } as React.CSSProperties
                 }
                 ref={viewport}
-                onPointerDown={() => {
-                  geometryHeld.current = false;
-                  geometry.current = null;
-                  command({ action: "pause" });
-                }}
-                onWheel={() => {
-                  geometryHeld.current = false;
-                  geometry.current = null;
-                  command({ action: "pause" });
+                onPointerDown={(e) => takeOverScroll(e.currentTarget)}
+                onWheel={(e) => {
+                  takeOverScroll(e.currentTarget);
                   voiceManual();
                 }}
-                onTouchStart={() => {
-                  geometryHeld.current = false;
-                  geometry.current = null;
-                  command({ action: "pause" });
-                }}
+                onTouchStart={(e) => takeOverScroll(e.currentTarget)}
                 onTouchMove={voiceManual}
                 onClick={(e) => voiceTap(e.clientX, e.clientY)}
                 onScroll={(e) => {

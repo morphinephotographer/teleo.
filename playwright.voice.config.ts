@@ -2,7 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 import base from "./playwright.config";
 export default defineConfig({
   ...base,
-  testMatch: "voice-follow.spec.ts",
+  testMatch: ["voice-follow.spec.ts", "reader-keys.spec.ts"],
   outputDir: "test-results/voice-follow",
   workers: 1,
   use: {

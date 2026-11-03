@@ -716,7 +716,7 @@ function App() {
   /** Tap a word while voice follow is on to continue reading from it. */
   const voiceTap = (x: number, y: number) => {
     const view = viewport.current;
-    if (!voice.running || !view) return;
+    if ((!voice.running && !voice.paused) || !view) return;
     const doc = document as Document & {
       caretPositionFromPoint?: (
         x: number,
@@ -750,7 +750,9 @@ function App() {
       offset--;
     voiceScroll.current.userAt = 0;
     voiceScroll.current.value = -1;
-    voice.jump(block.offset + offset);
+    // A tap is a user gesture: it also restarts listening that the browser paused.
+    if (voice.paused) voice.resume(block.offset + offset);
+    else voice.jump(block.offset + offset);
   };
   useEffect(() => {
     if (!reading) return;

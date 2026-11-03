@@ -52,14 +52,14 @@ test("a Word .docx imports as a script with its paragraphs", async ({
 test("an old .doc explains how to convert it", async ({ page }) => {
   const t = dictionaries.ru;
   const library = await openLibrary(page);
-  const rows = await library.locator(".script-row").count();
   await library.locator('input[type="file"]').setInputFiles({
     name: "Старый.doc",
     mimeType: "application/msword",
     buffer: fixture("script.doc"),
   });
   await expect(page.getByRole("alert")).toContainText(t.importOldWord);
-  await expect(library.locator(".script-row")).toHaveCount(rows);
+  // Nothing was imported (counting rows would race the Welcome script).
+  await expect(library.getByText("Старый", { exact: true })).toHaveCount(0);
 });
 
 test("the import button label fits on one line", async ({ page }) => {

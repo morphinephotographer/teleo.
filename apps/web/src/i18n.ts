@@ -17,6 +17,8 @@ export const en = {
   voiceNetwork:
     "The browser's speech service is unreachable. Check the connection, then try again.",
   voiceFailed: "Voice follow stopped. Press the microphone to try again.",
+  voicePaused:
+    "Listening paused by the browser. Tap the text where you are, or the microphone, to continue.",
   helpVoice:
     "Voice follow: in Reader, press the microphone and read aloud. The text follows your voice, read text dims, and tapping a word continues from it. Choose the speech language in Settings → Follow my voice. Works in browsers with speech recognition (Chrome, Edge, Safari).",
   privacyVoice:
@@ -407,6 +409,8 @@ export const uk: Record<Key, string> = {
     "Сервіс розпізнавання браузера недоступний. Перевірте з’єднання й спробуйте знову.",
   voiceFailed:
     "Стеження за голосом зупинилося. Натисніть мікрофон, щоб спробувати знову.",
+  voicePaused:
+    "Браузер призупинив слухання. Торкніться тексту, де ви зараз, або мікрофона, щоб продовжити.",
   helpVoice:
     "Стеження за голосом: у режимі читання натисніть мікрофон і читайте вголос. Текст рухається за голосом, прочитане тьмяніє, а дотик до слова продовжує з нього. Мову мовлення можна вибрати в Налаштуваннях → Стежити за голосом. Працює в браузерах із розпізнаванням мовлення (Chrome, Edge, Safari).",
   privacyVoice:
@@ -796,6 +800,8 @@ export const ru: Record<Key, string> = {
     "Сервис распознавания браузера недоступен. Проверьте соединение и попробуйте снова.",
   voiceFailed:
     "Слежение за голосом остановилось. Нажмите микрофон, чтобы попробовать снова.",
+  voicePaused:
+    "Браузер приостановил слушание. Коснитесь текста там, где вы сейчас, или микрофона, чтобы продолжить.",
   helpVoice:
     "Слежение за голосом: в режиме чтения нажмите микрофон и читайте вслух. Текст движется за голосом, прочитанное тускнеет, а касание слова продолжает с него. Язык речи можно выбрать в Настройках → Следить за голосом. Работает в браузерах с распознаванием речи (Chrome, Edge, Safari).",
   privacyVoice:

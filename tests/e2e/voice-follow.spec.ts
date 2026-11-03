@@ -328,7 +328,21 @@ test("permission denial is explained and Play turns voice follow off", async ({
   await expect(page.locator(".voice-status")).toHaveClass(/listening/);
   await w("__deny", "not-allowed");
   await page.evaluate(() => (window as never as { __end: () => void }).__end());
-  await expect(page.getByRole("alert")).toContainText(t.voiceFailed);
+  await expect(page.getByRole("alert")).toContainText(t.voicePaused);
+  await expect(page.locator(".voice-status")).toHaveCount(0);
+
+  // A tap on the text continues listening from that word (a user gesture).
+  await w("__deny", undefined);
+  await page
+    .locator("[data-paragraph]")
+    .nth(2)
+    .click({ position: { x: 4, y: 8 } });
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollowStop, exact: true })
+    .click();
   await expect(page.locator(".voice-status")).toHaveCount(0);
 
   // A short network loss does not stop listening.

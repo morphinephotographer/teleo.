@@ -9,6 +9,7 @@ export default defineConfig({
     "editor-tools.spec.ts",
     "intro.spec.ts",
     "import-docx.spec.ts",
+    "voice-ipad.spec.ts",
   ],
   outputDir: "test-results/voice-follow",
   workers: 1,

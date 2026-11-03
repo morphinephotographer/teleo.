@@ -2642,9 +2642,11 @@ function App() {
                     role="toolbar"
                     aria-label={t("documentActions")}
                   >
-                    {documentActions.map(([key, icon, run]) =>
-                      button(key, run, false, false, icon),
-                    )}
+                    {documentActions.map(([key, icon, run]) => (
+                      <React.Fragment key={key}>
+                        {button(key, run, false, false, icon)}
+                      </React.Fragment>
+                    ))}
                   </div>
                   <label>
                     {t("folder")}

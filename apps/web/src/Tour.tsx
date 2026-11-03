@@ -10,7 +10,7 @@ import { localGet, localSet } from "./i18n";
 import { Icon } from "./ui";
 
 /**
- * First-run walkthrough for 1.3.0: editor, text tools, phone remote, Reader and
+ * First-run walkthrough (shown again for 1.4.0): editor, text tools, phone remote, Reader and
  * voice follow. Non-modal: clicks pass through the shade, so nobody is blocked.
  * Each step spotlights the real control and shows a short looping scene.
  */

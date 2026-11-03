@@ -7,6 +7,7 @@ import {
 import type { Key } from "./i18n";
 import { Icon, Sheet } from "./ui";
 import { readQuickSendFile } from "./quick-send";
+import { IMPORT_ACCEPT, ImportFileError } from "./import-file";
 export function QuickSendSheet({
   open,
   connected,
@@ -133,7 +134,7 @@ export function QuickSendSheet({
             <input
               ref={file}
               type="file"
-              accept=".txt,.json,text/plain,application/json"
+              accept={IMPORT_ACCEPT}
               hidden
               disabled={busy}
               onChange={async (e) => {
@@ -143,8 +144,12 @@ export function QuickSendSheet({
                 try {
                   setBody(await readQuickSendFile(selected));
                   setError(null);
-                } catch {
-                  setError("invalidImport");
+                } catch (error) {
+                  setError(
+                    error instanceof ImportFileError
+                      ? error.key
+                      : "invalidImport",
+                  );
                 }
               }}
             />

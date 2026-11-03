@@ -1,6 +1,7 @@
 import { useId, useRef, useState } from "react";
 import type { Folder, Script } from "../../../packages/protocol/domain";
 import type { Key, Locale } from "./i18n";
+import { IMPORT_ACCEPT } from "./import-file";
 import { Icon, IconButton } from "./ui";
 
 export type LibraryAction = {
@@ -323,13 +324,17 @@ export function LibraryPanel({
           type="file"
           hidden
           disabled={!ready}
-          accept=".txt,.json,text/plain,application/json"
+          accept={IMPORT_ACCEPT}
           onChange={(e) => {
             if (e.target.files?.[0]) onImport(e.target.files[0]);
             e.target.value = "";
           }}
         />
-        <button disabled={!ready} onClick={() => input.current?.click()}>
+        <button
+          disabled={!ready}
+          title={t("importFormats")}
+          onClick={() => input.current?.click()}
+        >
           <Icon name="import" />
           <span>{t("import")}</span>
         </button>

@@ -8,6 +8,7 @@ export default defineConfig({
     "ui-alignment.spec.ts",
     "editor-tools.spec.ts",
     "intro.spec.ts",
+    "import-docx.spec.ts",
   ],
   outputDir: "test-results/voice-follow",
   workers: 1,

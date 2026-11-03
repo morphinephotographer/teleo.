@@ -48,6 +48,7 @@ import {
 } from "../../../packages/protocol/control";
 import { ActionDialog } from "./ActionDialog";
 import { EditorTools, FindBar } from "./EditorTools";
+import { ImportFileError, importTitle, readTextFile } from "./import-file";
 import { version as appVersion } from "../../../package.json";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
@@ -1889,15 +1890,14 @@ function App() {
   async function importFile(file: File) {
     try {
       if (file.size > 10_000_000) throw Error();
-      const text = await file.text();
       const imported = file.name.toLowerCase().endsWith(".json")
-        ? parseBundle(text)
-        : [createScript(file.name.replace(/\.txt$/i, ""), text)];
+        ? parseBundle(await file.text())
+        : [createScript(importTitle(file.name), await readTextFile(file))];
       for (const script of imported) {
         await add({ ...script, scriptId: crypto.randomUUID() });
       }
-    } catch {
-      setNotice("invalidImport");
+    } catch (error) {
+      setNotice(error instanceof ImportFileError ? error.key : "invalidImport");
     }
   }
   const button = (

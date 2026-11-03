@@ -250,7 +250,8 @@ export const en = {
   duplicate: "Duplicate",
   delete: "Move to trash",
   confirmDelete: "Move this script to trash?",
-  import: "Import .txt / JSON",
+  import: "Import .txt / .docx",
+  importFormats: "Text (.txt), Word (.docx) or a teleo. JSON backup",
   export: "Export .txt",
   exportJSON: "Export JSON",
   title: "Script title",
@@ -346,7 +347,9 @@ export const en = {
   invite: "Invitation link",
   expired: "Invitation expired or already used",
   invalidImport:
-    "Invalid or unsupported file. Use UTF-8 text or teleo. JSON v1.",
+    "Invalid or unsupported file. Use .txt (UTF-8), Word .docx or teleo. JSON v1.",
+  importOldWord:
+    "Old Word .doc files can't be read. Open it in Word or Pages and save as .docx, then import again.",
   importError: "Could not read this file.",
   versions: "Version history",
   restore: "Restore",
@@ -635,7 +638,8 @@ export const uk: Record<Key, string> = {
   duplicate: "Створити копію",
   delete: "До кошика",
   confirmDelete: "Перемістити цей текст до кошика?",
-  import: "Імпорт .txt / JSON",
+  import: "Імпорт .txt / .docx",
+  importFormats: "Текст (.txt), Word (.docx) або резервна копія teleo. JSON",
   export: "Експорт .txt",
   exportJSON: "Експорт JSON",
   title: "Назва тексту",
@@ -733,7 +737,9 @@ export const uk: Record<Key, string> = {
   invite: "Посилання-запрошення",
   expired: "Запрошення прострочене або вже використане",
   invalidImport:
-    "Неприпустимий файл. Використайте текст UTF-8 або teleo. JSON v1.",
+    "Неприпустимий файл. Використайте .txt (UTF-8), Word .docx або teleo. JSON v1.",
+  importOldWord:
+    "Старі файли Word .doc не читаються. Відкрийте його у Word або Pages, збережіть як .docx і імпортуйте знову.",
   importError: "Не вдалося прочитати файл.",
   versions: "Історія версій",
   restore: "Відновити",
@@ -1022,7 +1028,8 @@ export const ru: Record<Key, string> = {
   duplicate: "Создать копию",
   delete: "В корзину",
   confirmDelete: "Переместить этот текст в корзину?",
-  import: "Импорт .txt / JSON",
+  import: "Импорт .txt / .docx",
+  importFormats: "Текст (.txt), Word (.docx) или резервная копия teleo. JSON",
   export: "Экспорт .txt",
   exportJSON: "Экспорт JSON",
   title: "Название текста",
@@ -1122,7 +1129,9 @@ export const ru: Record<Key, string> = {
   invite: "Ссылка-приглашение",
   expired: "Приглашение истекло или уже использовано",
   invalidImport:
-    "Недопустимый файл. Используйте текст UTF-8 или teleo. JSON v1.",
+    "Недопустимый файл. Используйте .txt (UTF-8), Word .docx или teleo. JSON v1.",
+  importOldWord:
+    "Старые файлы Word .doc не читаются. Откройте его в Word или Pages, сохраните как .docx и импортируйте снова.",
   importError: "Не удалось прочитать файл.",
   versions: "История версий",
   restore: "Восстановить",

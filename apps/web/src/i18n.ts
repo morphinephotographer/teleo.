@@ -17,6 +17,8 @@ export const en = {
   voiceNetwork:
     "The browser's speech service is unreachable. Check the connection, then try again.",
   voiceFailed: "Voice follow stopped. Press the microphone to try again.",
+  voiceNoAudio:
+    "The browser keeps closing the microphone right away. On iPad/iPhone turn on Dictation (Settings → General → Keyboard → Enable Dictation), make sure the speech language is one of your keyboards, allow the microphone for this site, then press the microphone again.",
   voicePaused:
     "Listening paused by the browser. Tap the text where you are, or the microphone, to continue.",
   helpVoice:
@@ -409,6 +411,8 @@ export const uk: Record<Key, string> = {
     "Сервіс розпізнавання браузера недоступний. Перевірте з’єднання й спробуйте знову.",
   voiceFailed:
     "Стеження за голосом зупинилося. Натисніть мікрофон, щоб спробувати знову.",
+  voiceNoAudio:
+    "Браузер одразу закриває мікрофон. На iPad/iPhone увімкніть Диктування (Параметри → Загальні → Клавіатура → Увімкнути диктування), додайте клавіатуру мови тексту, дозвольте мікрофон для сайту й натисніть мікрофон знову.",
   voicePaused:
     "Браузер призупинив слухання. Торкніться тексту, де ви зараз, або мікрофона, щоб продовжити.",
   helpVoice:
@@ -800,6 +804,8 @@ export const ru: Record<Key, string> = {
     "Сервис распознавания браузера недоступен. Проверьте соединение и попробуйте снова.",
   voiceFailed:
     "Слежение за голосом остановилось. Нажмите микрофон, чтобы попробовать снова.",
+  voiceNoAudio:
+    "Браузер сразу закрывает микрофон. На iPad/iPhone включите Диктовку (Настройки → Основные → Клавиатура → Включить диктовку), добавьте клавиатуру языка текста, разрешите микрофон для сайта и нажмите микрофон снова.",
   voicePaused:
     "Браузер приостановил слушание. Коснитесь текста там, где вы сейчас, или микрофона, чтобы продолжить.",
   helpVoice:

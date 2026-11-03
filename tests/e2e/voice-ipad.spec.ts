@@ -66,7 +66,10 @@ test.beforeEach(async ({ page }) => {
             return this.finish();
           }
           micBusy = true;
+          w.__continuous = this.continuous;
           this.onstart?.({});
+          // Dictation off / language missing: opens and closes at once.
+          if (w.__quick) setTimeout(() => this.finish(), 50);
         }, 10);
       }
       finish() {
@@ -93,16 +96,27 @@ test.beforeEach(async ({ page }) => {
           });
         setTimeout(() => this.finish(), 30);
       }
+      /** Delivers a result list without ending the session. */
+      results(list: string[]) {
+        if (this.continuous) return;
+        this.onresult?.({
+          results: list.map((transcript) =>
+            Object.assign([{ transcript }], { isFinal: false }),
+          ),
+        });
+      }
     }
     w.SpeechRecognition = undefined;
     w.webkitSpeechRecognition = IPadRecognition;
     w.__phrase = (s: string) =>
       (w.__recognition as IPadRecognition | undefined)?.phrase(s);
+    w.__results = (list: string[]) =>
+      (w.__recognition as IPadRecognition | undefined)?.results(list);
   });
 });
 
-async function openReader(page: Page) {
-  await page.goto("/studio?lang=en");
+async function openReader(page: Page, query = "") {
+  await page.goto("/studio?lang=en" + query);
   if (
     !(await page
       .getByRole("button", { name: t.newScript, exact: true })
@@ -241,10 +255,11 @@ test("long silences keep listening instead of pausing", async ({ page }) => {
     .getByRole("button", { name: t.voiceFollow, exact: true })
     .click();
   await expect(page.locator(".voice-status")).toHaveClass(/listening/);
-  // Safari ends a silent session after a while; the presenter is just quiet.
+  // Safari ends a silent session after a second or more; the presenter is
+  // just quiet. (Sessions that close within 0.8 s are treated as failures.)
   for (let i = 0; i < 8; i++) {
     const before = await starts(page);
-    await page.waitForTimeout(150);
+    await page.waitForTimeout(900);
     await page.evaluate(() =>
       (
         window as never as { __recognition?: { finish: () => void } }
@@ -254,4 +269,122 @@ test("long silences keep listening instead of pausing", async ({ page }) => {
   }
   await expect(page.locator(".voice-status")).toHaveClass(/listening/);
   await expect(page.getByRole("alert")).toHaveCount(0);
+});
+
+const mic = (page: Page) =>
+  page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true });
+const readText = (page: Page) =>
+  page.evaluate(() => {
+    const h = (
+      CSS as unknown as { highlights: Map<string, Iterable<Range>> }
+    ).highlights.get("teleo-voice-read");
+    return h ? [...h].map((r) => r.toString()).join(" ") : "";
+  });
+const results = (page: Page, list: string[]) =>
+  page.evaluate(
+    (l) =>
+      (window as never as { __results: (l: string[]) => void }).__results(l),
+    list,
+  );
+const phrase = (page: Page, s: string) =>
+  page.evaluate(
+    (p) => (window as never as { __phrase: (s: string) => void }).__phrase(p),
+    s,
+  );
+
+test("a recognizer that opens and closes at once stops with Dictation advice", async ({
+  page,
+}) => {
+  await openReader(page);
+  await page.evaluate(() => {
+    (window as never as { __quick: boolean }).__quick = true;
+  });
+  await mic(page).click();
+  await expect(page.getByRole("alert")).toContainText(t.voiceNoAudio, {
+    timeout: 15000,
+  });
+  const attempts = await starts(page);
+  expect(attempts).toBeLessThanOrEqual(7);
+  await page.waitForTimeout(2500);
+  expect(await starts(page)).toBe(attempts); // no endless on/off
+});
+
+test("Safari's overlapping results are not read as repeated words", async ({
+  page,
+}) => {
+  await openReader(page);
+  await mic(page).click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await results(page, ["абзац 1 сьогодні"]);
+  await results(page, ["абзац 1 сьогодні", "абзац 1 сьогодні ми говоримо"]);
+  await results(page, [
+    "абзац 1 сьогодні ми говоримо",
+    "абзац 1 сьогодні ми говоримо про нові можливості",
+    "абзац 1 сьогодні ми говоримо про нові можливості",
+  ]);
+  await expect.poll(() => readText(page)).toContain("нові можливості");
+  expect(await readText(page)).not.toContain("Абзац 2");
+});
+
+test("a transcript that Safari wipes mid-session keeps following", async ({
+  page,
+}) => {
+  await openReader(page);
+  await mic(page).click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await results(page, ["абзац 1 сьогодні ми говоримо про нові можливості"]);
+  await expect.poll(() => readText(page)).toContain("можливості");
+  // Earlier words vanish after a pause; only the new ones remain.
+  await results(page, ["які допоможуть"]);
+  await results(page, ["які допоможуть читати текст природно"]);
+  await expect.poll(() => readText(page)).toContain("природно");
+});
+
+test("phrases that lose their first words to a slow microphone still follow", async ({
+  page,
+}) => {
+  await openReader(page);
+  await mic(page).click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  // "Абзац 1" and "які допоможуть" were said before each session could hear.
+  const sessions = [
+    "сьогодні ми говоримо про нові можливості",
+    "читати текст природно",
+  ];
+  for (const s of sessions) {
+    const before = await starts(page);
+    await phrase(page, s);
+    await expect.poll(() => starts(page), { timeout: 3000 }).toBe(before + 1);
+    await page.waitForTimeout(80);
+  }
+  await expect
+    .poll(() => readText(page))
+    .toContain("допоможуть читати текст природно");
+});
+
+test("field switches in the address change mode and pause between sessions", async ({
+  page,
+}) => {
+  await openReader(page, "&voicemode=continuous&voicedelay=900&voicelog=1");
+  await mic(page).click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  expect(
+    await page.evaluate(
+      () => (window as never as { __continuous: boolean }).__continuous,
+    ),
+  ).toBe(true);
+  await expect(page.locator(".voice-log")).toContainText("continuous");
+  const before = await starts(page);
+  const ended = await page.evaluate(() => {
+    (
+      window as never as { __recognition?: { finish: () => void } }
+    ).__recognition?.finish();
+    return performance.now();
+  });
+  await expect.poll(() => starts(page), { timeout: 4000 }).toBe(before + 1);
+  const reopened = await page.evaluate(() => performance.now());
+  expect(reopened - ended).toBeGreaterThanOrEqual(850);
+  await expect(page.locator(".voice-log")).toContainText("end in silence");
 });

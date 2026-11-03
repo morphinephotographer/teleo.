@@ -52,4 +52,21 @@ Safari on iPhone/iPad does not keep `continuous` recognition working: results st
 
 Other browsers keep one continuous session with a fresh recognizer after each end.
 
-Field diagnosis: open the Reader with `?voicelog=1` in the address (e.g. `https://teleo.cc/studio?voicelog=1`) to see the recognizer's open/start/result/error/end events on screen. Simulation tests: `tests/e2e/voice-ipad.spec.ts` (models the WebKit behaviour above; they fail on the previous code).
+More WebKit behaviour handled (each has a simulation test in `tests/e2e/voice-ipad.spec.ts`):
+
+- **Overlapping results** — Safari repeats earlier phrases in later results ("hello", "hello world") and can send a final phrase twice; `joinResults` keeps one copy.
+- **Wiped transcripts** — Safari can drop what it heard earlier in a session; a transcript that no longer continues the previous one starts a new stretch from the confirmed position.
+- **Slow microphone start** — words said before a session can hear are lost; following continues from the words that arrive.
+- **Recognizer that opens and closes at once** (Dictation off, language not among the keyboards, microphone taken): sessions that start and end within 0.8 s without hearing anything; after 6 in a row voice follow stops with Dictation/microphone advice (`voiceNoAudio`) instead of switching the microphone on and off forever. `service-not-allowed` on iPhone/iPad shows the same advice; `not-allowed` keeps the microphone-permission message.
+
+Field diagnosis and switches (kept for the browser tab; close the tab to reset):
+
+| Address | Effect |
+|---|---|
+| `?voicelog=1` | On-screen log: settings, every session's open/start/heard/error/end with timings |
+| `&voicemode=phrase` / `continuous` | Force one-phrase or continuous sessions |
+| `&voicedelay=1000` | Pause in ms before the next session |
+| `&voicereuse=0` / `1` | New recognizer per session / reuse one |
+| `&voicelang=device` or `&voicelang=ru-RU` | Recognition language override (`device` = leave it to the system) |
+
+Opening teleo from a Home Screen icon (standalone web app) is a known weak spot for Safari speech recognition; use a Safari tab when in doubt.

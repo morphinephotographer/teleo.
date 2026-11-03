@@ -77,6 +77,11 @@ describe("production boundary", () => {
       /localhost|127\.0\.0\.1|api\.teleo/,
     );
     expect(response.headers.get("referrer-policy")).toBe("no-referrer");
+    // Voice follow needs the microphone on teleo.cc itself (never for embeds);
+    // "microphone=()" made Safari refuse speech recognition in production.
+    expect(response.headers.get("permissions-policy")).toBe(
+      "camera=(), microphone=(self), geolocation=()",
+    );
     expect(response.headers.get("x-teleo-commit")).toBe(env.RELEASE_COMMIT);
     expect(response.headers.get("x-teleo-deployment")).toBe("release-id");
     const sw = await production.fetch(

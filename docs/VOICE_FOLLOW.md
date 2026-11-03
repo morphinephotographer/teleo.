@@ -70,3 +70,8 @@ Field diagnosis and switches (kept for the browser tab; close the tab to reset):
 | `&voicelang=device` or `&voicelang=ru-RU` | Recognition language override (`device` = leave it to the system) |
 
 Opening teleo from a Home Screen icon (standalone web app) is a known weak spot for Safari speech recognition; use a Safari tab when in doubt.
+
+
+## Production header (fixed 2026-11-03)
+
+teleo.cc used to send `Permissions-Policy: microphone=()`, which forbids the microphone for the site itself. Local tests (Vite dev server) never sent that header, so voice follow worked locally and in tests but Safari on iPad refused it in production ("Failed to load resource: permission denied" in Web Inspector, microphone switching on and off). The header is now `microphone=(self)`: allowed for teleo.cc, still forbidden for any embedding page. `tests/production.test.ts` guards it.

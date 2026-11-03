@@ -7,9 +7,13 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem("teleo.locale", "en");
   });
 });
-test("wide desktop keeps library and aligns header modes to editor", async ({
+test("wide desktop keeps library and centres the script title", async ({
   page,
-}) => {
+}, info) => {
+  test.skip(
+    info.project.name !== "desktop",
+    "the wide layout is for a mouse or trackpad",
+  );
   await page.setViewportSize({ width: 1000, height: 900 });
   await page.goto("/studio");
   await expect(page.locator(".editor textarea")).toHaveValue(/Welcome/);
@@ -26,17 +30,17 @@ test("wide desktop keeps library and aligns header modes to editor", async ({
     await expect(
       page.getByRole("button", { name: t.closeLibrary, exact: true }),
     ).toBeHidden();
-    await expect(page.locator("header > .script-selector")).toBeHidden();
-    const modes = page.locator("header > .segmented");
-    await expect(modes).toBeVisible();
-    const modeRect = (await modes.boundingBox())!,
-      editor = (await page.locator(".editor").boundingBox())!;
-    expect(Math.abs(modeRect.x - editor.x)).toBeLessThan(1);
+    // 1.4 top bar: the script title sits on the screen's centre line.
+    const title = (await page
+      .locator("header .script-selector .picker-trigger")
+      .boundingBox())!;
+    expect(Math.abs(title.x + title.width / 2 - width / 2)).toBeLessThan(2);
+    await expect(page.locator("header .topbar-read")).toBeVisible();
     expect(
       await page
-        .locator("header > .brand")
+        .locator("header .brand")
         .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
-    ).toBe(44);
+    ).toBe(53);
     expect(
       (await page.locator(".app-shell > header").boundingBox())!.height,
     ).toBe(52);
@@ -44,12 +48,12 @@ test("wide desktop keeps library and aligns header modes to editor", async ({
   }
   await page.screenshot({ path: "test-results/desktop-layout/wide.png" });
   await page
-    .locator("header > .segmented")
+    .locator("header")
     .getByRole("button", { name: t.read, exact: true })
     .click();
   await expect(page.locator(".reader")).toBeVisible();
 });
-test("touch tablets and phones retain header modes, logo and sidebar controls", async ({
+test("touch tablets and phones keep Read, logo and sidebar controls", async ({
   browser,
 }) => {
   const context = await browser.newContext({
@@ -68,16 +72,19 @@ test("touch tablets and phones retain header modes, logo and sidebar controls", 
     ]) {
       await page.setViewportSize({ width, height });
       await page.goto("/studio");
-      await expect(page.locator("header > .segmented")).toBeVisible();
+      await expect(page.locator("header .topbar-read")).toBeVisible();
       await expect(page.locator(".desktop-workspace-mode")).toBeHidden();
+      // iPad in landscape pins the library open; elsewhere it has a toggle.
+      const pinned = width > 900 && width > height;
       await expect(
         page
           .locator("header")
           .getByRole("button", { name: t.library, exact: true }),
-      ).toBeVisible();
+      ).toBeVisible({ visible: !pinned });
+      if (pinned) await expect(page.locator(".library")).toBeVisible();
       expect(
         await page
-          .locator("header > .brand")
+          .locator("header .brand")
           .evaluate((el) => parseFloat(getComputedStyle(el).fontSize)),
       ).toBeLessThan(60);
     }

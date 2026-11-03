@@ -5,12 +5,12 @@ const t = dictionaries.en;
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     sessionStorage.setItem("teleo.intro.seen.v1", "true");
-    if (!localStorage.getItem("teleo.tour.v130"))
-      localStorage.setItem("teleo.tour.v130", "force");
+    if (!localStorage.getItem("teleo.tour.v140"))
+      localStorage.setItem("teleo.tour.v140", "force");
   });
 });
 
-test("1.3.0 tour walks editor, tools, phone, Reader and voice once", async ({
+test("tour walks editor, tools, phone, Reader and voice once", async ({
   page,
 }) => {
   await page.goto("/studio");
@@ -49,6 +49,6 @@ test("Escape closes the tour and remembers it", async ({ page }) => {
   await page.keyboard.press("Escape");
   await expect(page.locator(".tour")).toHaveCount(0);
   expect(
-    await page.evaluate(() => localStorage.getItem("teleo.tour.v130")),
+    await page.evaluate(() => localStorage.getItem("teleo.tour.v140")),
   ).toBe("done");
 });

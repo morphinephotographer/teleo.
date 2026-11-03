@@ -10,6 +10,8 @@ export default defineConfig({
     "intro.spec.ts",
     "import-docx.spec.ts",
     "voice-ipad.spec.ts",
+    "topbar.spec.ts",
+    "tour.spec.ts",
   ],
   outputDir: "test-results/voice-follow",
   workers: 1,

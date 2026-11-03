@@ -30,8 +30,8 @@ export function Popover({
   maxHeight?: number;
   onOpenChange?: (open: boolean) => void;
   triggerClassName?: string;
-  /** "end" lines the popup's right edge up with the trigger's. */
-  align?: "start" | "end";
+  /** "end" lines the popup's right edge up with the trigger's; "center" centres it. */
+  align?: "start" | "end" | "center";
 }) {
   const id = useId();
   const anchor = useRef<HTMLButtonElement>(null),
@@ -61,7 +61,12 @@ export function Popover({
     el.style.width = popupWidth + "px";
     el.style.maxHeight = availableHeight + "px";
     const height = Math.min(el.scrollHeight, availableHeight);
-    const start = align === "end" ? r.right - popupWidth : r.left;
+    const start =
+      align === "end"
+        ? r.right - popupWidth
+        : align === "center"
+          ? r.left + r.width / 2 - popupWidth / 2
+          : r.left;
     el.style.left =
       Math.max(x + 12, Math.min(start, x + w - popupWidth - 12)) + "px";
     el.style.top =
@@ -238,35 +243,47 @@ export function TeleoSelect({
   options,
   onChange,
   className = "",
+  align,
+  detail,
 }: {
   label: string;
   value: string;
   options: SelectOption[];
   onChange: (value: string) => void;
   className?: string;
+  align?: "start" | "end" | "center";
+  /** A second line inside the trigger (e.g. save status and length). */
+  detail?: ReactNode;
 }) {
   if (!supportsPopover())
     return (
-      <select
-        className={"teleo-select-native " + className}
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <>
+        <select
+          className={"teleo-select-native " + className}
+          aria-label={label}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value} disabled={o.disabled}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+        {detail && <span className="picker-detail">{detail}</span>}
+      </>
     );
   return (
     <Popover
       label={label}
       kind="listbox"
       className={className}
+      align={align}
       trigger={
-        <span>{options.find((o) => o.value === value)?.label || label}</span>
+        <>
+          <span>{options.find((o) => o.value === value)?.label || label}</span>
+          {detail && <small className="picker-detail">{detail}</small>}
+        </>
       }
     >
       {options.map((o) => (

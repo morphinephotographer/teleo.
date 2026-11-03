@@ -6787,3 +6787,375 @@ input[type="checkbox"] {
     opacity: 0;
   }
 }
+
+/* 1.4 top bar. One row from 601px: library + teleo. on the left, the script
+   title with its status centred on the screen, remote, settings and Read on the
+   right. Phones in portrait use two rows: brand and icons, then script + Read. */
+.app-shell.route-studio > header.topbar {
+  display: grid;
+  /* Equal sides keep the title on the screen's centre line; the title column
+     never takes more than what is left beside the widest side. */
+  --topbar-side: 250px;
+  grid-template-columns:
+    minmax(0, 1fr) fit-content(calc(100% - 2 * var(--topbar-side) - 32px))
+    minmax(0, 1fr);
+  grid-template-areas: none;
+  align-items: center;
+  column-gap: 16px;
+  row-gap: 0;
+  height: var(--toolbar);
+  min-height: 0;
+  max-height: none;
+}
+.topbar-start,
+.topbar-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.topbar-end {
+  justify-content: flex-end;
+}
+.app-shell.route-studio > header.topbar .brand {
+  display: flex;
+  align-items: center;
+  height: 44px;
+  margin: 0 0 0 2px;
+  font-size: 53px;
+  line-height: 44px;
+  letter-spacing: -0.05em;
+  white-space: nowrap;
+}
+.app-shell.route-studio > header.topbar .icon-button,
+.app-shell.route-studio > header.topbar .top-settings > .picker-trigger {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  margin: 0;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--subtle);
+  color: var(--ink);
+  box-shadow: none;
+}
+.app-shell.route-studio > header.topbar .icon-button svg,
+.app-shell.route-studio > header.topbar .top-settings > .picker-trigger svg {
+  width: 20px;
+  height: 20px;
+}
+.app-shell.route-studio > header.topbar .icon-button[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+.app-shell.route-studio > header.topbar .top-settings {
+  flex: none;
+  width: 44px;
+  margin: 0;
+}
+.topbar-title {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  height: 44px;
+}
+.app-shell.route-studio > header.topbar .script-selector {
+  display: block;
+  flex: none;
+  width: auto;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-trigger {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  align-items: center;
+  column-gap: 4px;
+  row-gap: 1px;
+  width: auto;
+  max-width: 100%;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 18px;
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-trigger:hover {
+  background: var(--subtle);
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-trigger > span:first-child {
+  order: 1;
+  min-width: 0;
+  max-width: calc(100% - 19px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-detail {
+  order: 3;
+  flex-basis: 100%;
+  display: flex;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-chevron {
+  order: 2;
+  display: grid;
+  flex: none;
+  opacity: 0.6;
+}
+.app-shell.route-studio > header.topbar .script-selector .picker-chevron svg {
+  width: 15px;
+  height: 15px;
+}
+.app-shell.route-studio > header.topbar .script-selector .teleo-select-native {
+  height: 26px;
+  min-height: 26px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  font-weight: 600;
+}
+.topbar-meta {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 400;
+  color: var(--muted);
+}
+.topbar-meta.error {
+  color: #ff6b6b;
+}
+.app-shell.route-studio > header.topbar .topbar-read {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: none;
+  height: 44px;
+  min-height: 44px;
+  padding: 0 20px 0 16px;
+  border-radius: 999px;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.app-shell.route-studio > header.topbar .topbar-read svg {
+  width: 14px;
+  height: 14px;
+}
+.app-shell.route-studio > header.topbar .topbar-read.reading {
+  border-color: var(--line);
+  background: var(--subtle);
+  color: var(--ink);
+}
+.app-shell.route-studio > header.topbar .topbar-read.reading svg {
+  width: 16px;
+  height: 16px;
+}
+.app-shell.route-studio > header.topbar .topbar-read:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+/* Status and length live in the top bar; the editor keeps the ⋯ tools. */
+.editor-meta {
+  display: none;
+}
+.editor-top-end {
+  margin-left: auto;
+}
+.editor-top .save-status.error {
+  font-size: 11px;
+  color: #ff6b6b;
+}
+
+/* iPad in landscape and wide desktops: the library is always shown. */
+@media (min-width: 901px) and (orientation: landscape) and (pointer: coarse) {
+  .app-shell.route-studio > header.topbar .topbar-library,
+  .app-shell.route-studio .library-heading > .icon-button {
+    display: none;
+  }
+  .app-shell.route-studio .workspace:not(:has(.integrated-settings)) {
+    grid-template-columns: 230px minmax(280px, 1fr);
+  }
+  .app-shell.route-studio .library {
+    display: flex;
+  }
+}
+@media (min-width: 1440px) and (hover: hover) and (pointer: fine) {
+  .app-shell.route-studio > header.topbar .topbar-library {
+    display: none;
+  }
+}
+
+/* Phones in portrait: brand and plain icons, then the script and Read. */
+@media (max-width: 600px) {
+  .app-shell.route-studio > header.topbar {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
+    grid-template-rows: 44px 44px;
+    column-gap: 2px;
+    row-gap: 8px;
+    height: auto;
+    padding: 4px 6px 0;
+  }
+  .app-shell.route-studio > header.topbar > .topbar-start,
+  .app-shell.route-studio > header.topbar > .topbar-title,
+  .app-shell.route-studio > header.topbar > .topbar-end {
+    display: contents;
+  }
+  .app-shell.route-studio > header.topbar .brand {
+    grid-area: 1 / 1;
+    justify-self: start;
+    margin: 0;
+    font-size: 27px;
+    letter-spacing: -2px;
+  }
+  .app-shell.route-studio > header.topbar .topbar-library {
+    grid-area: 1 / 2;
+  }
+  .app-shell.route-studio > header.topbar .tour-remote {
+    grid-area: 1 / 3;
+  }
+  .app-shell.route-studio > header.topbar .top-settings {
+    grid-area: 1 / 4;
+  }
+  .app-shell.route-studio > header.topbar .icon-button,
+  .app-shell.route-studio > header.topbar .top-settings > .picker-trigger {
+    border-color: transparent;
+    background: transparent;
+  }
+  .app-shell.route-studio > header.topbar .icon-button svg,
+  .app-shell.route-studio > header.topbar .top-settings > .picker-trigger svg {
+    width: 22px;
+    height: 22px;
+  }
+  .app-shell.route-studio > header.topbar .icon-button[aria-pressed="true"] {
+    border-color: transparent;
+    background: var(--subtle);
+  }
+  .app-shell.route-studio > header.topbar .script-selector {
+    grid-area: 2 / 1 / 3 / 2;
+    width: 100%;
+    margin-right: 6px;
+  }
+  .app-shell.route-studio > header.topbar .script-selector .picker-trigger,
+  .app-shell.route-studio > header.topbar .script-selector .teleo-select-native {
+    justify-content: space-between;
+    width: 100%;
+    height: 44px;
+    min-height: 44px;
+    padding: 0 12px 0 16px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--subtle);
+    font-size: 14px;
+  }
+  .app-shell.route-studio > header.topbar .script-selector .picker-detail {
+    display: none;
+  }
+  .app-shell.route-studio > header.topbar .script-selector .picker-trigger {
+    flex-wrap: nowrap;
+    justify-content: space-between;
+    font-weight: 550;
+  }
+  .app-shell.route-studio > header.topbar .topbar-read {
+    grid-area: 2 / 2 / 3 / 5;
+    padding: 0 16px 0 14px;
+  }
+  .editor-meta {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .editor-top {
+    align-items: center;
+  }
+  .editor-top-end {
+    margin-left: 0;
+  }
+}
+/* Phones in portrait with the keyboard up: one row, no script picker. */
+@media (max-width: 600px) and (max-height: 500px) {
+  .app-shell.route-studio > header.topbar {
+    grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+    grid-template-rows: 44px;
+    row-gap: 0;
+  }
+  .app-shell.route-studio > header.topbar .script-selector {
+    display: none;
+  }
+  .app-shell.route-studio > header.topbar .topbar-read {
+    grid-area: 1 / 5;
+    margin-left: 4px;
+  }
+}
+
+/* Short landscape screens (phones on their side): the script actions and the
+   folder move from below the text into the ⋯ menu, leaving room to write. */
+.editor-tools .tools-document {
+  display: none;
+}
+.editor-tools .tools-document > .tools-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+.editor-tools .tools-document > .tools-item:not(:disabled):hover,
+.editor-tools .tools-document > .tools-item:focus-visible {
+  background: var(--subtle);
+  outline-offset: -2px;
+}
+.editor-tools .tools-document > .tools-item.danger {
+  color: #ff6b6b;
+}
+.editor-tools .tools-chip.selected {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .editor-tools .tools-document {
+    display: block;
+  }
+  .app-shell.route-studio .editor > .document-actions,
+  .app-shell.route-studio .editor > label {
+    display: none;
+  }
+}

@@ -1,4 +1,10 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { Popover } from "./menus";
 import { Icon } from "./ui";
 import type { Key } from "./i18n";
@@ -73,12 +79,15 @@ export function EditorTools({
   locale,
   speed,
   onFind,
+  documentItems,
 }: {
   area: Area;
   t: Translate;
   locale: string;
   speed: number;
   onFind: () => void;
+  /** Document actions; the menu shows them only where the editor hides its own row. */
+  documentItems?: ReactNode;
 }) {
   const [selection, setSelection] = useState({ start: 0, end: 0, text: "" });
   const [note, setNote] = useState("");
@@ -260,6 +269,12 @@ export function EditorTools({
           <strong>{t("toolFind")}</strong>
           <kbd>{mac ? "⌘F" : "Ctrl+F"}</kbd>
         </button>
+        {documentItems && (
+          <div className="tools-document" role="presentation">
+            <div className="tools-separator" role="separator" />
+            {documentItems}
+          </div>
+        )}
         {hasSelection && (
           <div className="tools-footer" role="presentation">
             {t("selectionStats")}: {new Intl.NumberFormat(locale).format(words)}{" "}

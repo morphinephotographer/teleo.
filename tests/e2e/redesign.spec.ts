@@ -141,7 +141,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
         ),
       );
       await body.blur();
-      await expect(page.locator(".document-metrics")).toContainText(t.words);
+      await expect(
+        page.locator(".topbar-meta:visible, .editor-meta:visible").first(),
+      ).toContainText(t.words);
       await fits(page);
       await expect(body).toBeInViewport();
       if (

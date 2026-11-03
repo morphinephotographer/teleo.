@@ -14,7 +14,7 @@ import { Icon } from "./ui";
  * voice follow. Non-modal: clicks pass through the shade, so nobody is blocked.
  * Each step spotlights the real control and shows a short looping scene.
  */
-export const tourKey = "teleo.tour.v130";
+export const tourKey = "teleo.tour.v140";
 
 export function tourNeeded() {
   const value = localGet(tourKey);
@@ -61,7 +61,7 @@ const steps: Step[] = [
     id: "read",
     title: "tourReadTitle",
     body: "tourReadBody",
-    target: "header .segmented button:last-of-type",
+    target: "header .topbar-read",
   },
   {
     id: "voice",
@@ -202,12 +202,24 @@ export function Tour({
     const below = innerHeight - (box.top + box.height) - gap - m;
     const above = box.top - gap - m;
     let top: number;
-    if (below >= h) top = box.top + box.height + gap;
-    else if (above >= h) top = box.top - gap - h;
-    else top = innerHeight - h - m - 8; // A large target: sit over its lower part.
-    top = Math.min(Math.max(m, top), innerHeight - h - m);
     let left = box.left + box.width / 2 - w / 2;
     if (box.width > w * 1.6) left = box.left + box.width - w - 24;
+    const beside = (side: number) => {
+      left = side;
+      top = box.top + box.height / 2 - h / 2;
+    };
+    if (below >= h) top = box.top + box.height + gap;
+    else if (above >= h) top = box.top - gap - h;
+    // Short screens (a phone on its side): beside a small control, not over it.
+    else if (box.height < 120 && box.left - gap - m >= w)
+      beside(box.left - gap - w);
+    else if (
+      box.height < 120 &&
+      innerWidth - box.left - box.width - gap - m >= w
+    )
+      beside(box.left + box.width + gap);
+    else top = innerHeight - h - m - 8; // A large target: sit over its lower part.
+    top = Math.min(Math.max(m, top!), innerHeight - h - m);
     left = Math.min(Math.max(m, left), innerWidth - w - m);
     setPlace({ width: w, left, top });
   }, [box, index, missing]);

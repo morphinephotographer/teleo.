@@ -53,7 +53,7 @@ import { version as appVersion } from "../../../package.json";
 import { LibraryPanel, type LibraryAction } from "./LibraryPanel";
 import { Intro, introNeeded } from "./Intro";
 import { Tour, tourNeeded } from "./Tour";
-import { Icon, IconButton, Segmented, Sheet, type IconName } from "./ui";
+import { Icon, IconButton, Sheet, type IconName } from "./ui";
 import { TeleoSelect, Popover } from "./menus";
 import { RemoteController } from "./RemoteController";
 import { HostPreview } from "./host-preview";
@@ -2240,6 +2240,73 @@ function App() {
     setImmersive(true);
     fullscreenControl.current?.enter(readerRoot.current);
   };
+  const settingsPopover = (
+    <Popover
+      kind="dialog"
+      width={320}
+      maxHeight={1000}
+      className="top-settings"
+      label={t("settings")}
+      trigger={<Icon name="settings" />}
+      triggerClassName="icon-button"
+      onOpenChange={(open) => {
+        setSettingsOpen(open);
+        if (!open) {
+          setLearn(null);
+          setTesting(false);
+        }
+      }}
+    >
+      {settingsContent}
+    </Popover>
+  );
+  const saveProblem = status === "saveError" || status === "saveConflict";
+  const documentMeta = [
+    t(
+      status === "saving"
+        ? "saving"
+        : saveProblem
+          ? "notSavedShort"
+          : "savedShort",
+    ),
+    `${new Intl.NumberFormat(locale).format(wordCount)} ${t("words")}`,
+    `${duration} ${t("minutesShort")}`,
+  ].join(" · ");
+  const documentActions: [Key, IconName, () => void][] = current
+    ? [
+        [
+          "duplicate",
+          "copy",
+          () => void add(createScript(current.title, current.body)),
+        ],
+        [
+          "export",
+          "import",
+          () => download((current.title || "teleo") + ".txt", current.body),
+        ],
+        [
+          "exportJSON",
+          "file",
+          () =>
+            download("teleo.json", exportBundle([current]), "application/json"),
+        ],
+        [
+          "versions",
+          "restart",
+          () => {
+            void flush()
+              .then(() => storage.revisions(current.scriptId))
+              .then(setRevisions)
+              .catch(() => setStatus("saveError"));
+          },
+        ],
+        [
+          "delete",
+          "trash",
+          () => setActionDialog({ kind: "deleteScript", id: current.scriptId }),
+        ],
+      ]
+    : [];
   return (
     <>
       <div
@@ -2256,83 +2323,86 @@ function App() {
         aria-hidden={intro || undefined}
       >
         {route !== "/remote" && (
-          <header>
-            <Wordmark />
-            {route === "/studio" && (
+          <header className={route === "/studio" ? "topbar" : undefined}>
+            {route === "/studio" ? (
               <>
-                <IconButton
-                  name="library"
-                  label={t("library")}
-                  active={libraryOpen}
-                  onClick={() => {
-                    if (reading) {
-                      exitReader();
-                      setLibraryOpen(true);
-                    } else setLibraryOpen(!libraryOpen);
-                    setPanel("library");
-                  }}
-                />
-                <TeleoSelect
-                  className="script-selector"
-                  label={t("currentScript")}
-                  value={selected}
-                  onChange={(id) => {
-                    void flush();
-                    setSelected(id);
-                    setRevisions(null);
-                  }}
-                  options={
-                    current
-                      ? scripts.map((script) => ({
-                          value: script.scriptId,
-                          label: script.title || t("untitled"),
-                        }))
-                      : [{ value: "", label: t("chooseScript") }]
-                  }
-                />
-                <Segmented
-                  label={t("workspaceMode")}
-                  value={reading ? "prompt" : "script"}
-                  onChange={(mode) =>
-                    mode === "prompt" ? void startReader() : editMode()
-                  }
-                  options={[
-                    { value: "script", label: t("editor"), disabled: !current },
-                    { value: "prompt", label: t("read"), disabled: !current },
-                  ]}
-                />
-                <div className="toolbar-spacer" />
-
-                <IconButton
-                  className={
-                    "tour-remote" +
-                    (remoteStatus === "connected" ? " has-connection" : "")
-                  }
-                  name="remote"
-                  label={t("remoteConnection")}
-                  disabled={!current}
-                  onClick={() => void showConnection()}
-                />
+                <div className="topbar-start">
+                  <IconButton
+                    className="topbar-library"
+                    name="library"
+                    label={t("library")}
+                    active={libraryOpen}
+                    onClick={() => {
+                      if (reading) {
+                        exitReader();
+                        setLibraryOpen(true);
+                      } else setLibraryOpen(!libraryOpen);
+                      setPanel("library");
+                    }}
+                  />
+                  <Wordmark />
+                </div>
+                <div className="topbar-title">
+                  <TeleoSelect
+                    className="script-selector"
+                    label={t("currentScript")}
+                    align="center"
+                    value={selected}
+                    onChange={(id) => {
+                      void flush();
+                      setSelected(id);
+                      setRevisions(null);
+                    }}
+                    options={
+                      current
+                        ? scripts.map((script) => ({
+                            value: script.scriptId,
+                            label: script.title || t("untitled"),
+                          }))
+                        : [{ value: "", label: t("chooseScript") }]
+                    }
+                    detail={
+                      current && (
+                        <span
+                          className={
+                            "topbar-meta" + (saveProblem ? " error" : "")
+                          }
+                        >
+                          {documentMeta}
+                        </span>
+                      )
+                    }
+                  />
+                </div>
+                <div className="topbar-end">
+                  <IconButton
+                    className={
+                      "tour-remote" +
+                      (remoteStatus === "connected" ? " has-connection" : "")
+                    }
+                    name="remote"
+                    label={t("remoteConnection")}
+                    disabled={!current}
+                    onClick={() => void showConnection()}
+                  />
+                  {settingsPopover}
+                  <button
+                    type="button"
+                    className={"topbar-read" + (reading ? " reading" : "")}
+                    disabled={!current}
+                    onClick={() => (reading ? editMode() : void startReader())}
+                  >
+                    <Icon name={reading ? "pencil" : "play"} />
+                    <span>{t(reading ? "editor" : "read")}</span>
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <Wordmark />
+                {settingsPopover}
               </>
             )}
-            <Popover
-              kind="dialog"
-              width={320}
-              maxHeight={1000}
-              className="top-settings"
-              label={t("settings")}
-              trigger={<Icon name="settings" />}
-              triggerClassName="icon-button"
-              onOpenChange={(open) => {
-                setSettingsOpen(open);
-                if (!open) {
-                  setLearn(null);
-                  setTesting(false);
-                }
-              }}
-            >
-              {settingsContent}
-            </Popover>
           </header>
         )}
         {!online && (
@@ -2457,26 +2527,81 @@ function App() {
                     <span
                       role="status"
                       className={
-                        status === "saveError" || status === "saveConflict"
-                          ? "error"
-                          : "muted"
+                        "save-status " + (saveProblem ? "error" : "sr-only")
                       }
                     >
                       {t(status)}
                     </span>
+                    <span className="editor-meta" aria-hidden="true">
+                      {documentMeta}
+                    </span>
                     <div className="editor-top-end">
-                      <span className="document-metrics">
-                        {new Intl.NumberFormat(locale).format(wordCount)}{" "}
-                        {t("words")}
-                        <span>·</span>
-                        {duration} {t("minutes")}
-                      </span>
                       <EditorTools
                         area={bodyArea}
                         t={t}
                         locale={locale}
                         speed={current.preferences.speed || 1}
                         onFind={openFind}
+                        documentItems={
+                          <>
+                            <div className="tools-heading" role="presentation">
+                              {t("documentActions")}
+                            </div>
+                            {documentActions.map(([key, , run]) => (
+                              <button
+                                type="button"
+                                role="menuitem"
+                                tabIndex={-1}
+                                key={key}
+                                className={
+                                  "tools-item tools-item-row" +
+                                  (key === "delete" ? " danger" : "")
+                                }
+                                onClick={() => setTimeout(run)}
+                              >
+                                <strong>{t(key)}</strong>
+                              </button>
+                            ))}
+                            <div className="tools-heading" role="presentation">
+                              {t("folder")}
+                            </div>
+                            <div
+                              className="tools-chips"
+                              role="group"
+                              aria-label={t("scriptFolder")}
+                            >
+                              {[
+                                { id: "", title: t("noFolder") },
+                                ...folders.map((f) => ({
+                                  id: f.folderId,
+                                  title: f.title,
+                                })),
+                              ].map((f) => (
+                                <button
+                                  type="button"
+                                  role="menuitem"
+                                  tabIndex={-1}
+                                  key={f.id || "none"}
+                                  className={
+                                    "tools-chip" +
+                                    ((current.folderId || "") === f.id
+                                      ? " selected"
+                                      : "")
+                                  }
+                                  aria-current={
+                                    (current.folderId || "") === f.id ||
+                                    undefined
+                                  }
+                                  onClick={() =>
+                                    edit({ folderId: f.id || undefined })
+                                  }
+                                >
+                                  {f.title}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        }
                       />
                     </div>
                   </div>
@@ -2517,58 +2642,8 @@ function App() {
                     role="toolbar"
                     aria-label={t("documentActions")}
                   >
-                    {button(
-                      "duplicate",
-                      () => void add(createScript(current.title, current.body)),
-                      false,
-                      false,
-                      "copy",
-                    )}
-                    {button(
-                      "export",
-                      () =>
-                        download(
-                          (current.title || "teleo") + ".txt",
-                          current.body,
-                        ),
-                      false,
-                      false,
-                      "import",
-                    )}
-                    {button(
-                      "exportJSON",
-                      () =>
-                        download(
-                          "teleo.json",
-                          exportBundle([current]),
-                          "application/json",
-                        ),
-                      false,
-                      false,
-                      "file",
-                    )}
-                    {button(
-                      "versions",
-                      () => {
-                        void flush()
-                          .then(() => storage.revisions(current.scriptId))
-                          .then(setRevisions)
-                          .catch(() => setStatus("saveError"));
-                      },
-                      false,
-                      false,
-                      "restart",
-                    )}
-                    {button(
-                      "delete",
-                      () =>
-                        setActionDialog({
-                          kind: "deleteScript",
-                          id: current.scriptId,
-                        }),
-                      false,
-                      false,
-                      "trash",
+                    {documentActions.map(([key, icon, run]) =>
+                      button(key, run, false, false, icon),
                     )}
                   </div>
                   <label>

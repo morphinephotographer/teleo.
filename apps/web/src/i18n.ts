@@ -85,7 +85,7 @@ export const en = {
   tourFinish: "Start",
   tourEditorTitle: "Editor",
   tourEditorBody:
-    "Write or paste your script. It saves by itself, and the reading time updates as you type.",
+    "Write or paste your script. It saves by itself. The title, save status and reading time sit at the top — tap the title to switch scripts.",
   tourToolsTitle: "Text tools",
   tourToolsBody:
     "The ⋯ button tidies pasted text, splits sentences into paragraphs, adds [cues] you won’t read aloud, and finds and replaces. ⌘Z undoes any of it.",
@@ -94,7 +94,7 @@ export const en = {
     "Scan the QR code with your phone and allow the connection. You get Play, speed and paragraphs — and can send text from the phone straight into Teleo.",
   tourReadTitle: "Reading mode",
   tourReadBody:
-    "The text scrolls under the guide line. Speed, size and mirroring are in the bottom bar; Space pauses.",
+    "Read at the top starts reading mode: the text scrolls under the guide line. Speed, size and mirroring are in the bottom bar; Space pauses.",
   tourVoiceTitle: "Follow my voice",
   tourVoiceBody:
     "Tap the microphone and read aloud. The text moves with you and read words fade. Skip ahead or go back — Teleo finds the place.",
@@ -173,6 +173,9 @@ export const en = {
   closeLibrary: "Close library",
   words: "words",
   minutes: "min · estimate",
+  minutesShort: "min",
+  savedShort: "Saved",
+  notSavedShort: "Not saved",
   documentActions: "Script actions",
   textTools: "Text tools",
   toolsOrganize: "Tidy up",
@@ -478,7 +481,7 @@ export const uk: Record<Key, string> = {
   tourFinish: "Почати",
   tourEditorTitle: "Редактор",
   tourEditorBody:
-    "Пишіть або вставте сценарій. Він зберігається сам, а час читання оновлюється, поки ви друкуєте.",
+    "Пишіть або вставте сценарій. Він зберігається сам. Назва, стан збереження й час читання — вгорі: торкніться назви, щоб перейти до іншого тексту.",
   tourToolsTitle: "Інструменти тексту",
   tourToolsBody:
     "Кнопка ⋯ прибере зайве у вставленому тексті, розіб’є речення на абзаци, додасть [позначки], які не читаються вголос, знайде й замінить. ⌘Z скасує будь-що.",
@@ -487,7 +490,7 @@ export const uk: Record<Key, string> = {
     "Відскануйте QR-код телефоном і дозвольте підключення. На телефоні — Play, швидкість і абзаци, а ще можна надіслати текст із телефона просто в Teleo.",
   tourReadTitle: "Режим читання",
   tourReadBody:
-    "Текст пливе під напрямною. Швидкість, розмір і дзеркало — на нижній панелі; пробіл ставить на паузу.",
+    "Кнопка «Читати» вгорі вмикає режим читання: текст пливе під напрямною. Швидкість, розмір і дзеркало — на нижній панелі; пробіл ставить на паузу.",
   tourVoiceTitle: "Стежити за голосом",
   tourVoiceBody:
     "Натисніть мікрофон і читайте вголос. Текст рухається за вами, прочитане тьмяніє. Перескочили чи повернулися — Teleo знайде місце.",
@@ -565,6 +568,9 @@ export const uk: Record<Key, string> = {
   closeLibrary: "Закрити бібліотеку",
   words: "слів",
   minutes: "хв · приблизно",
+  minutesShort: "хв",
+  savedShort: "Збережено",
+  notSavedShort: "Не збережено",
   documentActions: "Дії з текстом",
   textTools: "Інструменти тексту",
   toolsOrganize: "Упорядкувати",
@@ -871,7 +877,7 @@ export const ru: Record<Key, string> = {
   tourFinish: "Начать",
   tourEditorTitle: "Редактор",
   tourEditorBody:
-    "Пишите или вставьте сценарий. Он сохраняется сам, а время чтения обновляется, пока вы печатаете.",
+    "Пишите или вставьте сценарий. Он сохраняется сам. Название, статус сохранения и время чтения — вверху: нажмите на название, чтобы переключиться на другой текст.",
   tourToolsTitle: "Инструменты текста",
   tourToolsBody:
     "Кнопка ⋯ уберёт лишнее во вставленном тексте, разобьёт предложения на абзацы, добавит [пометки], которые не читаются вслух, найдёт и заменит. ⌘Z отменит что угодно.",
@@ -880,7 +886,7 @@ export const ru: Record<Key, string> = {
     "Отсканируйте QR-код телефоном и разрешите подключение. На телефоне — Play, скорость и абзацы, а ещё можно отправить текст с телефона прямо в Teleo.",
   tourReadTitle: "Режим чтения",
   tourReadBody:
-    "Текст плывёт под направляющей. Скорость, размер и зеркало — на нижней панели; пробел ставит на паузу.",
+    "Кнопка «Читать» вверху включает режим чтения: текст плывёт под направляющей. Скорость, размер и зеркало — на нижней панели; пробел ставит на паузу.",
   tourVoiceTitle: "Следить за голосом",
   tourVoiceBody:
     "Нажмите микрофон и читайте вслух. Текст двигается за вами, прочитанное тускнеет. Перескочили или вернулись — Teleo найдёт место.",
@@ -958,6 +964,9 @@ export const ru: Record<Key, string> = {
   closeLibrary: "Закрыть библиотеку",
   words: "слов",
   minutes: "мин · примерно",
+  minutesShort: "мин",
+  savedShort: "Сохранено",
+  notSavedShort: "Не сохранено",
   documentActions: "Действия с текстом",
   textTools: "Инструменты текста",
   toolsOrganize: "Упорядочить",

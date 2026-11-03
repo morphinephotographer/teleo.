@@ -125,9 +125,10 @@ function voiceLog(enabled: boolean) {
   const lines: string[] = [];
   return (message: string) => {
     if (!box.isConnected) document.body.append(box);
-    lines.push(
-      `${((performance.now() - start) / 1000).toFixed(1)}s ${message}`,
-    );
+    const line = `${((performance.now() - start) / 1000).toFixed(1)}s ${message}`;
+    lines.push(line);
+    // Also in the console, for Safari's Web Inspector on a connected iPad.
+    console.info("[teleo voice]", line);
     if (lines.length > 60) lines.shift();
     box.textContent = lines.join("\n");
     box.scrollTop = box.scrollHeight;

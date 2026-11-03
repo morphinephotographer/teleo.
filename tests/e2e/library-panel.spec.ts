@@ -206,9 +206,7 @@ test("appearance buttons cycle directly and the default settings fit the viewpor
     [844, 390],
   ]) {
     await page.setViewportSize({ width, height });
-    const trigger = page.locator(
-      ".app-shell > header > .top-settings > button",
-    );
+    const trigger = page.locator(".app-shell > header .top-settings > button");
     await trigger.click();
     const menu = page.locator(
       `[id="${await trigger.getAttribute("aria-controls")}"]`,
@@ -336,7 +334,7 @@ test("reader has one alignment outline, no phone button and round appearance sym
     .getByRole("textbox", { name: t.body, exact: true })
     .fill("Абзац для проверки воспроизведения. ".repeat(400));
   await page.getByRole("textbox", { name: t.body, exact: true }).blur();
-  const trigger = page.locator(".app-shell > header > .top-settings > button");
+  const trigger = page.locator(".app-shell > header .top-settings > button");
   await trigger.click();
   const settings = page.locator(
     `[id="${await trigger.getAttribute("aria-controls")}"]`,

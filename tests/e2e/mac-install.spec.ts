@@ -65,7 +65,7 @@ for (const locale of ["en", "ru", "uk"] as const) {
     ]) {
       await page.setViewportSize({ width, height });
       const trigger = page.locator(
-        ".app-shell > header > .top-settings > button",
+        ".app-shell > header .top-settings > button",
       );
       await trigger.click();
       const settings = page.locator(".top-settings > [popover]:popover-open");

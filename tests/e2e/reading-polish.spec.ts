@@ -19,7 +19,7 @@ test.beforeEach(async ({ page }) => {
   await page.setExtraHTTPHeaders({ "CF-Connecting-IP": crypto.randomUUID() });
 });
 async function settings(page: Page) {
-  const trigger = page.locator(".app-shell > header > .top-settings > button");
+  const trigger = page.locator(".app-shell > header .top-settings > button");
   const id = await trigger.getAttribute("aria-controls");
   const menu = page.locator(`[id="${id}"]`);
   if (!(await menu.isVisible())) await trigger.click();

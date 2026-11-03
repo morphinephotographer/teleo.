@@ -108,7 +108,10 @@ export class VoiceFollow {
   private suspended = false;
   private restartTimer?: ReturnType<typeof setTimeout>;
   private language = "";
-  private emptySessions = 0;
+  /** Sessions in a row that ended without ever starting (real failures). */
+  private failedStarts = 0;
+  /** iPhone/iPad: the last recognizer, reused so Safari does not ask again. */
+  private spare?: Recognition;
   private sessionStarted = 0;
   private started = false;
   private heardInSession = false;
@@ -167,6 +170,7 @@ export class VoiceFollow {
     this.suspended = false;
     clearTimeout(this.restartTimer);
     this.close();
+    this.spare = undefined;
     if (report) {
       this.follower = undefined;
       this.onStatus("off");
@@ -178,7 +182,7 @@ export class VoiceFollow {
     this.close();
     this.active = true;
     this.suspended = false;
-    this.emptySessions = 0;
+    this.failedStarts = 0;
     this.networkErrors = 0;
     this.captureErrors = 0;
     this.onStatus(this.listened ? "listening" : "starting");
@@ -186,18 +190,27 @@ export class VoiceFollow {
     this.open();
   }
 
-  private get emptyLimit() {
+  private get failLimit() {
     return this.apple ? 4 : 6;
   }
 
-  /** Each session gets a new recognizer: Safari does not reliably restart a used one. */
-  private open() {
+  /**
+   * Opens one recognition session.
+   * - iPhone/iPad: one phrase per session (`continuous` is unreliable in
+   *   WebKit: results stop arriving), and the same recognizer is reused so
+   *   Safari does not ask for the microphone again; a fresh one is made only
+   *   if the old one refuses to start.
+   * - Elsewhere: a fresh continuous recognizer per session.
+   */
+  private open(fresh = false): void {
     if (!this.active || !this.follower) return;
     const Constructor = recognitionConstructor();
     if (!Constructor) return this.fail("voiceUnsupported");
-    const recognition = new Constructor();
+    const reuse = this.apple && !fresh && this.spare;
+    const recognition = reuse || new Constructor();
+    this.spare = undefined;
     recognition.lang = this.language;
-    recognition.continuous = true;
+    recognition.continuous = !this.apple;
     recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.onstart = () => {
@@ -211,7 +224,7 @@ export class VoiceFollow {
     recognition.onresult = (event) => {
       if (this.recognition !== recognition || !this.follower) return;
       this.heardInSession = true;
-      this.emptySessions = 0;
+      this.failedStarts = 0;
       this.networkErrors = 0;
       this.captureErrors = 0;
       const parts: string[] = [];
@@ -257,21 +270,33 @@ export class VoiceFollow {
     };
     recognition.onend = () => {
       if (this.recognition !== recognition) return;
-      this.log("end");
+      this.log(
+        this.heardInSession
+          ? "end"
+          : this.started
+            ? "end (silence)"
+            : "end (never started)",
+      );
       this.recognition = undefined;
+      if (this.apple) this.spare = recognition;
       if (!this.active) return;
-      const short =
-        !this.started || performance.now() - this.sessionStarted < 1500;
-      if (this.heardInSession) this.emptySessions = 0;
-      else if (short) this.emptySessions++;
-      // Sessions that keep ending at once: the browser will not listen on its
-      // own any more. Pause rather than flicker the microphone on and off.
-      if (this.emptySessions > this.emptyLimit) return this.suspend();
+      // Silence just reopens the next session; only sessions that never
+      // started are failures. Several in a row: the browser will not listen
+      // without a tap, so pause rather than flicker the microphone.
+      if (this.started || this.heardInSession) this.failedStarts = 0;
+      else this.failedStarts++;
+      if (this.failedStarts > this.failLimit) return this.suspend();
+      const quick =
+        this.started && performance.now() - this.sessionStarted < 1000;
       this.restartTimer = setTimeout(
-        () => this.open(),
-        this.apple
-          ? Math.min(2500, 450 + 450 * this.emptySessions)
-          : Math.min(1500, 200 * (this.emptySessions + 1)),
+        () => this.open(this.failedStarts > 1),
+        this.failedStarts
+          ? Math.min(2500, (this.apple ? 500 : 300) * this.failedStarts)
+          : this.apple
+            ? 300
+            : quick
+              ? 400
+              : 150,
       );
     };
     this.recognition = recognition;
@@ -279,14 +304,18 @@ export class VoiceFollow {
     this.heardInSession = false;
     this.follower.restart();
     try {
-      this.log("open");
+      this.log(reuse ? "open (reused)" : "open");
       recognition.start();
     } catch (error) {
-      // A start that throws (still busy) is retried like an empty session.
       this.log(`start threw ${(error as Error)?.name || error}`);
       this.recognition = undefined;
-      if (++this.emptySessions > this.emptyLimit) return this.suspend();
-      this.restartTimer = setTimeout(() => this.open(), this.apple ? 900 : 400);
+      // A reused recognizer that will not start: try a fresh one right away.
+      if (reuse) return this.open(true);
+      if (++this.failedStarts > this.failLimit) return this.suspend();
+      this.restartTimer = setTimeout(
+        () => this.open(true),
+        this.apple ? 900 : 400,
+      );
     }
   }
 
@@ -307,6 +336,7 @@ export class VoiceFollow {
     this.log("paused – tap to continue");
     clearTimeout(this.restartTimer);
     this.close();
+    this.spare = undefined;
     this.active = false;
     this.suspended = true;
     this.onStatus("error", "voicePaused");

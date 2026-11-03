@@ -42,11 +42,14 @@ Still to verify on real devices: Chrome/Edge on Mac with a real microphone (uk/r
 
 ## iPhone and iPad (Safari)
 
-Safari on iPhone/iPad ends a recognition session after every phrase or pause, fails a start made too soon after the previous session ("audio-capture"), and does not reliably restart a used recognizer. Voice follow therefore:
+Safari on iPhone/iPad does not keep `continuous` recognition working: results stop arriving and the session ends (WebKit bug 225298), so the microphone appears to switch on and off by itself. It also fails a start made too soon after the previous session ("audio-capture"), throws when a recognizer that is still running is started, and may ask for the microphone again for every new recognizer. Voice follow therefore, on iPhone/iPad:
 
-- opens a **new** recognizer for every session;
-- waits for the microphone to free up before reopening (450 ms, growing by 450 ms per empty session up to 2.5 s on iPhone/iPad; 200 ms elsewhere);
+- runs **one phrase per session** (`continuous = false`) and reopens 300 ms after each session ends;
+- **reuses the same recognizer** for the whole reading (a fresh one only if the old one refuses to start);
+- treats sessions that started and ended in silence as normal (the presenter is quiet), never as failures;
 - ignores `no-speech`, `aborted`, up to 3 `network` and up to 4 `audio-capture` errors after it has listened once;
-- when sessions keep ending at once (5 in a row on iPhone/iPad) or the browser refuses an automatic restart, **pauses** instead of flickering the microphone: "Listening paused… tap the text where you are, or the microphone". A tap is a user gesture, so listening continues from the tapped word.
+- when sessions keep ending without ever starting (5 in a row) or the browser refuses an automatic restart, **pauses** instead of flickering: "Listening paused… tap the text where you are, or the microphone". A tap is a user gesture, so listening continues from the tapped word.
 
-Field diagnosis: open the Reader with `?voicelog=1` in the address (e.g. `https://teleo.cc/studio?voicelog=1`) to see the recognizer's open/start/result/error/end events on screen. Simulation tests: `tests/e2e/voice-ipad.spec.ts`.
+Other browsers keep one continuous session with a fresh recognizer after each end.
+
+Field diagnosis: open the Reader with `?voicelog=1` in the address (e.g. `https://teleo.cc/studio?voicelog=1`) to see the recognizer's open/start/result/error/end events on screen. Simulation tests: `tests/e2e/voice-ipad.spec.ts` (models the WebKit behaviour above; they fail on the previous code).

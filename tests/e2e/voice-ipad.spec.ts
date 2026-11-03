@@ -3,10 +3,12 @@ import { dictionaries } from "../../apps/web/src/i18n";
 const t = dictionaries.en;
 
 /**
- * iPad Safari's recognizer, as observed: every session ends after a phrase or
- * a pause; a start too soon after the previous end fails at once with
- * "audio-capture"; a used recognizer object cannot be started again; and the
- * browser may refuse automatic restarts until the next tap.
+ * iPad Safari's recognizer, as reported: in `continuous` mode results stop
+ * arriving (WebKit bug 225298) and the session just ends; a session ends after
+ * a phrase or a pause; a start too soon after the previous end fails with
+ * "audio-capture"; starting a recognizer that is still running throws; every
+ * new recognizer object may ask for the microphone again; and the browser may
+ * refuse automatic restarts until the next tap.
  */
 const text = Array.from(
   { length: 12 },
@@ -39,14 +41,17 @@ test.beforeEach(async ({ page }) => {
       onerror: Handler = null;
       onend: Handler = null;
       onstart: Handler = null;
-      used = false;
+      running = false;
+      constructor() {
+        w.__instances = ((w.__instances as number) || 0) + 1;
+      }
       start() {
-        if (this.used)
+        if (this.running)
           throw new DOMException("already started", "InvalidStateError");
-        this.used = true;
+        this.running = true;
         w.__starts = ((w.__starts as number) || 0) + 1;
         w.__recognition = this;
-        const tooSoon = performance.now() - lastEnd < 400 || micBusy;
+        const tooSoon = performance.now() - lastEnd < 250 || micBusy;
         const refuse = w.__refuse as boolean | undefined;
         w.__log.push(tooSoon ? "fail-busy" : refuse ? "refused" : "start");
         const die = w.__die as boolean | undefined;
@@ -65,6 +70,8 @@ test.beforeEach(async ({ page }) => {
         }, 10);
       }
       finish() {
+        if (!this.running) return;
+        this.running = false;
         micBusy = false;
         lastEnd = performance.now();
         this.onend?.({});
@@ -73,14 +80,17 @@ test.beforeEach(async ({ page }) => {
         setTimeout(() => this.finish(), 10);
       }
       abort() {
+        if (this.running) lastEnd = performance.now();
+        this.running = false;
         micBusy = false;
-        lastEnd = performance.now();
       }
       /** Says a phrase; like iPad, the session ends right after it. */
       phrase(transcript: string) {
-        this.onresult?.({
-          results: [Object.assign([{ transcript }], { isFinal: true })],
-        });
+        // WebKit bug: continuous sessions deliver no results.
+        if (!this.continuous)
+          this.onresult?.({
+            results: [Object.assign([{ transcript }], { isFinal: true })],
+          });
         setTimeout(() => this.finish(), 30);
       }
     }
@@ -143,6 +153,12 @@ test("sessions that end after every phrase restart calmly and keep following", a
     await page.waitForTimeout(100);
   }
   expect((await log(page)).filter((l) => l !== "start")).toEqual([]);
+  // One recognizer for the whole reading: Safari does not ask again.
+  expect(
+    await page.evaluate(
+      () => (window as never as { __instances: number }).__instances,
+    ),
+  ).toBe(1);
   await expect(page.locator(".voice-status")).toHaveClass(/listening/);
   await expect(page.getByRole("alert")).toHaveCount(0);
   // Following moved on into paragraph 2.
@@ -216,4 +232,26 @@ test("sessions that end at once give up after a few calm attempts", async ({
   expect(attempts).toBeLessThanOrEqual(6);
   await page.waitForTimeout(2500);
   expect((await starts(page)) - before).toBe(attempts);
+});
+
+test("long silences keep listening instead of pausing", async ({ page }) => {
+  await openReader(page);
+  await page
+    .locator(".reader-top")
+    .getByRole("button", { name: t.voiceFollow, exact: true })
+    .click();
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  // Safari ends a silent session after a while; the presenter is just quiet.
+  for (let i = 0; i < 8; i++) {
+    const before = await starts(page);
+    await page.waitForTimeout(150);
+    await page.evaluate(() =>
+      (
+        window as never as { __recognition?: { finish: () => void } }
+      ).__recognition?.finish(),
+    );
+    await expect.poll(() => starts(page), { timeout: 3000 }).toBe(before + 1);
+  }
+  await expect(page.locator(".voice-status")).toHaveClass(/listening/);
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });

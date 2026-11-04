@@ -7160,7 +7160,7 @@ input[type="checkbox"] {
   }
 }
 
-/* Tapping teleo. in the top bar: the "o" winks like an eye, the dot hops. */
+/* Tapping teleo. in the top bar plays a small trampoline (Wordmark.tsx). */
 .wordmark.playful {
   pointer-events: auto;
   cursor: default;
@@ -7172,46 +7172,9 @@ input[type="checkbox"] {
 .wordmark.playful > .wordmark-dot {
   display: inline-block;
 }
-.wordmark.playful > .wordmark-dot {
-  transform-origin: 50% 100%;
-}
-.wordmark.playful.wink > .wordmark-o {
-  animation: wordmark-wink 420ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-.wordmark.playful.wink > .wordmark-dot {
-  animation: wordmark-hop 560ms cubic-bezier(0.3, 0, 0.3, 1) 200ms;
-}
-/* The lid comes down from the top: the closed "o" keeps only its lower arc. */
-@keyframes wordmark-wink {
-  0%,
-  100% {
-    clip-path: inset(-10% -10% -10% -10%);
-  }
-  35%,
-  58% {
-    clip-path: inset(62% -10% -10% -10%);
-  }
-}
-@keyframes wordmark-hop {
-  0%,
-  100% {
-    transform: translateY(0) scale(1, 1);
-  }
-  12% {
-    transform: translateY(0) scale(1.15, 0.85);
-  }
-  40% {
-    transform: translateY(-0.26em) scale(0.92, 1.1);
-  }
-  68% {
-    transform: translateY(0) scale(1.2, 0.8);
-  }
-  84% {
-    transform: translateY(-0.05em) scale(1, 1);
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .wordmark.playful.wink > * {
-    animation: none;
-  }
+/* An empty inline-block sits on the baseline: it tells the script where that is. */
+.wordmark.playful > .wordmark-base {
+  display: inline-block;
+  width: 0;
+  height: 0;
 }

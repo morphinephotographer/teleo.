@@ -7162,18 +7162,23 @@ input[type="checkbox"] {
 
 /* Tapping teleo. in the top bar plays a small trampoline (Wordmark.tsx). */
 .wordmark.playful {
+  position: relative;
   pointer-events: auto;
   cursor: default;
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   -webkit-user-select: none;
 }
-.wordmark.playful > .wordmark-o,
-.wordmark.playful > .wordmark-dot {
+.wordmark.playful .wordmark-o,
+.wordmark.playful .wordmark-dot {
   display: inline-block;
 }
+.wordmark.playful > .wordmark-sheet {
+  position: absolute;
+  pointer-events: none;
+}
 /* An empty inline-block sits on the baseline: it tells the script where that is. */
-.wordmark.playful > .wordmark-base {
+.wordmark.playful .wordmark-base {
   display: inline-block;
   width: 0;
   height: 0;

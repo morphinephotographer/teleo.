@@ -2340,7 +2340,7 @@ function App() {
                       setPanel("library");
                     }}
                   />
-                  <Wordmark />
+                  <Wordmark playful />
                 </div>
                 <div className="topbar-title">
                   <TeleoSelect

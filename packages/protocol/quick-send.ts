@@ -1,5 +1,13 @@
 /** Fits the existing relay frame budget even when every character is JSON-escaped. */
 export const QUICK_SEND_LIMIT = 8_000;
+export function quickSendBodyIssue(
+  body: string,
+): "empty" | "tooLong" | "invalid" | null {
+  if (!body.trim()) return "empty";
+  if (body.length > QUICK_SEND_LIMIT) return "tooLong";
+  if (body.includes("\u0000")) return "invalid";
+  return null;
+}
 export type QuickSend = {
   type: "quickSend";
   id: string;
@@ -25,9 +33,7 @@ export function validQuickSend(value: unknown): value is QuickSend {
     transferId(m.id) &&
     ["session", "library"].includes(m.destination) &&
     typeof m.body === "string" &&
-    !!m.body.trim() &&
-    m.body.length <= QUICK_SEND_LIMIT &&
-    !m.body.includes("\u0000")
+    quickSendBodyIssue(m.body) === null
   );
 }
 export function validQuickSendAck(value: unknown): value is QuickSendAck {

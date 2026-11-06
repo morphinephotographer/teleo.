@@ -1,3 +1,4 @@
+import type { VoiceOffer } from "../../../packages/protocol/remote-voice";
 import type {
   QuickSend,
   QuickSendAck,
@@ -254,6 +255,15 @@ function App() {
     () => localSet("teleo.voiceLanguage", voiceLanguage),
     [voiceLanguage],
   );
+  const [voiceSource, setVoiceSource] = useState<"local" | "phone">("local");
+  const [phoneVoiceOffer, setPhoneVoiceOffer] = useState<VoiceOffer | null>(
+    null,
+  );
+  const voiceGrant = useRef<{
+    offer: VoiceOffer;
+    lastSeen: number;
+    heard: boolean;
+  } | null>(null);
   const voiceTarget = useRef<number | null>(null);
   const voiceScroll = useRef({
     desired: -1,
@@ -619,6 +629,14 @@ function App() {
     registry.set("teleo-cue", new HighlightClass(...ranges));
   }, [reading, bodyParagraphs]);
   const stopVoice = () => {
+    const grant = voiceGrant.current;
+    voiceGrant.current = null;
+    if (grant)
+      remote.current.voice({
+        type: "voiceStop",
+        version: 1,
+        session: grant.offer.session,
+      });
     voice.stop();
     voiceTarget.current = null;
     voiceScroll.current = { ...voiceScroll.current, painted: -1, value: -1 };
@@ -628,6 +646,11 @@ function App() {
     const view = viewport.current,
       script = currentRef.current;
     if (!view || !script) return;
+    stopVoice();
+    if (voiceSource === "phone" && remoteStatus !== "connected") {
+      setVoiceError("voicePhoneDisconnected");
+      return;
+    }
     if (engine.playing) command({ action: "pause" });
     engine.countdown = 0;
     const from = Math.round(
@@ -645,15 +668,62 @@ function App() {
       painted: -1,
       last: 0,
     };
-    voice.start(
-      script.body,
+    const language =
       voiceLanguage === "auto"
         ? speechLanguage(script.body, locale)
-        : voiceLanguage,
-      from,
-    );
+        : voiceLanguage;
+    if (voiceSource === "phone") {
+      const offer: VoiceOffer = {
+        type: "voiceOffer",
+        version: 1,
+        session: crypto.randomUUID(),
+        target: controlTargetRef.current,
+        language,
+      };
+      voiceGrant.current = { offer, lastSeen: Date.now(), heard: false };
+      voice.startRemote(script.body, from);
+      remote.current.voice(offer);
+    } else voice.start(script.body, language, from);
     showControls();
   };
+  const stopVoiceRef = useRef(stopVoice);
+  stopVoiceRef.current = stopVoice;
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const grant = voiceGrant.current;
+      if (grant && Date.now() - grant.lastSeen > (grant.heard ? 7000 : 30000)) {
+        stopVoiceRef.current();
+        setVoiceError("voicePhoneDisconnected");
+      }
+    }, 1000);
+    const hidden = () => {
+      if (document.hidden && voiceGrant.current) stopVoiceRef.current();
+    };
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, []);
+  const voiceSourcePicker = (
+    <TeleoSelect
+      label={t("voiceSource")}
+      className="voice-source-picker"
+      value={voiceSource}
+      onChange={(value) => {
+        stopVoice();
+        setVoiceSource(value === "phone" ? "phone" : "local");
+      }}
+      options={[
+        { value: "local", label: t("voiceLocal") },
+        {
+          value: "phone",
+          label: t("voicePhone"),
+          disabled: remoteStatus !== "connected",
+        },
+      ]}
+    />
+  );
   const voiceStepRef = useRef((_view: HTMLElement, _now: number) => {});
   /** Called every frame while voice follow is on: ease the guide to the spoken position. */
   voiceStepRef.current = (view, now) => {
@@ -1308,6 +1378,46 @@ function App() {
         serverUnreachable: "serverUnreachable",
         expired: "expired",
       };
+      if (e.voice) {
+        const frame = e.voice;
+        if (route === "/remote") {
+          if (frame.type === "voiceOffer") setPhoneVoiceOffer(frame);
+          if (frame.type === "voiceStop")
+            setPhoneVoiceOffer((old) =>
+              old?.session === frame.session ? null : old,
+            );
+        } else {
+          const grant = voiceGrant.current;
+          if (
+            grant &&
+            frame.session === grant.offer.session &&
+            grant.offer.target === controlTargetRef.current &&
+            reading
+          ) {
+            grant.lastSeen = Date.now();
+            grant.heard = true;
+            if (frame.type === "voiceTranscript")
+              voice.receiveTranscript(frame.text, frame.restart);
+            if (frame.type === "voiceStatus") {
+              if (frame.status === "error") {
+                stopVoice();
+                setVoiceError(frame.error || "voiceFailed");
+              } else {
+                setVoiceStatus(frame.status);
+                setVoiceError(null);
+              }
+            }
+            if (frame.type === "voiceStop") stopVoice();
+          }
+        }
+      }
+      if (statuses[e.type]) {
+        setPhoneVoiceOffer(null);
+        if (voiceGrant.current) {
+          stopVoice();
+          setVoiceError("voicePhoneDisconnected");
+        }
+      }
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
       if (
         [
@@ -2035,7 +2145,8 @@ function App() {
       <details className="voice-settings">
         <summary>{t("voiceFollow")}</summary>
         <p>{t(voiceFollowSupported() ? "voiceHelp" : "voiceUnsupported")}</p>
-        {voiceFollowSupported() && (
+        {voiceSourcePicker}
+        {(voiceFollowSupported() || voiceSource === "phone") && (
           <label>
             {t("voiceLanguage")}
             <TeleoSelect
@@ -2473,6 +2584,11 @@ function App() {
         ) : route === "/remote" ? (
           <RemoteController
             t={t}
+            voiceOffer={phoneVoiceOffer}
+            onVoiceFrame={(frame) => {
+              if (frame.type === "voiceStop") setPhoneVoiceOffer(null);
+              return remote.current.voice(frame);
+            }}
             status={remoteStatus}
             state={remoteState}
             preview={receiver.current}
@@ -2740,11 +2856,17 @@ function App() {
                   {t(
                     voiceStatus === "listening"
                       ? "voiceListening"
-                      : "voiceStarting",
+                      : voiceSource === "phone"
+                        ? "voicePhoneWaiting"
+                        : "voiceStarting",
                   )}
                 </span>
               )}
-              {voiceFollowSupported() && (
+              {(voiceFollowSupported() ||
+                remoteStatus === "connected" ||
+                voiceSource === "phone") &&
+                voiceSourcePicker}
+              {(voiceFollowSupported() || voiceSource === "phone") && (
                 <IconButton
                   name="microphone"
                   label={t(voiceOn ? "voiceFollowStop" : "voiceFollow")}

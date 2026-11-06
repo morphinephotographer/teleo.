@@ -749,3 +749,132 @@ describe("Quick Send relay", () => {
     host.ws.close();
   });
 });
+
+describe("ephemeral remote voice", () => {
+  const grant = () => ({
+    type: "voiceOffer",
+    version: 1,
+    session: crypto.randomUUID(),
+    target: crypto.randomUUID(),
+    language: "uk-UA",
+  });
+  it("requires host consent, drops stale sessions and replays, and forwards only bounded ephemeral speech", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const offer = grant();
+    host.send(offer);
+    expect(await phone.next("voiceOffer")).toMatchObject(offer);
+    const frame = {
+      type: "voiceTranscript",
+      version: 1,
+      session: offer.session,
+      sequence: 0,
+      restart: true,
+      text: "PRIVATE_REMOTE_SPEECH_92",
+    };
+    phone.send(frame);
+    expect(await host.next("voiceTranscript")).toMatchObject(frame);
+    phone.send(frame);
+    phone.send({ ...frame, session: crypto.randomUUID(), sequence: 1 });
+    await new Promise((r) => setTimeout(r, 60));
+    expect(host.messages.some((m) => m.type === "voiceTranscript")).toBe(false);
+    host.send({ type: "voiceStop", version: 1, session: offer.session });
+    await phone.next("voiceStop");
+    phone.send({ ...frame, sequence: 2 });
+    await new Promise((r) => setTimeout(r, 60));
+    expect(host.messages.some((m) => m.type === "voiceTranscript")).toBe(false);
+    for (const file of await readdir(persistence, { recursive: true })) {
+      if (!file.endsWith(".sqlite")) continue;
+      const db = new DatabaseSync(join(persistence, file));
+      try {
+        for (const row of db
+          .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+          .all()) {
+          const name = String(row.name).replace(/"/g, '""');
+          const statement = db.prepare(`SELECT * FROM "${name}"`);
+          statement.setReadBigInts(true);
+          expect(
+            JSON.stringify(statement.all(), (_, v) =>
+              v instanceof Uint8Array
+                ? Buffer.from(v).toString("utf8")
+                : typeof v === "bigint"
+                  ? String(v)
+                  : v,
+            ),
+          ).not.toContain(frame.text);
+        }
+      } finally {
+        db.close();
+      }
+    }
+    host.send({ type: "revoke" });
+  });
+  it("prevents the controller from granting itself a microphone session", async () => {
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    phone.send(grant());
+    await phone.waitClosed();
+  });
+  it("rejects host-authored transcripts and unapproved voice", async () => {
+    const first = await session();
+    first.phone.send({
+      type: "voiceStop",
+      version: 1,
+      session: crypto.randomUUID(),
+    });
+    await first.phone.waitClosed();
+    const { host, phone } = await session();
+    host.send({ type: "allow" });
+    await phone.next("connected");
+    const offer = grant();
+    host.send(offer);
+    await phone.next("voiceOffer");
+    host.send({
+      type: "voiceTranscript",
+      version: 1,
+      session: offer.session,
+      sequence: 0,
+      text: "invalid role",
+      restart: true,
+    });
+    await host.waitClosed();
+  });
+});
+
+it("remote voice consent is invalidated on controller reconnect", async () => {
+  const room = await create(),
+    hostKey = resumeKey(),
+    phoneKey = resumeKey();
+  const host = await peer(room.id, room.host, hostKey);
+  await host.next("waiting");
+  const phone = await peer(room.id, room.invite, phoneKey);
+  await host.next("approval");
+  host.send({ type: "allow" });
+  await phone.next("connected");
+  const offer = {
+    type: "voiceOffer",
+    version: 1,
+    session: crypto.randomUUID(),
+    target: crypto.randomUUID(),
+    language: "en-US",
+  };
+  host.send(offer);
+  await phone.next("voiceOffer");
+  phone.ws.close(1001, "Network loss");
+  await host.next("reconnecting");
+  const replacement = await peer(room.id, phoneKey, phoneKey, true);
+  await replacement.next("connected");
+  replacement.send({
+    type: "voiceTranscript",
+    version: 1,
+    session: offer.session,
+    sequence: 0,
+    restart: true,
+    text: "stale microphone",
+  });
+  await new Promise((r) => setTimeout(r, 60));
+  expect(host.messages.some((m) => m.type === "voiceTranscript")).toBe(false);
+  host.send({ type: "revoke" });
+});

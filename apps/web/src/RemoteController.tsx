@@ -1,3 +1,8 @@
+import { RemoteMicrophone } from "./RemoteMicrophone";
+import type {
+  VoiceFrame,
+  VoiceOffer,
+} from "../../../packages/protocol/remote-voice";
 import { QuickSendSheet } from "./QuickSendSheet";
 import type {
   QuickSend,
@@ -141,7 +146,11 @@ export function RemoteController({
   language,
   onStudio,
   onQuickSend,
+  voiceOffer,
+  onVoiceFrame,
 }: {
+  voiceOffer: VoiceOffer | null;
+  onVoiceFrame: (frame: VoiceFrame) => boolean;
   t: (key: Key) => string;
   status: Key | null;
   state: PlaybackState;
@@ -706,6 +715,12 @@ export function RemoteController({
           <span>−{clockTime(time.remaining)}</span>
         </div>
       </div>
+      <RemoteMicrophone
+        offer={voiceOffer}
+        connected={connected}
+        onFrame={onVoiceFrame}
+        t={t}
+      />
       <div className="remote-playback">
         <IconButton
           name="minus"

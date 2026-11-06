@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
   QUICK_SEND_LIMIT,
+  quickSendBodyIssue,
   type QuickSend,
   type QuickSendAck,
 } from "../../../packages/protocol/quick-send";
@@ -29,10 +30,18 @@ export function QuickSendSheet({
   const [error, setError] = useState<Key | null>(null);
   const attempt = useRef<QuickSend | null>(null);
   const file = useRef<HTMLInputElement>(null);
-  const valid =
-    !!body.trim() &&
-    body.length <= QUICK_SEND_LIMIT &&
-    !body.includes("\u0000");
+  const editor = useRef<HTMLTextAreaElement>(null);
+  const issue = quickSendBodyIssue(body);
+  const valid = issue === null;
+  const blocked: Key | null = !connected
+    ? "quickSendPairRequired"
+    : issue === "tooLong"
+      ? "quickSendTooLong"
+      : issue === "invalid"
+        ? "quickSendInvalidText"
+        : issue === "empty"
+          ? "quickSendEmpty"
+          : null;
   const close = () => {
     if (!busy) onClose();
   };
@@ -97,6 +106,11 @@ export function QuickSendSheet({
       ) : (
         <div className="quick-send-content">
           <textarea
+            ref={editor}
+            aria-invalid={
+              issue === "tooLong" || issue === "invalid" || undefined
+            }
+            aria-describedby="quick-send-count quick-send-reason"
             aria-label={t("quickSendTitle")}
             placeholder={t("quickSendPlaceholder")}
             value={body}
@@ -106,7 +120,13 @@ export function QuickSendSheet({
               setError(null);
             }}
           />
-          <output className="quick-send-count" aria-live="polite">
+          <output
+            id="quick-send-count"
+            className={
+              "quick-send-count" + (issue === "tooLong" ? " invalid" : "")
+            }
+            aria-live="polite"
+          >
             {body.length} / {QUICK_SEND_LIMIT} {t("quickSendCharacters")}
           </output>
           <div className="quick-send-tools">
@@ -115,12 +135,11 @@ export function QuickSendSheet({
               onClick={async () => {
                 try {
                   const text = await navigator.clipboard.readText();
-                  if (text.length > QUICK_SEND_LIMIT || text.includes("\u0000"))
-                    throw Error();
                   setBody(text);
                   setError(null);
                 } catch {
                   setError("quickSendClipboard");
+                  editor.current?.focus();
                 }
               }}
             >
@@ -181,10 +200,15 @@ export function QuickSendSheet({
               </label>
             ))}
           </fieldset>
-          {!connected && <p role="status">{t("quickSendPairRequired")}</p>}
+          <p id="quick-send-reason" role="status" aria-live="polite">
+            {blocked
+              ? t(blocked).replace("{limit}", QUICK_SEND_LIMIT.toLocaleString())
+              : ""}
+          </p>
           {error && <p role="alert">{t(error)}</p>}
           <button
             className="primary"
+            aria-describedby="quick-send-reason"
             disabled={!connected || !valid || busy}
             onClick={() => void submit()}
           >

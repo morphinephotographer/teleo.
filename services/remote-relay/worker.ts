@@ -1,4 +1,8 @@
 import {
+  validVoiceFrame,
+  type VoiceOffer,
+} from "../../packages/protocol/remote-voice";
+import {
   validQuickSend,
   validQuickSendAck,
 } from "../../packages/protocol/quick-send";
@@ -31,6 +35,8 @@ type RoomData = {
   transfers?: string[];
   previewAllowed?: boolean;
   previewEpoch?: number;
+  voice?: VoiceOffer;
+  voiceSequence?: number;
 };
 type Attachment = {
   role: "new" | Role;
@@ -242,7 +248,12 @@ export class Room extends DurableObject<Env> {
         if (
           message.length > 1024 &&
           !(a.role === "host" && m.type === "previewContent") &&
-          !(a.role === "controller" && m.type === "quickSend")
+          !(a.role === "controller" && m.type === "quickSend") &&
+          !(
+            a.role === "controller" &&
+            m.type === "voiceTranscript" &&
+            message.length <= 6000
+          )
         )
           throw Error();
         if (a.role === "new") {
@@ -274,6 +285,8 @@ export class Room extends DurableObject<Env> {
             } else throw Error();
             d.resume[role] = await hash(m.resume);
           } else throw Error();
+          delete d.voice;
+          delete d.voiceSequence;
           const previous = this.peers(d, role);
           a.role = role;
           d.connections[role] = a.id;
@@ -319,6 +332,46 @@ export class Room extends DurableObject<Env> {
           return;
         }
         if (!d.approved) throw Error();
+        if (
+          typeof m.type === "string" &&
+          [
+            "voiceOffer",
+            "voiceStop",
+            "voiceStatus",
+            "voiceTranscript",
+          ].includes(m.type)
+        ) {
+          if (!validVoiceFrame(m)) throw Error();
+          if (m.type === "voiceOffer") {
+            if (a.role !== "host") throw Error();
+            if (!this.ready(d)) return;
+            d.voice = m;
+            d.voiceSequence = -1;
+            await this.ctx.storage.put("room", d);
+            this.send(d, "controller", m);
+          } else {
+            if (m.type !== "voiceStop" && a.role !== "controller")
+              throw Error();
+            if (!this.ready(d) || d.voice?.session !== m.session) return;
+            if (m.type === "voiceStop") {
+              delete d.voice;
+              delete d.voiceSequence;
+              await this.ctx.storage.put("room", d);
+              this.send(d, "host", m);
+              this.send(d, "controller", m);
+            } else {
+              if (m.type === "voiceTranscript") {
+                if (m.sequence <= (d.voiceSequence ?? -1)) return;
+                d.voiceSequence = m.sequence;
+                await this.ctx.storage.put("room", d);
+              }
+              // Forward speech in memory only; never put the frame in storage.
+              this.send(d, "host", m);
+            }
+          }
+          return;
+        }
+
         if (
           m.type === "previewPermission" &&
           a.role === "host" &&
@@ -523,6 +576,8 @@ export class Room extends DurableObject<Env> {
         await this.revoke();
         return;
       }
+      delete d.voice;
+      delete d.voiceSequence;
       delete d.connections[a.role];
       d.detached[a.role] = Date.now() + RECONNECT_GRACE;
       d.pending = [];

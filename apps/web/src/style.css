@@ -6898,7 +6898,11 @@ input[type="checkbox"] {
 .app-shell.route-studio > header.topbar .script-selector .picker-trigger:hover {
   background: var(--subtle);
 }
-.app-shell.route-studio > header.topbar .script-selector .picker-trigger > span:first-child {
+.app-shell.route-studio
+  > header.topbar
+  .script-selector
+  .picker-trigger
+  > span:first-child {
   order: 1;
   min-width: 0;
   max-width: calc(100% - 19px);
@@ -7063,7 +7067,10 @@ input[type="checkbox"] {
     margin-right: 6px;
   }
   .app-shell.route-studio > header.topbar .script-selector .picker-trigger,
-  .app-shell.route-studio > header.topbar .script-selector .teleo-select-native {
+  .app-shell.route-studio
+    > header.topbar
+    .script-selector
+    .teleo-select-native {
     justify-content: space-between;
     width: 100%;
     height: 44px;
@@ -7182,4 +7189,102 @@ input[type="checkbox"] {
   display: inline-block;
   width: 0;
   height: 0;
+}
+
+/* Phone voice source uses the same compact monochrome controls as the remote. */
+.reader-top .voice-source-picker {
+  flex: 0 1 auto;
+  max-width: 170px;
+}
+.reader-top .voice-source-picker > button {
+  min-height: 36px;
+  padding: 6px 10px;
+  font-size: 11px;
+}
+.remote-microphone {
+  display: grid;
+  gap: 5px;
+  padding: 4px 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.remote-microphone .remote-mic {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px 14px;
+}
+.remote-mic svg {
+  width: 18px;
+  height: 18px;
+}
+.remote-mic.active {
+  background: var(--ink);
+  color: var(--surface);
+}
+.remote-microphone small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+}
+@media (max-width: 520px) {
+  .reader-top .voice-source-picker {
+    max-width: 118px;
+  }
+  .reader-top .voice-source-picker > button {
+    font-size: 10px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .remote-v12 .remote-text-frame {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+  .remote-v12 .remote-microphone {
+    grid-column: 1;
+    grid-row: 3/5;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 3px;
+    min-height: 0;
+    padding: 0;
+  }
+  .remote-v12 .remote-microphone .remote-mic {
+    flex: 0 0 40px;
+    min-height: 40px;
+    padding: 6px 12px;
+  }
+  .remote-v12 .remote-microphone small {
+    font-size: 10px;
+  }
+  .remote-v12 .remote-bottom-actions {
+    grid-column: 2;
+    grid-row: 5;
+    height: 44px;
+    min-height: 0;
+  }
+  .remote-v12 .remote-bottom-actions > button {
+    height: 44px;
+  }
+}
+
+.quick-send-count.invalid,
+.quick-send-sheet textarea[aria-invalid="true"] {
+  color: #ff8b85;
+}
+.quick-send-sheet textarea[aria-invalid="true"] {
+  border-color: #ff8b85;
+}
+#quick-send-reason {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #ccc;
+}
+#quick-send-reason:empty {
+  display: none;
 }

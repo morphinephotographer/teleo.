@@ -1,4 +1,16 @@
 export const en = {
+  voiceSource: "Microphone source",
+  voiceLocal: "This device",
+  voicePhone: "iPhone remote",
+  voicePhoneStart: "Use iPhone microphone",
+  voicePhoneStop: "Stop iPhone microphone",
+  voicePhoneWaiting: "Start the microphone on iPhone",
+  voicePhoneReady:
+    "Keep this screen open while reading. Tap to allow the microphone.",
+  voicePhoneHelp:
+    "In Reader on the computer, choose iPhone remote and press the microphone.",
+  voicePhoneDisconnected:
+    "The iPhone microphone stopped or the connection was lost. Start voice follow again.",
   voiceFollow: "Follow my voice",
   voiceFollowStop: "Stop following my voice",
   voiceStarting: "Starting microphone…",
@@ -8,7 +20,7 @@ export const en = {
   voiceHelp:
     "In Reader, press the microphone and read aloud: the text follows the words you say and already-read text dims. Tap a word to continue from it. Scroll manually to catch up. Play switches back to steady scrolling. Text in [square brackets] never needs to be spoken.",
   voicePrivacy:
-    "Speech recognition is done by your browser. Depending on the browser, audio may be processed by its speech service (for example, Google in Chrome or Apple in Safari). teleo. never receives or stores audio or transcripts.",
+    "Your browser or its speech provider processes audio. With iPhone remote selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
   voiceUnsupported:
     "This browser does not support speech recognition. Use Chrome, Edge or Safari for voice follow.",
   voicePermission:
@@ -24,13 +36,18 @@ export const en = {
   helpVoice:
     "Voice follow: in Reader, press the microphone and read aloud. The text follows your voice, read text dims, and tapping a word continues from it. Choose the speech language in Settings → Follow my voice. Works in browsers with speech recognition (Chrome, Edge, Safari).",
   privacyVoice:
-    "Voice follow stays off until you turn it on in Reader. While it is on, your browser's speech recognition listens to the microphone; depending on the browser, audio may be processed by its provider's speech service. teleo. itself never receives, sends or stores audio or transcripts.",
+    "Your browser or its speech provider processes audio. With iPhone remote selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
   voiceLanguageError:
     "The browser cannot recognize this language. Choose another speech language in Settings → Follow my voice.",
   offShort: "Off",
   letterSpacing: "Letter spacing",
   previousLine: "Previous line",
   nextLine: "Next line",
+  quickSendEmpty: "Paste or type text into the field to enable Send.",
+  quickSendTooLong:
+    "This text is too long for one transfer. Maximum: {limit} characters. Shorten it or import the full script on the computer.",
+  quickSendInvalidText:
+    "The text contains an unsupported invisible character. Copy it through a plain-text editor and try again.",
   quickSendTitle: "Send text",
   quickSendPlaceholder: "Paste or enter your script…",
   quickSendCharacters: "characters",
@@ -395,6 +412,18 @@ export const en = {
 };
 export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
+  voiceSource: "Джерело мікрофона",
+  voiceLocal: "Цей пристрій",
+  voicePhone: "Пульт iPhone",
+  voicePhoneStart: "Увімкнути мікрофон iPhone",
+  voicePhoneStop: "Вимкнути мікрофон iPhone",
+  voicePhoneWaiting: "Увімкніть мікрофон на iPhone",
+  voicePhoneReady:
+    "Залишайте цей екран відкритим під час читання. Натисніть, щоб дозволити мікрофон.",
+  voicePhoneHelp:
+    "На комп’ютері в режимі читання виберіть Пульт iPhone і натисніть мікрофон.",
+  voicePhoneDisconnected:
+    "Мікрофон iPhone зупинився або з’єднання втрачено. Увімкніть стеження за голосом знову.",
   voiceFollow: "Стежити за голосом",
   voiceFollowStop: "Вимкнути стеження за голосом",
   voiceStarting: "Вмикаю мікрофон…",
@@ -404,7 +433,7 @@ export const uk: Record<Key, string> = {
   voiceHelp:
     "У режимі читання натисніть мікрофон і читайте вголос: текст рухається за вашими словами, а прочитане тьмяніє. Торкніться слова, щоб продовжити з нього. Прокрутіть вручну, щоб наздогнати. Кнопка відтворення повертає рівномірну прокрутку. Текст у [квадратних дужках] вимовляти не потрібно.",
   voicePrivacy:
-    "Мовлення розпізнає ваш браузер. Залежно від браузера звук може оброблятися його сервісом розпізнавання (наприклад, Google у Chrome або Apple у Safari). teleo. ніколи не отримує й не зберігає звук або розпізнаний текст.",
+    "Звук обробляє браузер або його сервіс розпізнавання. Якщо вибрано пульт iPhone, розпізнані фрази передаються через з’єднання пульта на комп’ютер. teleo. не зберігає звук або розпізнані фрази.",
   voiceUnsupported:
     "Цей браузер не підтримує розпізнавання мовлення. Для стеження за голосом використовуйте Chrome, Edge або Safari.",
   voicePermission:
@@ -421,13 +450,18 @@ export const uk: Record<Key, string> = {
   helpVoice:
     "Стеження за голосом: у режимі читання натисніть мікрофон і читайте вголос. Текст рухається за голосом, прочитане тьмяніє, а дотик до слова продовжує з нього. Мову мовлення можна вибрати в Налаштуваннях → Стежити за голосом. Працює в браузерах із розпізнаванням мовлення (Chrome, Edge, Safari).",
   privacyVoice:
-    "Стеження за голосом вимкнене, доки ви не ввімкнете його в режимі читання. Поки воно ввімкнене, розпізнавання мовлення браузера слухає мікрофон; залежно від браузера звук може оброблятися сервісом його постачальника. Сам teleo. ніколи не отримує, не надсилає й не зберігає звук або розпізнаний текст.",
+    "Звук обробляє браузер або його сервіс розпізнавання. Якщо вибрано пульт iPhone, розпізнані фрази передаються через з’єднання пульта на комп’ютер. teleo. не зберігає звук або розпізнані фрази.",
   voiceLanguageError:
     "Браузер не розпізнає цю мову. Виберіть іншу мову мовлення в Налаштуваннях → Стежити за голосом.",
   offShort: "Вимк.",
   letterSpacing: "Міжлітерний інтервал",
   previousLine: "Попередній рядок",
   nextLine: "Наступний рядок",
+  quickSendEmpty: "Вставте або введіть текст у поле, щоб увімкнути надсилання.",
+  quickSendTooLong:
+    "Текст завеликий для одного надсилання. Максимум: {limit} символів. Скоротіть його або імпортуйте повний файл на комп’ютері.",
+  quickSendInvalidText:
+    "Текст містить непідтримуваний невидимий символ. Скопіюйте його через редактор звичайного тексту й повторіть спробу.",
   quickSendTitle: "Надіслати текст",
   quickSendPlaceholder: "Вставте або введіть текст сценарію…",
   quickSendCharacters: "символів",
@@ -791,6 +825,18 @@ export const uk: Record<Key, string> = {
   back: "Назад",
 };
 export const ru: Record<Key, string> = {
+  voiceSource: "Источник микрофона",
+  voiceLocal: "Это устройство",
+  voicePhone: "Пульт iPhone",
+  voicePhoneStart: "Включить микрофон iPhone",
+  voicePhoneStop: "Выключить микрофон iPhone",
+  voicePhoneWaiting: "Включите микрофон на iPhone",
+  voicePhoneReady:
+    "Оставляйте этот экран открытым во время чтения. Нажмите, чтобы разрешить микрофон.",
+  voicePhoneHelp:
+    "На компьютере в режиме чтения выберите Пульт iPhone и нажмите микрофон.",
+  voicePhoneDisconnected:
+    "Микрофон iPhone остановился или соединение потеряно. Включите слежение за голосом заново.",
   voiceFollow: "Следить за голосом",
   voiceFollowStop: "Выключить слежение за голосом",
   voiceStarting: "Включаю микрофон…",
@@ -800,7 +846,7 @@ export const ru: Record<Key, string> = {
   voiceHelp:
     "В режиме чтения нажмите микрофон и читайте вслух: текст движется за вашими словами, а прочитанное тускнеет. Коснитесь слова, чтобы продолжить с него. Прокрутите вручную, чтобы догнать. Кнопка воспроизведения возвращает равномерную прокрутку. Текст в [квадратных скобках] произносить не нужно.",
   voicePrivacy:
-    "Речь распознаёт ваш браузер. В зависимости от браузера звук может обрабатываться его сервисом распознавания (например, Google в Chrome или Apple в Safari). teleo. никогда не получает и не хранит звук или распознанный текст.",
+    "Звук обрабатывает браузер или его сервис распознавания. Если выбран пульт iPhone, распознанные фразы передаются через соединение пульта на компьютер. teleo. не хранит звук или распознанные фразы.",
   voiceUnsupported:
     "Этот браузер не поддерживает распознавание речи. Для слежения за голосом используйте Chrome, Edge или Safari.",
   voicePermission:
@@ -817,13 +863,18 @@ export const ru: Record<Key, string> = {
   helpVoice:
     "Слежение за голосом: в режиме чтения нажмите микрофон и читайте вслух. Текст движется за голосом, прочитанное тускнеет, а касание слова продолжает с него. Язык речи можно выбрать в Настройках → Следить за голосом. Работает в браузерах с распознаванием речи (Chrome, Edge, Safari).",
   privacyVoice:
-    "Слежение за голосом выключено, пока вы не включите его в режиме чтения. Пока оно включено, распознавание речи браузера слушает микрофон; в зависимости от браузера звук может обрабатываться сервисом его поставщика. Сам teleo. никогда не получает, не отправляет и не хранит звук или распознанный текст.",
+    "Звук обрабатывает браузер или его сервис распознавания. Если выбран пульт iPhone, распознанные фразы передаются через соединение пульта на компьютер. teleo. не хранит звук или распознанные фразы.",
   voiceLanguageError:
     "Браузер не распознаёт этот язык. Выберите другой язык речи в Настройках → Следить за голосом.",
   offShort: "Выкл.",
   letterSpacing: "Межбуквенный интервал",
   previousLine: "Предыдущая строка",
   nextLine: "Следующая строка",
+  quickSendEmpty: "Вставьте или введите текст в поле, чтобы включить отправку.",
+  quickSendTooLong:
+    "Текст слишком длинный для одной отправки. Максимум: {limit} символов. Сократите его или импортируйте полный файл на компьютере.",
+  quickSendInvalidText:
+    "В тексте есть неподдерживаемый невидимый символ. Скопируйте его через редактор обычного текста и попробуйте снова.",
   quickSendTitle: "Отправить текст",
   quickSendPlaceholder: "Вставьте или введите текст сценария…",
   quickSendCharacters: "символов",

@@ -3,6 +3,7 @@ import "fake-indexeddb/auto";
 import { createScript, exportBundle } from "../packages/protocol/domain";
 import {
   QUICK_SEND_LIMIT,
+  quickSendBodyIssue,
   validQuickSend,
   validQuickSendAck,
 } from "../packages/protocol/quick-send";
@@ -47,6 +48,15 @@ describe("Quick Send boundaries", () => {
         result: "applied",
       }),
     ).toBe(false);
+  });
+  it("explains exactly why text cannot be sent, including the 8000-character boundary", () => {
+    expect(quickSendBodyIssue(" \n")).toBe("empty");
+    expect(quickSendBodyIssue("a".repeat(QUICK_SEND_LIMIT))).toBeNull();
+    expect(quickSendBodyIssue("a".repeat(QUICK_SEND_LIMIT + 1))).toBe(
+      "tooLong",
+    );
+    expect(quickSendBodyIssue("Text\u0000hidden")).toBe("invalid");
+    expect(quickSendBodyIssue("Привіт 👋\n\nNew paragraph")).toBeNull();
   });
   it("imports existing TXT and portable JSON formats without flattening paragraphs", async () => {
     expect(await readQuickSendFile(new File([body], "script.txt"))).toBe(body);

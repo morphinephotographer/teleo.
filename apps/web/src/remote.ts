@@ -1,4 +1,8 @@
 import {
+  validVoiceFrame,
+  type VoiceFrame,
+} from "../../../packages/protocol/remote-voice";
+import {
   validQuickSend,
   validQuickSendAck,
   type QuickSend,
@@ -24,6 +28,7 @@ export type RemoteEvent = {
   state?: PlaybackState;
   sequence?: number;
   preview?: PreviewEnvelope | PreviewPermission;
+  voice?: VoiceFrame;
 };
 const secret = () =>
   Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
@@ -133,6 +138,10 @@ export class RemoteLink {
         event = JSON.parse(e.data);
       } catch {
         this.finish("unavailable");
+        return;
+      }
+      if (validVoiceFrame(event)) {
+        if (this.ready) this.onEvent({ type: event.type, voice: event });
         return;
       }
       if (validQuickSend(event)) {
@@ -318,6 +327,11 @@ export class RemoteLink {
   send(message: unknown) {
     if (this.authenticated && this.socket?.readyState === WebSocket.OPEN)
       this.socket.send(JSON.stringify(message));
+  }
+  voice(frame: VoiceFrame) {
+    if (!this.ready || !validVoiceFrame(frame)) return false;
+    this.send(frame);
+    return true;
   }
   previewPermission(allowed: boolean) {
     if (this.ready)

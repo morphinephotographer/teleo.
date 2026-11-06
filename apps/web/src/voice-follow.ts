@@ -34,7 +34,8 @@ export type VoiceError =
   | "voiceLanguageError"
   | "voiceFailed"
   | "voicePaused"
-  | "voiceNoAudio";
+  | "voiceNoAudio"
+  | "voicePhoneDisconnected";
 
 function recognitionConstructor(): RecognitionConstructor | undefined {
   const w = window as unknown as {
@@ -165,6 +166,8 @@ export function joinResults(results: RecognitionResultList) {
  */
 export class VoiceFollow {
   private recognition?: Recognition;
+  private remoteInput = false;
+  private transcriptSink?: (text: string, restart: boolean) => void;
   private follower?: SpeechFollower;
   private active = false;
   private suspended = false;
@@ -225,8 +228,14 @@ export class VoiceFollow {
     return this.apple ? 4 : 6;
   }
 
-  start(text: string, language: string, from: number) {
+  start(
+    text: string,
+    language: string,
+    from: number,
+    transcriptSink?: (text: string, restart: boolean) => void,
+  ) {
     this.stop(false);
+    this.transcriptSink = transcriptSink;
     if (!recognitionConstructor()) {
       this.onStatus("error", "voiceUnsupported");
       return;
@@ -240,6 +249,24 @@ export class VoiceFollow {
       `voice on · ${this.apple ? "iPhone/iPad" : "other"} · lang ${this.language || "device"} · ${this.continuous ? "continuous" : "phrase"} · reuse ${this.reuse ? "yes" : "no"}`,
     );
     this.begin();
+  }
+
+  /** A host can follow incoming text even without a local speech API. */
+  startRemote(text: string, from: number) {
+    this.stop(false);
+    this.follower = new SpeechFollower(text, from);
+    this.remoteInput = true;
+    this.active = true;
+    this.onPosition(this.follower.position);
+    this.onStatus("starting");
+  }
+  receiveTranscript(text: string, restart: boolean) {
+    if (!this.remoteInput || !this.active || !this.follower) return;
+    if (restart) this.follower.restart();
+    const before = this.follower.position;
+    const after = this.follower.match(text, performance.now());
+    if (after !== before) this.onPosition(after);
+    this.onStatus("listening");
   }
 
   /** Continue after a pause (call it from a tap: browsers allow a start then). */
@@ -259,6 +286,8 @@ export class VoiceFollow {
   stop(report = true) {
     if (this.active || this.suspended) this.log("voice off");
     this.active = false;
+    this.remoteInput = false;
+    this.transcriptSink = undefined;
     this.suspended = false;
     clearTimeout(this.restartTimer);
     this.close();
@@ -318,6 +347,7 @@ export class VoiceFollow {
       // Safari can drop what it heard earlier in a session; a transcript that
       // no longer continues the last one starts a new stretch of speech.
       const last = this.lastTranscript;
+      let restarted = !last;
       if (
         last &&
         transcript.length < last.length * 0.6 &&
@@ -325,6 +355,7 @@ export class VoiceFollow {
           .toLocaleLowerCase()
           .startsWith(transcript.toLocaleLowerCase().slice(0, 12))
       ) {
+        restarted = true;
         this.log(`#${session} transcript restarted`);
         this.follower.restart();
       }
@@ -336,6 +367,10 @@ export class VoiceFollow {
       this.log(
         `#${session} heard${finals ? " (final)" : ""} …${transcript.slice(-42)}`,
       );
+      if (this.transcriptSink) {
+        this.transcriptSink(transcript, restarted);
+        return;
+      }
       const before = this.follower.position;
       const after = this.follower.match(transcript, performance.now());
       if (after !== before) this.onPosition(after);

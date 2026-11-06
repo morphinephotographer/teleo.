@@ -50,7 +50,7 @@ public struct ScriptBundle: Codable, Sendable {
     for s in bundle.scripts {
       let p = s.preferences
       guard s.body.count <= 2_000_000, p.speed.isFinite, (0.5...3).contains(p.speed),
-        (16...100).contains(p.fontSize), (1...3).contains(p.lineHeight),
+        (16...120).contains(p.fontSize), (1...3).contains(p.lineHeight),
         (280...1600).contains(p.textWidth), ["left", "center", "right"].contains(p.alignment),
         ["dark", "light"].contains(p.appearance), (0...10).contains(p.countdownSeconds)
       else { throw ImportError.invalid }

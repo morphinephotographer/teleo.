@@ -30,7 +30,7 @@ export type ControlCommand =
 const uuid = (v: unknown): v is string =>
   typeof v === "string" && /^[a-f0-9-]{36}$/.test(v);
 const bounds = {
-  fontSize: [16, 100],
+  fontSize: [16, 120],
   lineHeight: [1, 3],
   textWidth: [280, 1600],
   countdownSeconds: [0, 10],

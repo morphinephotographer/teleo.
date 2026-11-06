@@ -41,6 +41,7 @@ describe("v0.6 approved controls", () => {
   it("allowlists typography and secondary preferences with exact types and bounds", () => {
     for (const [key, value] of [
       ["fontSize", 68],
+      ["fontSize", 120],
       ["alignment", "left"],
       ["alignment", "center"],
       ["alignment", "right"],
@@ -55,7 +56,7 @@ describe("v0.6 approved controls", () => {
         validControlCommand({ action: "setPreference", target, key, value }),
       ).toBe(true);
     for (const [key, value] of [
-      ["fontSize", 101],
+      ["fontSize", 121],
       ["alignment", "justify"],
       ["alignment", "LEFT"],
       ["alignment", ""],
@@ -74,6 +75,8 @@ describe("v0.6 approved controls", () => {
   });
   it("transfers only allowlisted control metadata and preserves old state compatibility", () => {
     expect(validControlState(controls)).toBe(true);
+    expect(validControlState({ ...controls, fontSize: 120 })).toBe(true);
+    expect(validControlState({ ...controls, fontSize: 121 })).toBe(false);
     for (const focusPosition of [20, 35, 60, 70])
       expect(validControlState({ ...controls, focusPosition })).toBe(true);
     for (const focusPosition of [0, 71, NaN, "35"])

@@ -37,6 +37,15 @@ final class CoreTests: XCTestCase {
     p.countdown = 1; p.playing = true; p.tick(0); p.tick(0.02)
     p.dispatch(Command(.speedUp)); p.tick(0.04); XCTAssertEqual(p.countdown, 0.96, accuracy: 0.000001)
   }
+  func testEnlargedReadingFontRoundtrip() throws {
+    var script = PortableScript(title: "Large text", body: "Read from a distance")
+    script.preferences.fontSize = 120
+    let data = try ScriptBundle(scripts: [script]).encode()
+    XCTAssertEqual(try ScriptBundle.decode(data).scripts[0].preferences.fontSize, 120)
+    script.preferences.fontSize = 121
+    let invalid = try ScriptBundle(scripts: [script]).encode()
+    XCTAssertThrowsError(try ScriptBundle.decode(invalid))
+  }
   func testCanonicalFixture() throws {
     var root = URL(fileURLWithPath: #filePath)
     for _ in 0..<5 { root.deleteLastPathComponent() }

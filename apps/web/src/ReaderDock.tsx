@@ -225,7 +225,7 @@ export function ReaderDock({
           )}
         </button>
         {slider("textWidth", "width", 280, 1600, 20)}
-        {slider("fontSize", "size", 16, 100, 1)}
+        {slider("fontSize", "size", 16, 120, 1)}
         <IconButton
           name={engine.playing ? "pause" : "play"}
           className="dock-play primary"
@@ -315,7 +315,7 @@ export function ReaderDock({
           </div>
           {(
             [
-              ["fontSize", 16, 100, 1],
+              ["fontSize", 16, 120, 1],
               ["lineHeight", 1, 3, 0.1],
               ["textWidth", 280, 1600, 20],
             ] as const

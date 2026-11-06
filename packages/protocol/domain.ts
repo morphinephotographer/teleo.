@@ -180,7 +180,7 @@ export function parseBundle(input: string): Script[] {
     const p = { ...defaults, ...s.preferences };
     for (const [key, min, max] of [
       ["speed", 0.5, 3],
-      ["fontSize", 16, 100],
+      ["fontSize", 16, 120],
       ["lineHeight", 1, 3],
       ["textWidth", 280, 1600],
       ["countdownSeconds", 0, 10],

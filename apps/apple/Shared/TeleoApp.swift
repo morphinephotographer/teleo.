@@ -408,7 +408,7 @@ struct ReadingSettings: View {
             Slider(value: number(\.speed), in: 0.5...3, step: 0.1)
           }
         }
-        LabeledContent("Text size") { Slider(value: number(\.fontSize), in: 16...100) }
+        LabeledContent("Text size") { Slider(value: number(\.fontSize), in: 16...120) }
         LabeledContent("Line spacing") { Slider(value: number(\.lineHeight), in: 1...3) }
         LabeledContent("Text width") { Slider(value: number(\.textWidth), in: 280...1600) }
         Toggle("Mirror horizontally", isOn: flag(\.mirrorHorizontal))

@@ -796,7 +796,7 @@ export function RemoteController({
           <div ref={quickRef} className="quick-typography">
             {(
               [
-                ["fontSize", "size", 16, 100, 1],
+                ["fontSize", "size", 16, 120, 1],
                 ["lineHeight", "spacing", 1, 3, 0.1],
                 ["textWidth", "width", 280, 1600, 10],
               ] as const
@@ -951,7 +951,7 @@ export function RemoteController({
           )}
           {(
             [
-              ["fontSize", "size", 16, 100, 1],
+              ["fontSize", "size", 16, 120, 1],
               ["lineHeight", "spacing", 1, 3, 0.1],
               ["textWidth", "width", 280, 1600, 10],
             ] as const

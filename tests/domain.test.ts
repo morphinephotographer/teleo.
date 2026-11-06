@@ -92,6 +92,15 @@ describe("portable storage", () => {
       expect(parseBundle(exportBundle([s]))).toEqual([s]);
     }
   });
+  it("roundtrips the enlarged reading font and rejects values above the limit", () => {
+    const script = createScript("Large text", "Read from a distance");
+    script.preferences.fontSize = 120;
+    expect(parseBundle(exportBundle([script]))[0].preferences.fontSize).toBe(
+      120,
+    );
+    script.preferences.fontSize = 121;
+    expect(() => parseBundle(exportBundle([script]))).toThrow();
+  });
   it("rejects invalid schema, limits and preference types", () => {
     expect(() => parseBundle('{"version":2,"scripts":[]}')).toThrow();
     const s = createScript("a");

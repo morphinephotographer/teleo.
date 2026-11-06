@@ -11,7 +11,7 @@ test("wide desktop keeps library and centres the script title", async ({
   page,
 }, info) => {
   test.skip(
-    info.project.name !== "desktop",
+    info.project.name === "mobile",
     "the wide layout is for a mouse or trackpad",
   );
   await page.setViewportSize({ width: 1000, height: 900 });
@@ -96,11 +96,14 @@ test("touch tablets and phones keep Read, logo and sidebar controls", async ({
 test("iPad status bar leaves room above the editor and windowed reader after rotation", async ({
   browser,
 }) => {
-  const context = await browser.newContext({ hasTouch: true });
+  const context = await browser.newContext({
+    hasTouch: true,
+    serviceWorkers: "block",
+  });
   const page = await context.newPage();
   // Desktop browser runners report zero safe-area insets. Substitute a controllable
   // inset in the served stylesheet to exercise the installed iPad layout.
-  await page.route("**/src/style.css", async (route) => {
+  await page.route("**/*.css", async (route) => {
     const response = await route.fetch();
     await route.fulfill({
       response,

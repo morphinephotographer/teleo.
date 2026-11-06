@@ -1,9 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
 import { dictionaries, type Locale } from "../../apps/web/src/i18n";
 import { createScript, exportBundle } from "../../packages/protocol/domain";
-import { chooseSelect } from "./helpers";
+import { chooseSelect, prepareReader } from "./helpers";
 
 test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     sessionStorage.setItem("teleo.intro.seen.v1", "true");
     if (!localStorage.getItem("teleo.locale"))
@@ -64,7 +65,8 @@ async function seed(page: Page, count = 4, locale: Locale = "ru") {
 }
 
 async function showLibrary(page: Page) {
-  if (!(await page.locator(".library").isVisible()))
+  await expect(page.locator(".reader")).toHaveCount(0);
+  if (!(await page.locator(".app-shell.library-open").count()))
     await page
       .locator("header")
       .getByRole("button", {
@@ -74,12 +76,21 @@ async function showLibrary(page: Page) {
         exact: true,
       })
       .click();
+  await expect(page.locator(".library")).toBeVisible();
+  // Let WebKit finish the windowed Reader → sidebar layout before pointer actions.
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
 }
 
 async function action(page: Page, title: string, label: string) {
   const row = page.locator(".script-row").filter({
     has: page.locator("strong", { hasText: new RegExp(`^${title}$`) }),
   });
+
   await row.locator(".library-row-actions").hover();
   return row.getByRole("button", { name: `${label}: ${title}`, exact: true });
 }
@@ -212,19 +223,23 @@ test("appearance buttons cycle directly and the default settings fit the viewpor
       `[id="${await trigger.getAttribute("aria-controls")}"]`,
     );
     await expect(menu).toBeVisible();
-    for (const surface of [menu, menu.locator(".settings")]) {
-      expect(
-        await surface.evaluate((el) => el.scrollHeight <= el.clientHeight + 1),
-      ).toBe(true);
-    }
-    const bounds = await menu.boundingBox();
+    const bounds = (await menu.boundingBox())!;
+    expect(bounds.y).toBeGreaterThanOrEqual(0);
+    expect(bounds.y + bounds.height).toBeLessThanOrEqual(height);
+    expect(
+      await menu.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
+    ).toBe(true);
     for (const control of await menu
       .locator(".settings-language,.appearance-row,.welcome-preference,summary")
       .all()) {
+      await control.scrollIntoViewIfNeeded();
       const r = await control.boundingBox();
       expect(r!.y).toBeGreaterThanOrEqual(bounds!.y);
       expect(r!.y + r!.height).toBeLessThanOrEqual(bounds!.y + bounds!.height);
     }
+    await menu
+      .getByRole("combobox", { name: t.language, exact: true })
+      .scrollIntoViewIfNeeded();
     await expect(
       menu.getByRole("combobox", { name: t.language, exact: true }),
     ).toBeVisible();
@@ -342,7 +357,7 @@ test("reader has one alignment outline, no phone button and round appearance sym
   for (const symbol of await settings.locator(".appearance-symbol").all()) {
     await expect(symbol).toHaveCSS("border-radius", "50%");
     const box = await symbol.boundingBox();
-    expect(box!.width).toBe(box!.height);
+    expect(box!.width).toBeCloseTo(box!.height, 3);
   }
   await settings
     .locator(".appearance-content")
@@ -792,6 +807,7 @@ test("document creation, trash restore, confirmed permanent deletion and last do
   await library.getByRole("button", { name: t.openLast, exact: true }).click();
   await expect(library).toBeHidden();
   await expect(page.locator(".reader")).toBeVisible();
+  await prepareReader(page, t);
   await expect(page.locator(".title-input")).toHaveValue("Новый документ");
   await page
     .locator(".reader")

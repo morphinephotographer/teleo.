@@ -7288,3 +7288,47 @@ input[type="checkbox"] {
 #quick-send-reason:empty {
   display: none;
 }
+
+/* Remote buttons share filled surfaces; keyboard focus stays inside the button. */
+.controller.remote-v06 button,
+.remote-settings-page button {
+  border: 0;
+}
+.remote-settings-page .sheet-heading.with-back > .icon-button {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--subtle);
+  box-shadow: none;
+}
+.controller.remote-v06 button:focus-visible,
+.remote-settings-page button:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #77777f;
+}
+.controller.remote-v06 button:focus:not(:focus-visible),
+.remote-settings-page button:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Keep both Welcome actions separate in a compact row. */
+.top-settings .welcome-preference {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.top-settings .welcome-preference > button {
+  grid-row: 2;
+  width: 100%;
+  white-space: normal;
+}
+.top-settings .welcome-preference > button:first-of-type {
+  grid-column: 1;
+}
+.top-settings .welcome-preference > button:nth-of-type(2) {
+  grid-column: 2;
+}
+.top-settings .welcome-preference > p {
+  grid-column: 1 / -1;
+  grid-row: 3;
+}

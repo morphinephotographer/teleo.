@@ -17,14 +17,14 @@ export async function openSettings(
   t: typeof dictionaries.en,
   tab?: "playback" | "text" | "appearance",
 ) {
-  let settings = page.locator(".integrated-settings");
-  if (!(await settings.isVisible())) {
-    await page
-      .locator("header")
-      .getByRole("button", { name: t.settings, exact: true })
-      .click();
-    settings = page.getByRole("dialog");
-  }
+  const trigger = page
+    .locator("header")
+    .getByRole("button", { name: t.settings, exact: true });
+  const settings = page.locator(
+    `[id="${await trigger.getAttribute("aria-controls")}"]`,
+  );
+  if (!(await settings.isVisible())) await trigger.click();
+  await expect(settings).toBeVisible();
   void tab; // Only Appearance remains in this panel; operational controls moved to the dock.
   return settings;
 }
@@ -138,14 +138,15 @@ export async function readerTypography(
   const dock = page.locator(".reader-dock");
   if (await dock.isVisible()) {
     await prepareReader(page, t);
-    if (!(await page.locator(".dock-text-tabs").isVisible()))
-      await dock.locator(".dock-aa").click();
-    await dock
-      .locator(".dock-text-tabs")
-      .getByRole("button", { name: t[key], exact: true })
-      .click();
+    return dock.getByRole("slider", { name: t[key], exact: true });
   }
-  return page
+  const input = page
     .locator(".reader-controls")
     .getByRole("slider", { name: t[key], exact: true });
+  if (!(await input.isVisible()))
+    await page
+      .locator(".reader-controls")
+      .getByRole("button", { name: t[key], exact: true })
+      .click();
+  return input;
 }

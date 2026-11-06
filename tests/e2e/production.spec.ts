@@ -3,7 +3,12 @@ import dns from "node:dns";
 import type { TLSSocket } from "node:tls";
 import { test, expect } from "@playwright/test";
 import { dictionaries } from "../../apps/web/src/i18n";
-import { chooseSelect, prepareReader, readerTypography } from "./helpers";
+import {
+  chooseSelect,
+  prepareReader,
+  readerTypography,
+  openSettings,
+} from "./helpers";
 const production = process.env.TELEO_PRODUCTION_URL;
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() =>
@@ -171,17 +176,20 @@ for (const locale of ["en", "uk", "ru"] as const) {
       page.getByRole("status").filter({ hasText: t.saved }),
     ).toBeVisible();
     await chooseSelect(
-      page
-        .locator("header")
-        .getByRole("combobox", { name: t.language, exact: true }),
+      (await openSettings(page, t)).getByRole("combobox", {
+        name: t.language,
+        exact: true,
+      }),
       "en",
     );
     await chooseSelect(
-      page
-        .locator("header")
-        .getByRole("combobox", { name: dictionaries.en.language, exact: true }),
+      (await openSettings(page, dictionaries.en)).getByRole("combobox", {
+        name: dictionaries.en.language,
+        exact: true,
+      }),
       locale,
     );
+    await page.keyboard.press("Escape");
     await page.reload();
     await expect(page.locator("html")).toHaveAttribute("lang", locale);
     await expect(
@@ -207,11 +215,19 @@ for (const locale of ["en", "uk", "ru"] as const) {
         page.locator(".reading-viewport").evaluate((el) => el.scrollTop),
       )
       .toBeGreaterThan(0);
-    await dock.getByRole("button", { name: t.pause, exact: true }).click();
+    await page.locator(".reader-pause").click();
     await (await readerTypography(page, t, "fontSize")).fill("52");
     await (await readerTypography(page, t, "lineHeight")).fill("1.5");
     await (await readerTypography(page, t, "textWidth")).fill("900");
-    await dock.getByRole("button", { name: t.alignRight, exact: true }).click();
+    const alignment = dock.locator(".dock-alignment-cycle");
+    for (
+      let i = 0;
+      i < 3 &&
+      (await alignment.getAttribute("aria-label")) !==
+        `${t.alignment}: ${t.alignRight}`;
+      i++
+    )
+      await alignment.click();
     await expect(page.locator(".reader article")).toHaveCSS(
       "font-size",
       "52px",

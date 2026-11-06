@@ -3,6 +3,7 @@ import { dictionaries } from "../../apps/web/src/i18n";
 const t = dictionaries.en;
 
 test.beforeEach(async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
   await page.addInitScript(() => {
     sessionStorage.setItem("teleo.intro.seen.v1", "true");
   });

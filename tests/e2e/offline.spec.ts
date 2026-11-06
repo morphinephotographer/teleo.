@@ -1,4 +1,5 @@
-import { chooseSelect } from "./helpers";
+import { dictionaries, type Locale } from "../../apps/web/src/i18n";
+import { chooseSelect, openSettings } from "./helpers";
 import { test, expect } from "@playwright/test";
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -47,7 +48,14 @@ test("production assets: all locales and scripts work offline", async ({
     ["uk", "Language"],
   ]) {
     await chooseSelect(
-      page.getByRole("combobox", { name, exact: true }),
+      (
+        await openSettings(
+          page,
+          dictionaries[
+            (await page.locator("html").getAttribute("lang")) as Locale
+          ],
+        )
+      ).getByRole("combobox", { name, exact: true }),
       value,
     );
     await expect(page.locator("html")).toHaveAttribute("lang", value);

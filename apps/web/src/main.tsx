@@ -247,7 +247,9 @@ function App() {
   focusPositionRef.current = focusPosition;
   // Voice follow: browser speech recognition moves the reading position.
   const [voiceStatus, setVoiceStatus] = useState<VoiceStatus>("off");
-  const [voiceError, setVoiceError] = useState<VoiceError | null>(null);
+  const [voiceError, setVoiceError] = useState<
+    VoiceError | "voicePhonePaused" | null
+  >(null);
   const [voiceLanguage, setVoiceLanguage] = useState(
     () => localGet("teleo.voiceLanguage") || "auto",
   );
@@ -1403,8 +1405,15 @@ function App() {
               voice.receiveTranscript(frame.text, frame.restart);
             if (frame.type === "voiceStatus") {
               if (frame.status === "error") {
-                stopVoice();
-                setVoiceError(frame.error || "voiceFailed");
+                if (frame.error === "voicePaused") {
+                  // Safari can require another tap. Keep this grant alive so
+                  // the phone can resume the same session without pairing.
+                  setVoiceStatus("error");
+                  setVoiceError("voicePhonePaused");
+                } else {
+                  stopVoice();
+                  setVoiceError(frame.error || "voiceFailed");
+                }
               } else {
                 setVoiceStatus(frame.status);
                 setVoiceError(null);

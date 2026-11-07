@@ -14,7 +14,11 @@ type SpeechTestWindow = Window & {
   micStarts?: number;
   micAborts?: number;
   denyMic?: boolean;
-  recognition?: { onresult?: ((event: SpeechResultEvent) => void) | null };
+  recognition?: {
+    onresult?: ((event: SpeechResultEvent) => void) | null;
+    onend?: (() => void) | null;
+    onerror?: ((event: { error: string }) => void) | null;
+  };
   say: (text: string) => void;
 };
 const text = Array.from(
@@ -449,6 +453,63 @@ test("computer scrolling keeps the phone microphone connected", async ({
     await phone.locator(".remote-timeline input").fill("500");
     await expect.poll(position).toBeGreaterThan(100);
     await assertListening();
+  } finally {
+    await close();
+  }
+});
+
+test("phone recognition restarts after a seek and can resume if Safari requires a tap", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser);
+  try {
+    await start(phone);
+    const timeline = phone.locator(".remote-timeline input");
+    await timeline.fill("500");
+    await expect
+      .poll(() =>
+        host.locator(".reading-viewport").evaluate((el) => el.scrollTop),
+      )
+      .toBeGreaterThan(100);
+    await phone.evaluate(() =>
+      (window as unknown as SpeechTestWindow).recognition?.onend?.(),
+    );
+    await expect
+      .poll(() =>
+        phone.evaluate(() => (window as unknown as SpeechTestWindow).micStarts),
+      )
+      .toBe(2);
+    await expect(phone.locator(".remote-mic")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+
+    await phone.evaluate(() =>
+      (window as unknown as SpeechTestWindow).recognition?.onerror?.({
+        error: "not-allowed",
+      }),
+    );
+    const hint = dictionaries.en.voicePhonePaused;
+    await expect(
+      host.getByRole("alert").filter({ hasText: hint }),
+    ).toBeVisible();
+    await expect(phone.getByText(hint, { exact: true })).toBeVisible();
+    const resume = phone.getByRole("button", {
+      name: "Use iPhone microphone",
+      exact: true,
+    });
+    await expect(resume).toBeEnabled();
+    await resume.click();
+    await expect
+      .poll(() =>
+        phone.evaluate(() => (window as unknown as SpeechTestWindow).micStarts),
+      )
+      .toBe(3);
+    await expect(phone.locator(".remote-connection")).toHaveClass(/online/);
+    await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+    await expect(
+      host.getByRole("alert").filter({ hasText: hint }),
+    ).toBeHidden();
   } finally {
     await close();
   }

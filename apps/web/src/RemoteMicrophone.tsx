@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import type {
+  RemoteVoiceError,
   VoiceFrame,
   VoiceOffer,
 } from "../../../packages/protocol/remote-voice";
@@ -46,12 +47,7 @@ export function RemoteMicrophone({
               version: 1,
               session: id,
               status: next,
-              ...(issue
-                ? {
-                    error:
-                      issue as import("../../../packages/protocol/remote-voice").RemoteVoiceError,
-                  }
-                : {}),
+              ...(issue ? { error: issue as RemoteVoiceError } : {}),
             });
           if (next === "error") {
             clearTimeout(timer.current);
@@ -92,7 +88,8 @@ export function RemoteMicrophone({
     };
   }, []);
   useEffect(() => {
-    if (status !== "starting" && status !== "listening") return;
+    const paused = status === "error" && error === "voicePaused";
+    if (status !== "starting" && status !== "listening" && !paused) return;
     const beat = setInterval(() => {
       if (
         session.current &&
@@ -101,14 +98,19 @@ export function RemoteMicrophone({
           version: 1,
           session: session.current,
           status,
+          ...(paused ? { error: "voicePaused" as const } : {}),
         })
       )
         stopRef.current(false);
     }, 2000);
     return () => clearInterval(beat);
-  }, [status]);
+  }, [status, error]);
   const start = () => {
     if (!offer || !connected || document.hidden) return;
+    if (capture.paused && session.current === offer.session) {
+      capture.resume();
+      return;
+    }
     stop(false);
     session.current = offer.session;
     sequence.current = 0;
@@ -141,7 +143,7 @@ export function RemoteMicrophone({
   const supported = voiceFollowSupported();
   const label = t(on ? "voicePhoneStop" : "voicePhoneStart");
   const hint = t(
-    error ||
+    (error === "voicePaused" ? "voicePhonePaused" : error) ||
       (!supported
         ? "voiceUnsupported"
         : !offer
@@ -166,7 +168,11 @@ export function RemoteMicrophone({
       >
         <Icon name="microphone" />
       </button>
-      <span id={hintId} className="sr-only" role="status">
+      <span
+        id={hintId}
+        className={error === "voicePaused" ? "remote-mic-hint" : "sr-only"}
+        role="status"
+      >
         {hint}
       </span>
     </div>

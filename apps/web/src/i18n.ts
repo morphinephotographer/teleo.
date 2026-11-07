@@ -4,6 +4,8 @@ export const en = {
   voicePhone: "iPhone remote",
   voicePhoneStart: "Use iPhone microphone",
   voicePhoneStop: "Stop iPhone microphone",
+  voicePhonePaused:
+    "Safari paused listening. Tap the microphone on iPhone to resume.",
   voicePhoneWaiting: "Start the microphone on iPhone",
   voicePhoneReady:
     "Keep this screen open while reading. Tap to allow the microphone.",
@@ -417,6 +419,8 @@ export const uk: Record<Key, string> = {
   voicePhone: "Пульт iPhone",
   voicePhoneStart: "Увімкнути мікрофон iPhone",
   voicePhoneStop: "Вимкнути мікрофон iPhone",
+  voicePhonePaused:
+    "Safari призупинив прослуховування. Натисніть мікрофон на iPhone, щоб продовжити.",
   voicePhoneWaiting: "Увімкніть мікрофон на iPhone",
   voicePhoneReady:
     "Залишайте цей екран відкритим під час читання. Натисніть, щоб дозволити мікрофон.",
@@ -830,6 +834,8 @@ export const ru: Record<Key, string> = {
   voicePhone: "Пульт iPhone",
   voicePhoneStart: "Включить микрофон iPhone",
   voicePhoneStop: "Выключить микрофон iPhone",
+  voicePhonePaused:
+    "Safari приостановил прослушивание. Нажмите микрофон на iPhone, чтобы продолжить.",
   voicePhoneWaiting: "Включите микрофон на iPhone",
   voicePhoneReady:
     "Оставляйте этот экран открытым во время чтения. Нажмите, чтобы разрешить микрофон.",

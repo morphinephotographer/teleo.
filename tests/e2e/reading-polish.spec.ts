@@ -277,8 +277,10 @@ test("phone seeks animate during drag; fixed 18pt text stays on the host guide t
     }),
   );
   try {
+    await dialog
+      .getByRole("checkbox", { name: t.allowPreview, exact: true })
+      .uncheck();
     await phone.goto(invite!);
-    await dialog.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-text")).toContainText(t.previewPrivate);
     await expect(phone.locator(".remote-position-guide")).toHaveCount(0);
     await expect(phone.locator(".remote-text")).toHaveCSS("padding-top", "4px");

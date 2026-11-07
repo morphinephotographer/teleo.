@@ -177,7 +177,7 @@ test("responsive editor, reading, language menus and remote at six sizes plus la
       path: `docs/screenshots/full-audit-${info.project.name}-studio-${width}x${height}.png`,
     });
     await page.getByRole("button", { name: t.read, exact: true }).click();
-  await prepareReader(page, t);
+    await prepareReader(page, t);
     await page
       .locator(".reader-controls")
       .getByRole("button", { name: t.play, exact: true })
@@ -253,7 +253,6 @@ test("preview hash failure clears phone text; remote fullscreen exit rejection i
   phone.on("pageerror", (e) => errors.push(e.message));
   try {
     await phone.goto(invite!);
-    await pair.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(pair).not.toBeVisible();
     await page
       .locator("header")

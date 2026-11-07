@@ -356,13 +356,6 @@ test("branded QR decodes at native and rendered sizes; confirmed pairing, device
   try {
     await phone.goto(invite);
     await expect(phone.locator("html")).toHaveAttribute("lang", "uk");
-    await page
-      .locator("header")
-      .getByRole("button", { name: t.remoteConnection, exact: true })
-      .click();
-    await expect(pair.getByRole("status")).toHaveText(t.pairApproval);
-    await expect(pair).toBeVisible();
-    await pair.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-connection")).toHaveText(
       dictionaries.uk.connected,
     );
@@ -440,10 +433,7 @@ test("branded QR decodes at native and rendered sizes; confirmed pairing, device
     await context.close();
   }
 });
-test("QR expiry and server error expose compact recovery", async ({
-  page,
-  browser,
-}) => {
+test("QR expiry and server error expose compact recovery", async ({ page }) => {
   await language(page, ["en-US"]);
   await page.goto("/studio");
   await page
@@ -457,21 +447,13 @@ test("QR expiry and server error expose compact recovery", async ({
   await trigger.click();
   const pair = page.locator(".pairing-sheet");
   await expect(pair.locator("img")).toBeVisible();
-  const pendingContext = await browser.newContext({ locale: "en-US" });
-  const pendingPhone = await pendingContext.newPage();
-  await pendingPhone.goto(
-    (await pair
-      .getByRole("link", { name: t.invite, exact: true })
-      .getAttribute("href"))!,
-  );
-  await expect(pair.getByRole("status")).toHaveText(t.pairApproval);
+  await expect(pair.getByRole("status")).toHaveText(t.pairWaiting);
   await page.clock.fastForward(120001);
   await expect(pair.getByRole("status")).toHaveText(t.expired);
   await expect(pair.locator("img,a")).toHaveCount(0);
   await expect(
     pair.getByRole("button", { name: t.allow, exact: true }),
   ).toHaveCount(0);
-  await pendingContext.close();
   await pair.getByRole("button", { name: t.reconnect, exact: true }).click();
   await expect(pair.locator("img")).toBeVisible();
   await pair.getByRole("button", { name: t.close, exact: true }).click();

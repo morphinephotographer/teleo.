@@ -94,7 +94,6 @@ if (baseline)
     const phone = await context.newPage();
     try {
       await phone.goto(invite!);
-      await pair.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(pair).not.toBeVisible();
       await page
         .locator("header")
@@ -392,8 +391,10 @@ if (!baseline) {
       });
     });
     try {
+      await pair
+        .getByRole("checkbox", { name: t.allowPreview, exact: true })
+        .uncheck();
       await phone.goto(invite!);
-      await pair.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(pair).not.toBeVisible();
       await expect(phone.locator(".remote-speed")).toHaveText("1.0×");
       await expect(phone.locator(".remote-text")).not.toContainText(

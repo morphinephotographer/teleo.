@@ -142,8 +142,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
     const ctx = await browser.newContext({ locale });
     const phone = await ctx.newPage();
     await phone.goto(url + "");
-    await expect(page.getByText(t.pairApproval)).toBeVisible();
-    await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(

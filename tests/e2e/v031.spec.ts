@@ -397,6 +397,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .locator(".reader")
       .getByRole("button", { name: t.connect, exact: true })
       .click();
+    await page
+      .getByRole("checkbox", { name: t.allowPreview, exact: true })
+      .uncheck();
     const invite = (await page
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href"))!;
@@ -461,7 +464,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .toBe(true);
     }
     await phone.goto(invite);
-    await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone
       .getByRole("button", { name: t.advancedSettings, exact: true })

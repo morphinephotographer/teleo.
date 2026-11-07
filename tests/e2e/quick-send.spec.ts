@@ -79,7 +79,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
     page.on("pageerror", (e) => errors.push(e.message));
     try {
       await phone.goto(invitation!);
-      await pairing.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(phone.locator(".remote-text")).toContainText(
         "Original active script",
       );

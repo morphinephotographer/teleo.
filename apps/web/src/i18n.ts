@@ -7,7 +7,7 @@ export const en = {
   voicePhoneResume: "Resume mic",
   voicePhoneListening: "Listening on iPhone",
   voicePhoneGuide:
-    "Click the microphone here, then tap Start mic on your iPhone.",
+    "Tap Start mic on your iPhone. If the button is unavailable, click the microphone here first.",
   voicePhoneStart: "Use iPhone microphone",
   voicePhoneStop: "Stop iPhone microphone",
   voicePhonePaused:
@@ -16,7 +16,7 @@ export const en = {
   voicePhoneReady:
     "Keep this screen open while reading. Tap to allow the microphone.",
   voicePhoneHelp:
-    "On the computer, open Reader, choose iPhone microphone, then click the microphone. Return here and tap Start mic. Keep iPhone near the speaker. The text on the computer follows the words they say.",
+    "Open Reader on the computer. Then tap Start mic here. Keep iPhone near the speaker. The text on the computer follows the words they say.",
   voicePhoneDisconnected:
     "The iPhone microphone stopped or the connection was lost. Start voice follow again.",
   voiceFollow: "Follow my voice",
@@ -127,7 +127,8 @@ export const en = {
     "In Chrome, Edge or Safari a microphone appears here: read aloud and the text moves with your voice.",
 
   pairTitle: "Connect your phone",
-  pairHelper: "Scan this QR code with your iPhone.",
+  pairHelper:
+    "Scan with your iPhone to connect and control Teleo. You can change script preview below.",
   pairWaiting: "Waiting for connection…",
   pairApproval: "Approval required",
   pairLocal:
@@ -427,7 +428,8 @@ export const uk: Record<Key, string> = {
   voicePhoneTap: "Увімкнути",
   voicePhoneResume: "Продовжити",
   voicePhoneListening: "Слухаємо через iPhone",
-  voicePhoneGuide: "Натисніть мікрофон тут, а потім «Увімкнути» на iPhone.",
+  voicePhoneGuide:
+    "Натисніть «Увімкнути» на iPhone. Якщо кнопка недоступна, спочатку натисніть мікрофон тут.",
   voicePhoneStart: "Увімкнути мікрофон iPhone",
   voicePhoneStop: "Вимкнути мікрофон iPhone",
   voicePhonePaused:
@@ -436,7 +438,7 @@ export const uk: Record<Key, string> = {
   voicePhoneReady:
     "Залишайте цей екран відкритим під час читання. Натисніть, щоб дозволити мікрофон.",
   voicePhoneHelp:
-    "На комп’ютері відкрийте режим читання, виберіть «Мікрофон iPhone» й натисніть значок мікрофона. Потім натисніть «Увімкнути» тут. Тримайте iPhone поруч із тим, хто читає. Текст на комп’ютері рухатиметься за його словами.",
+    "Відкрийте режим читання на комп’ютері, а потім натисніть «Увімкнути» тут. Тримайте iPhone поруч із тим, хто читає. Текст на комп’ютері рухатиметься за його словами.",
   voicePhoneDisconnected:
     "Мікрофон iPhone зупинився або з’єднання втрачено. Увімкніть стеження за голосом знову.",
   voiceFollow: "Стежити за голосом",
@@ -547,7 +549,8 @@ export const uk: Record<Key, string> = {
     "У Chrome, Edge чи Safari тут з’явиться мікрофон: читайте вголос — і текст рухатиметься за голосом.",
 
   pairTitle: "Підключіть телефон",
-  pairHelper: "Відскануйте QR-код камерою iPhone.",
+  pairHelper:
+    "Відскануйте QR-код на iPhone, щоб керувати Teleo. Перегляд тексту можна налаштувати нижче.",
   pairWaiting: "Очікування підключення…",
   pairApproval: "Потрібне підтвердження",
   pairLocal:
@@ -847,7 +850,8 @@ export const ru: Record<Key, string> = {
   voicePhoneTap: "Включить",
   voicePhoneResume: "Продолжить",
   voicePhoneListening: "Слушаем через iPhone",
-  voicePhoneGuide: "Нажмите микрофон здесь, затем «Включить» на iPhone.",
+  voicePhoneGuide:
+    "Нажмите «Включить» на iPhone. Если кнопка недоступна, сначала нажмите микрофон здесь.",
   voicePhoneStart: "Включить микрофон iPhone",
   voicePhoneStop: "Выключить микрофон iPhone",
   voicePhonePaused:
@@ -856,7 +860,7 @@ export const ru: Record<Key, string> = {
   voicePhoneReady:
     "Оставляйте этот экран открытым во время чтения. Нажмите, чтобы разрешить микрофон.",
   voicePhoneHelp:
-    "На компьютере откройте режим чтения, выберите «Микрофон iPhone» и нажмите значок микрофона. Затем нажмите «Включить» здесь. Держите iPhone рядом с тем, кто читает. Текст на компьютере будет двигаться вслед за его словами.",
+    "Откройте режим чтения на компьютере, затем нажмите «Включить» здесь. Держите iPhone рядом с тем, кто читает. Текст на компьютере будет двигаться вслед за его словами.",
   voicePhoneDisconnected:
     "Микрофон iPhone остановился или соединение потеряно. Включите слежение за голосом заново.",
   voiceFollow: "Следить за голосом",
@@ -967,7 +971,8 @@ export const ru: Record<Key, string> = {
     "В Chrome, Edge или Safari здесь появится микрофон: читайте вслух — и текст будет двигаться за голосом.",
 
   pairTitle: "Подключите телефон",
-  pairHelper: "Отсканируйте QR-код камерой iPhone.",
+  pairHelper:
+    "Отсканируйте QR-код на iPhone, чтобы управлять Teleo. Просмотр текста можно настроить ниже.",
   pairWaiting: "Ожидание подключения…",
   pairApproval: "Требуется подтверждение",
   pairLocal:

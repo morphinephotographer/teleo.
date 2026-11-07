@@ -240,7 +240,6 @@ test("a queued typography frame cannot change a newly selected script playhead",
     }),
     phone = await context.newPage();
   await phone.goto(invite!);
-  await pair.getByRole("button", { name: t.allow, exact: true }).click();
   await expect(phone.locator(".remote-connection")).toContainText(t.connected);
   const font = await remoteValue(phone, t, "fontSize");
   await expect(font).toBeEnabled();

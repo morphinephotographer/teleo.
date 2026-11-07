@@ -123,7 +123,6 @@ for (const locale of ["en", "uk", "ru"] as const)
     const errors: string[] = [];
     phone.on("pageerror", (e) => errors.push(e.message));
     await phone.goto(invite!);
-    await pair.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(pair).not.toBeVisible();
     await page
       .locator("header")
@@ -358,7 +357,6 @@ test("queued typography and alignment gestures are cancelled when the host switc
   });
   const phone = await context.newPage();
   await phone.goto(invite!);
-  await pair.getByRole("button", { name: t.allow, exact: true }).click();
   const font = await remoteValue(phone, t, "fontSize");
   await expect(font).toHaveValue("40");
   await phone.clock.install({ time: new Date("2030-01-01T00:00:00Z") });

@@ -162,14 +162,14 @@ for (const locale of ["en", "uk", "ru"] as const) {
       });
       server.onClose((code, reason) => client.close({ code, reason }));
     });
-    await phone.goto(invite);
     await page
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
       .click();
     await expect(pair).toBeVisible();
     await expect(link).toHaveAttribute("href", invite);
-    await pair.getByRole("button", { name: t.allow, exact: true }).click();
+
+    await phone.goto(invite);
     await expect(pair).not.toBeVisible();
     await page
       .locator("header")

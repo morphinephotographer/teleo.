@@ -42,7 +42,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     test.setTimeout(90000);
     await create(page, locale);
     await page.getByRole("button", { name: t.read, exact: true }).click();
-  await prepareReader(page, t);
+    await prepareReader(page, t);
     await page
       .locator("header")
       .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -60,6 +60,9 @@ for (const locale of ["en", "uk", "ru"] as const) {
       path: `docs/screenshots/v06-${info.project.name}-${locale}-qr.png`,
       animations: "disabled",
     });
+    await pairing
+      .getByRole("checkbox", { name: t.allowPreview, exact: true })
+      .uncheck();
     await pairing.getByRole("button", { name: t.close, exact: true }).click();
     await expect(pairing).not.toBeVisible();
     const context = await browser.newContext({
@@ -108,15 +111,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
         .toBe(true);
     }
     await phone.goto(invite!);
-    await expect(
-      phone.getByRole("button", { name: t.play, exact: true }),
-    ).toBeDisabled();
-    await expect(pairing).not.toBeVisible();
-    await page
-      .locator("header")
-      .getByRole("button", { name: t.remoteConnection, exact: true })
-      .click();
-    await pairing.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(pairing).not.toBeVisible();
     await expect(phone.locator(".remote-connection")).toContainText(
       t.connected,
@@ -554,11 +548,7 @@ test("empty/edited script, stale target, private control and persisted typograph
     });
   });
   await phone.goto(invite!);
-  await page
-    .locator("header")
-    .getByRole("button", { name: t.remoteConnection, exact: true })
-    .click();
-  await pair.getByRole("button", { name: t.allow, exact: true }).click();
+  await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
   await expect(pair).not.toBeVisible();
   await expect(
     phone.getByRole("slider", { name: t.position, exact: true }),

@@ -124,7 +124,7 @@ function App() {
   );
   const libraryBeforeReading = useRef(libraryOpen);
   const [previewAllowed, setPreviewAllowed] = useState(
-    () => localGet("teleo.previewAllowed") === "true",
+    () => localGet("teleo.previewAllowed") !== "false",
   );
   // The saved choice is distinct from the relay's existing session/epoch authorization.
   const previewChoice = useRef(previewAllowed);
@@ -219,7 +219,6 @@ function App() {
   const [remoteStatus, setRemoteStatus] = useState<Key | null>(null),
     [invite, setInvite] = useState(""),
     [qr, setQR] = useState(""),
-    [approval, setApproval] = useState(false),
     [remoteState, setRemoteState] = useState<PlaybackState>({
       playing: false,
       speed: 1,
@@ -266,6 +265,7 @@ function App() {
     target: string;
     lastSeen: number;
     heard: boolean;
+    idle: boolean;
   } | null>(null);
   const voiceTarget = useRef<number | null>(null);
   const voiceScroll = useRef({
@@ -660,6 +660,37 @@ function App() {
       setVoiceError("voicePhoneDisconnected");
       return;
     }
+    const from = prepareVoicePosition(view);
+    const language = recognitionLanguage(script.body);
+    if (voiceSource === "phone") {
+      voice.startRemote(script.body, from);
+      offerPhoneVoice(language, false);
+    } else voice.start(script.body, language, from);
+    showControls();
+  };
+  function recognitionLanguage(body: string) {
+    return voiceLanguage === "auto"
+      ? speechLanguage(body, locale)
+      : voiceLanguage;
+  }
+  function offerPhoneVoice(language: string, idle: boolean) {
+    const offer: VoiceOffer = {
+      type: "voiceOffer",
+      version: 1,
+      session: crypto.randomUUID(),
+      target: controlTargetRef.current,
+      language,
+    };
+    if (remote.current.voice(offer))
+      voiceGrant.current = {
+        offer,
+        target: offer.target,
+        lastSeen: Date.now(),
+        heard: false,
+        idle,
+      };
+  }
+  function prepareVoicePosition(view: HTMLElement) {
     if (engine.playing) command({ action: "pause" });
     engine.countdown = 0;
     const from = Math.round(
@@ -677,35 +708,31 @@ function App() {
       painted: -1,
       last: 0,
     };
-    const language =
-      voiceLanguage === "auto"
-        ? speechLanguage(script.body, locale)
-        : voiceLanguage;
-    if (voiceSource === "phone") {
-      const offer: VoiceOffer = {
-        type: "voiceOffer",
-        version: 1,
-        session: crypto.randomUUID(),
-        target: controlTargetRef.current,
-        language,
-      };
-      voiceGrant.current = {
-        offer,
-        target: offer.target,
-        lastSeen: Date.now(),
-        heard: false,
-      };
-      voice.startRemote(script.body, from);
-      remote.current.voice(offer);
-    } else voice.start(script.body, language, from);
-    showControls();
-  };
+    return from;
+  }
+  useEffect(() => {
+    // QR pairing makes the microphone ready, but only a tap on the phone starts capture.
+    if (
+      route === "/studio" &&
+      reading &&
+      remoteStatus === "connected" &&
+      current?.body.trim() &&
+      !voiceGrant.current &&
+      !voice.running &&
+      !document.hidden
+    )
+      offerPhoneVoice(recognitionLanguage(current.body), true);
+  }, [route, reading, remoteStatus, controlTarget]);
   const stopVoiceRef = useRef(stopVoice);
   stopVoiceRef.current = stopVoice;
   useEffect(() => {
     const timer = setInterval(() => {
       const grant = voiceGrant.current;
-      if (grant && Date.now() - grant.lastSeen > (grant.heard ? 7000 : 30000)) {
+      if (
+        grant &&
+        !grant.idle &&
+        Date.now() - grant.lastSeen > (grant.heard ? 7000 : 30000)
+      ) {
         stopVoiceRef.current();
         setVoiceError("voicePhoneDisconnected");
       }
@@ -1147,16 +1174,17 @@ function App() {
       return;
     }
     if (grant.target === controlTarget) return;
-    const language =
-      voiceLanguage === "auto"
-        ? speechLanguage(current.body, locale)
-        : voiceLanguage;
+    const language = recognitionLanguage(current.body);
     if (language !== grant.offer.language) {
       // Changing the recognition language requires a new start on the phone.
-      startVoice();
+      if (grant.idle) {
+        stopVoice();
+        offerPhoneVoice(language, true);
+      } else startVoice();
       return;
     }
     grant.target = controlTarget;
+    if (grant.idle) return;
     voiceScroll.current.userAt = 0;
     voiceScroll.current.painted = -1;
     highlightRegistry()?.delete(voiceHighlight);
@@ -1438,6 +1466,19 @@ function App() {
             grant.target === controlTargetRef.current &&
             reading
           ) {
+            if (
+              grant.idle &&
+              (frame.type === "voiceTranscript" ||
+                (frame.type === "voiceStatus" && frame.status !== "error"))
+            ) {
+              const view = viewport.current;
+              const script = currentRef.current;
+              if (!view || !script) return;
+              grant.idle = false;
+              setVoiceSource("phone");
+              voice.startRemote(script.body, prepareVoicePosition(view));
+              showControls();
+            }
             grant.lastSeen = Date.now();
             grant.heard = true;
             if (frame.type === "voiceTranscript")
@@ -1464,21 +1505,13 @@ function App() {
       }
       if (statuses[e.type]) {
         setPhoneVoiceOffer(null);
-        if (voiceGrant.current) {
+        const grant = voiceGrant.current;
+        if (grant) {
           stopVoice();
-          setVoiceError("voicePhoneDisconnected");
+          if (!grant.idle) setVoiceError("voicePhoneDisconnected");
         }
       }
       if (statuses[e.type]) setRemoteStatus(statuses[e.type]);
-      if (
-        [
-          "disconnected",
-          "unavailable",
-          "serverUnreachable",
-          "expired",
-        ].includes(e.type)
-      )
-        setApproval(false);
       if (e.type === "connected") {
         lastHostState.current = "";
         pairGeneration.current++;
@@ -1488,7 +1521,6 @@ function App() {
         setPairOpen(false);
         setInvite("");
         setQR("");
-        setApproval(false);
         if (route !== "/remote") {
           previewInitializing.current = true;
           setPreviewPending(true);
@@ -1608,7 +1640,8 @@ function App() {
       }
       if (e.type === "previewRequest" && route !== "/remote")
         sender.current?.publish();
-      if (e.type === "approval") setApproval(true);
+      if (e.type === "approval" && route === "/studio")
+        remote.current.send({ type: "allow" });
       if (e.type === "unconfirmed") setNotice("unconfirmed");
       if (
         e.type === "stateRequest" &&
@@ -1861,6 +1894,7 @@ function App() {
       .catch(() => setStatus("saveError"));
   }, [locale, libraryLoaded, route]);
   function endRemote() {
+    if (voiceGrant.current) stopVoice();
     incoming.current = null;
     setReceivedText(null);
     setReviewText(false);
@@ -2011,7 +2045,6 @@ function App() {
     const generation = pairGeneration.current;
     setPairOpen(true);
     setSettingsOpen(false);
-    setApproval(false);
     setInvite("");
     setQR("");
     setQRState("loading");
@@ -2028,7 +2061,6 @@ function App() {
         setQRState("idle");
         remote.current.close();
         setRemoteStatus("expired");
-        setApproval(false);
         setInvite("");
         setQR("");
         setInviteDeadline(0);
@@ -3134,13 +3166,11 @@ function App() {
                 {previewConsent}
                 <p className="pair-status" role="status">
                   {t(
-                    approval
-                      ? "pairApproval"
-                      : qrState === "loading"
-                        ? "qrLoading"
-                        : remoteStatus === "waiting"
-                          ? "pairWaiting"
-                          : remoteStatus || "connecting",
+                    qrState === "loading"
+                      ? "qrLoading"
+                      : remoteStatus === "waiting"
+                        ? "pairWaiting"
+                        : remoteStatus || "connecting",
                   )}
                 </p>
                 {inviteDeadline > 0 && (
@@ -3176,22 +3206,6 @@ function App() {
                     {button("renewInvite", () => void connect())}
                   </>
                 )}
-                {approval && (
-                  <div className="pair-approval-actions">
-                    {button("allow", () => {
-                      remote.current.send({ type: "allow" });
-                      setApproval(false);
-                      setInvite("");
-                    })}
-                    {button("deny", () => {
-                      remote.current.send({ type: "deny" });
-                      endRemote();
-                      setRemoteStatus("disconnected");
-                      setApproval(false);
-                      setInvite("");
-                    })}
-                  </div>
-                )}
                 {(remoteStatus === "disconnected" ||
                   remoteStatus === "unavailable" ||
                   remoteStatus === "serverUnreachable" ||
@@ -3203,7 +3217,6 @@ function App() {
                     endRemote();
                     setRemoteStatus("disconnected");
                     setInvite("");
-                    setApproval(false);
                   })}
               </div>
             </div>

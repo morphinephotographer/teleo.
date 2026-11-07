@@ -103,7 +103,6 @@ test("font 120 synchronizes both ways with an approved phone remote", async ({
   try {
     const phone = await phoneContext.newPage();
     await phone.goto(invitation!);
-    await pairing.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(pairing).not.toBeVisible();
     await page
       .locator("header")

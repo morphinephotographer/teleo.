@@ -19,8 +19,8 @@ async function host(page: Page, locale: "en" | "uk" | "ru") {
   await page.getByRole("button", { name: t.read, exact: true }).click();
   await prepareReader(page, t);
   await page
-    .locator(".reader")
-    .getByRole("button", { name: t.connect })
+    .locator("header")
+    .getByRole("button", { name: t.remoteConnection, exact: true })
     .click();
   const link = page.getByRole("link", { name: t.invite });
   await expect(link).toBeVisible();
@@ -40,15 +40,13 @@ for (const locale of ["en", "uk", "ru"] as const) {
       sockets.push({ client, server: client.connectToServer() }),
     );
     await phone.goto(invite);
-    await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(
       phone.getByRole("button", { name: t.pause, exact: true }),
     ).toBeVisible();
-    const before = Number(
-      await page.getByRole("slider", { name: t.position }).inputValue(),
-    );
+    const viewport = page.locator(".reading-viewport");
+    const before = await viewport.evaluate((el) => el.scrollTop);
     await sockets[0].server.close({
       code: 1012,
       reason: "QA transport interruption",
@@ -60,7 +58,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
     await expect.poll(() => sockets.length).toBeGreaterThan(1);
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     expect(
-      Number(await page.getByRole("slider", { name: t.position }).inputValue()),
+      await viewport.evaluate((el) => el.scrollTop),
     ).toBeGreaterThanOrEqual(before);
     await expect(
       page
@@ -119,7 +117,6 @@ test("host reconnect keeps script and playback; unconfirmed command is not repla
     });
   });
   await phone.goto(invite);
-  await page.getByRole("button", { name: "Allow", exact: true }).click();
   await expect(phone.locator(".remote-connection")).toHaveText("Connected");
   // Drop a real command before delivery, then interrupt the host. No fake success response.
   let dropped = 0;
@@ -171,7 +168,6 @@ test("prolonged relay outage stops retries and preserves the local reader", asyn
     transport = { client, server: client.connectToServer() };
   });
   await phone.goto(invite);
-  await page.getByRole("button", { name: "Allow", exact: true }).click();
   await expect(phone.locator(".remote-connection")).toHaveText("Connected");
   await page
     .locator(".reader")

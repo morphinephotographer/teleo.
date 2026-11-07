@@ -62,7 +62,6 @@ for (const locale of ["en", "uk", "ru"] as const)
         .getByRole("link", { name: t.invite, exact: true })
         .getAttribute("href");
       await phone.goto(invitation!);
-      await pairing.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(
         phone.getByRole("button", { name: t.play, exact: true }),
       ).toBeEnabled();

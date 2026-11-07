@@ -359,7 +359,7 @@ if (!baseline) {
     );
     try {
       await phone.goto(invite!);
-      await pair.getByRole("button", { name: t.allow, exact: true }).click();
+      await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
       await page
         .locator("header")
         .getByRole("button", { name: t.remoteConnection, exact: true })
@@ -597,7 +597,7 @@ if (baseline)
     const phone = await ctx.newPage();
     try {
       await phone.goto(invite!);
-      await dialog.getByRole("button", { name: t.allow, exact: true }).click();
+      await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
       await page
         .locator("header")
         .getByRole("button", { name: t.remoteConnection, exact: true })

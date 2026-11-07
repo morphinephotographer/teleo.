@@ -112,29 +112,9 @@ async function paired(browser: Browser, hostSupported = true, preview = false) {
     .getByRole("link", { name: "Invitation link", exact: true })
     .getAttribute("href");
   await phone.goto(invitation!);
-  await dialog.getByRole("button", { name: "Allow", exact: true }).click();
   await expect(dialog).not.toBeVisible();
-  if (preview) {
-    await host
-      .locator("header")
-      .getByRole("button", { name: "Phone connection", exact: true })
-      .click();
-    await dialog
-      .getByRole("checkbox", {
-        name: dictionaries.en.allowPreview,
-        exact: true,
-      })
-      .check();
-    await dialog.getByRole("button", { name: "Close", exact: true }).click();
-    await expect(phone.locator(".remote-text")).toContainText("Chapter 30");
-  }
-  await host
-    .locator("header")
-    .getByRole("button", { name: "Read", exact: true })
-    .click();
-  await expect(
-    phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
-  ).toHaveCount(0);
+  await expect(phone.locator(".remote-connection")).toHaveClass(/online/);
+  await expect(phone.locator(".remote-text")).toContainText("Chapter 30");
   if (preview) {
     const t = dictionaries.en;
     await phone
@@ -144,17 +124,11 @@ async function paired(browser: Browser, hostSupported = true, preview = false) {
     await expect(help).toContainText(t.voicePhoneHelp);
     await help.getByRole("button", { name: t.back, exact: true }).click();
   }
-  await chooseSelect(
-    host.getByRole("combobox", { name: "Microphone source", exact: true }),
-    "phone",
-  );
-  await expect(host.locator(".voice-phone-status")).toHaveText(
-    dictionaries.en.voicePhoneGuide,
-  );
-  await host.locator(".reader-voice").click();
-  await expect(host.locator(".voice-phone-status")).toHaveText(
-    dictionaries.en.voicePhoneWaiting,
-  );
+  await host
+    .locator("header")
+    .getByRole("button", { name: "Read", exact: true })
+    .click();
+  await expect(host.locator(".reader")).not.toHaveClass(/is-listening/);
   await expect(
     phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
   ).toBeEnabled();

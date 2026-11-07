@@ -77,7 +77,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       .getByRole("textbox", { name: t.body, exact: true })
       .fill("Staging QA 🌍\n\n".repeat(100));
     await page.getByRole("button", { name: t.read, exact: true }).click();
-  await prepareReader(page, t);
+    await prepareReader(page, t);
     await page
       .locator(".reader")
       .getByRole("button", { name: t.connect })
@@ -101,7 +101,6 @@ for (const locale of ["en", "uk", "ru"] as const) {
       });
     });
     await phone.goto(invite);
-    await page.getByRole("button", { name: t.allow, exact: true }).click();
     await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
     await phone.getByRole("button", { name: t.play, exact: true }).click();
     await expect(
@@ -184,15 +183,8 @@ for (const locale of ["en", "uk", "ru"] as const) {
       await expect(phone.locator(".remote-connection")).toHaveText(
         t.disconnected,
       );
-      // A new invitation must still obtain explicit host approval.
+      // A newly scanned invitation pairs automatically.
       await phone.goto(nextInvite);
-      await expect(
-        panel.getByRole("button", { name: t.allow, exact: true }),
-      ).toBeVisible();
-      await expect(
-        phone.getByRole("button", { name: t.play, exact: true }),
-      ).toBeDisabled();
-      await panel.getByRole("button", { name: t.allow, exact: true }).click();
       await expect(phone.locator(".remote-connection")).toHaveText(t.connected);
 
       await phone.getByRole("button", { name: t.play, exact: true }).click();

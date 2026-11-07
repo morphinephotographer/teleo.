@@ -63,7 +63,7 @@ for (const locale of ["en", "uk", "ru"] as const) {
       name: t.allowPreview,
       exact: true,
     });
-    await expect(consent).not.toBeChecked();
+    await expect(consent).toBeChecked();
     const invitation = await dialog
       .getByRole("link", { name: t.invite, exact: true })
       .getAttribute("href");
@@ -110,14 +110,24 @@ for (const locale of ["en", "uk", "ru"] as const) {
       }),
     );
     try {
-      await phone.goto(invitation!);
-      await consent.check(); // saved choice is permitted before authorization, content is not
       expect(contentSent).toEqual([]);
       expect(previewReceived).toEqual([]);
-      await dialog.getByRole("button", { name: t.allow, exact: true }).click();
+      await phone.goto(invitation!);
       await expect(dialog).not.toBeVisible();
       await expect(phone.locator(".remote-text")).toContainText(secret.trim());
       expect(contentSent.length).toBeGreaterThan(0);
+      if (locale === "en") {
+        const secondPhone = await context.newPage();
+        await secondPhone.goto(invitation!);
+        await expect(secondPhone.locator(".remote-connection")).toHaveText(
+          t.expired,
+        );
+        await expect(phone.locator(".remote-connection")).toHaveText(
+          t.connected,
+        );
+        await secondPhone.close();
+      }
+
       await page
         .locator("header")
         .getByRole("button", { name: t.remoteConnection, exact: true })

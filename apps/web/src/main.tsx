@@ -303,10 +303,13 @@ function App() {
   const geometryTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const viewPosition = (view: HTMLElement) =>
-    currentRef.current?.preferences.mirrorVertical
-      ? engine.maximum - view.scrollTop
-      : view.scrollTop;
+  const viewPosition = (view: HTMLElement) => {
+    // Safari can report elastic overscroll outside the scrollable range.
+    const top = Math.max(0, Math.min(engine.maximum, view.scrollTop));
+    return currentRef.current?.preferences.mirrorVertical
+      ? engine.maximum - top
+      : top;
+  };
   const syncView = (view: HTMLElement) => {
     view.scrollTop = currentRef.current?.preferences.mirrorVertical
       ? engine.maximum - engine.position

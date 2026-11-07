@@ -6,6 +6,7 @@ import {
   type Page,
 } from "@playwright/test";
 import { chooseSelect } from "./helpers";
+import { dictionaries } from "../../apps/web/src/i18n";
 type SpeechResultEvent = {
   results: (Array<{ transcript: string }> & { isFinal: boolean })[];
 };
@@ -68,7 +69,7 @@ async function setup(context: BrowserContext, supported = true) {
     { supported },
   );
 }
-async function paired(browser: Browser, hostSupported = true) {
+async function paired(browser: Browser, hostSupported = true, preview = false) {
   const hostContext = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     reducedMotion: "reduce",
@@ -109,6 +110,20 @@ async function paired(browser: Browser, hostSupported = true) {
   await phone.goto(invitation!);
   await dialog.getByRole("button", { name: "Allow", exact: true }).click();
   await expect(dialog).not.toBeVisible();
+  if (preview) {
+    await host
+      .locator("header")
+      .getByRole("button", { name: "Phone connection", exact: true })
+      .click();
+    await dialog
+      .getByRole("checkbox", {
+        name: dictionaries.en.allowPreview,
+        exact: true,
+      })
+      .check();
+    await dialog.getByRole("button", { name: "Close", exact: true }).click();
+    await expect(phone.locator(".remote-text")).toContainText("Chapter 30");
+  }
   await host
     .locator("header")
     .getByRole("button", { name: "Read", exact: true })
@@ -326,6 +341,114 @@ test("missing phone heartbeats stop following without activating the laptop micr
         Number((window as unknown as SpeechTestWindow).micStarts || 0),
       ),
     ).toBe(0);
+  } finally {
+    await close();
+  }
+});
+
+test("remote seeking and elastic overscroll keep the phone microphone connected", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser, true, true);
+  try {
+    await start(phone);
+    const view = host.locator(".reading-viewport");
+    const timeline = phone.locator(".remote-timeline input");
+    const reached = () => view.evaluate((el) => el.scrollTop);
+    await timeline.fill("700");
+    await expect.poll(reached).toBeGreaterThan(100);
+    await timeline.fill("0");
+    await expect.poll(reached).toBeLessThan(2);
+
+    // Playwright does not generate iOS rubber-band scrolling. Feed the
+    // negative scrollTop that Safari exposes during an elastic overscroll.
+    await view.evaluate((el) => {
+      Object.defineProperty(el, "scrollTop", {
+        configurable: true,
+        get: () => -12,
+        set: () => {},
+      });
+      el.dispatchEvent(new Event("scroll", { bubbles: true }));
+    });
+    try {
+      const preview = phone.locator(".remote-text");
+      await preview.evaluate((el) => {
+        el.dispatchEvent(new Event("touchstart", { bubbles: true }));
+        el.scrollTop += 180;
+      });
+      // Observe several host state updates while the elastic offset is present.
+      await phone.waitForTimeout(1100);
+      await expect(phone.locator(".remote-connection")).toHaveClass(/online/);
+      await expect(phone.locator(".remote-mic")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    } finally {
+      await view.evaluate((el) => {
+        Reflect.deleteProperty(el, "scrollTop");
+      });
+    }
+
+    await timeline.fill("500");
+    await expect.poll(reached).toBeGreaterThan(100);
+    await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+
+    await phone.setViewportSize({ width: 375, height: 667 });
+    await expect(phone.locator(".remote-header .remote-mic")).toBeVisible();
+    await phone.locator(".remote-quick-trigger").click();
+    const quick = phone.locator(".remote-quick-menu");
+    const panel = (await quick.boundingBox())!;
+    const alignment = (await quick.locator(".quick-alignment").boundingBox())!;
+    expect(alignment.y + alignment.height).toBeLessThanOrEqual(
+      panel.y + panel.height,
+    );
+    await phone.screenshot({ path: test.info().outputPath("remote-text.png") });
+  } finally {
+    await close();
+  }
+});
+
+test("computer scrolling keeps the phone microphone connected", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser, true, true);
+  try {
+    await start(phone);
+    const view = host.locator(".reading-viewport");
+    const connection = phone.locator(".remote-connection");
+    const microphone = phone.locator(".remote-mic");
+    const position = () => view.evaluate((el) => el.scrollTop);
+    const assertListening = async () => {
+      await expect(connection).toHaveClass(/online/);
+      await expect(microphone).toHaveAttribute("aria-pressed", "true");
+      await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+    };
+
+    await view.hover();
+    await host.mouse.wheel(0, 680);
+    await expect.poll(position).toBeGreaterThan(100);
+    await assertListening();
+
+    const maximum = await view.evaluate(
+      (el) => el.scrollHeight - el.clientHeight,
+    );
+    for (const [wheel, expected] of [
+      [maximum * 2, maximum],
+      [-maximum * 2, 0],
+    ]) {
+      await host.mouse.wheel(0, wheel);
+      await expect.poll(position).toBeCloseTo(expected, 0);
+      // Wait for the phone to receive the new computer position over the relay.
+      await expect(phone.locator(".remote-timeline input")).toHaveValue(
+        expected ? "1000" : "0",
+      );
+      await assertListening();
+    }
+
+    // A fresh command still reaches the computer after scrolling both edges.
+    await phone.locator(".remote-timeline input").fill("500");
+    await expect.poll(position).toBeGreaterThan(100);
+    await assertListening();
   } finally {
     await close();
   }

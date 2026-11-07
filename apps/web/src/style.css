@@ -4347,16 +4347,23 @@ input[type="checkbox"] {
   gap: 14px;
   padding: 0 18px max(20px, env(safe-area-inset-bottom));
 }
-.quick-send-content textarea {
+.quick-send-editor {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid #3b3c3d;
+  border-radius: 20px;
+  background: #1d1e1f;
+}
+.quick-send-editor textarea {
   width: 100%;
   height: clamp(120px, 28dvh, 260px);
   min-height: 100px;
   resize: vertical;
-  flex-shrink: 0;
-  border: 1px solid #3b3c3d;
-  border-radius: 20px;
+  border: 0;
+  border-radius: inherit;
   color: #f5f5f5;
-  background: #1d1e1f;
+  background: transparent;
   padding: 16px;
   font: inherit;
   font-size: 16px;
@@ -4373,7 +4380,7 @@ input[type="checkbox"] {
   text-align: right;
   font-size: 12px;
   color: #aaa;
-  margin-top: -10px;
+  padding: 0 16px 10px;
 }
 .quick-send-tools {
   display: grid;
@@ -4950,10 +4957,14 @@ input[type="checkbox"] {
     gap: 8px;
     padding: 0 12px max(8px, env(safe-area-inset-bottom));
   }
-  .quick-send-content textarea {
+  .quick-send-editor {
+    flex: 1 1 auto;
+    min-height: 140px;
+  }
+  .quick-send-editor textarea {
     flex: 1 1 auto;
     height: auto;
-    min-height: 140px;
+    min-height: 0;
     resize: none;
   }
   .quick-send-sheet fieldset {
@@ -7201,33 +7212,22 @@ input[type="checkbox"] {
   padding: 6px 10px;
   font-size: 11px;
 }
-.remote-microphone {
+.remote-v06 .remote-header .remote-mic {
   display: grid;
-  gap: 5px;
-  padding: 4px 16px;
-  text-align: center;
-  flex-shrink: 0;
-}
-.remote-microphone .remote-mic {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 8px 14px;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--surface);
 }
 .remote-mic svg {
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
 }
-.remote-mic.active {
+.remote-v06 .remote-header .remote-mic.active {
   background: var(--ink);
   color: var(--surface);
-}
-.remote-microphone small {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.3;
 }
 @media (max-width: 520px) {
   .reader-top .voice-source-picker {
@@ -7241,26 +7241,8 @@ input[type="checkbox"] {
 @media (orientation: landscape) and (max-height: 600px) {
   .remote-v12 .remote-text-frame {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 2 / 5;
     min-height: 0;
-  }
-  .remote-v12 .remote-microphone {
-    grid-column: 1;
-    grid-row: 3/5;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 3px;
-    min-height: 0;
-    padding: 0;
-  }
-  .remote-v12 .remote-microphone .remote-mic {
-    flex: 0 0 40px;
-    min-height: 40px;
-    padding: 6px 12px;
-  }
-  .remote-v12 .remote-microphone small {
-    font-size: 10px;
   }
   .remote-v12 .remote-bottom-actions {
     grid-column: 2;
@@ -7277,7 +7259,7 @@ input[type="checkbox"] {
 .quick-send-sheet textarea[aria-invalid="true"] {
   color: #ff8b85;
 }
-.quick-send-sheet textarea[aria-invalid="true"] {
+.quick-send-editor:has(textarea[aria-invalid="true"]) {
   border-color: #ff8b85;
 }
 #quick-send-reason {

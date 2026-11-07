@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type {
   VoiceFrame,
   VoiceOffer,
@@ -136,34 +136,39 @@ export function RemoteMicrophone({
       }, 250);
     });
   };
+  const hintId = useId();
   const on = status === "starting" || status === "listening";
   const supported = voiceFollowSupported();
+  const label = t(on ? "voicePhoneStop" : "voicePhoneStart");
+  const hint = t(
+    error ||
+      (!supported
+        ? "voiceUnsupported"
+        : !offer
+          ? "voicePhoneHelp"
+          : status === "listening"
+            ? "voiceListening"
+            : status === "starting"
+              ? "voiceStarting"
+              : "voicePhoneReady"),
+  );
   return (
-    <section className="remote-microphone" aria-label={t("voicePhone")}>
+    <div className="remote-microphone">
       <button
         type="button"
         className={on ? "remote-mic active" : "remote-mic"}
         disabled={!connected || !offer || !supported}
+        aria-label={label}
+        aria-describedby={hintId}
         aria-pressed={on}
+        title={hint}
         onClick={() => (on ? stop() : start())}
       >
         <Icon name="microphone" />
-        <span>{t(on ? "voicePhoneStop" : "voicePhoneStart")}</span>
       </button>
-      <small role="status">
-        {t(
-          error ||
-            (!supported
-              ? "voiceUnsupported"
-              : !offer
-                ? "voicePhoneHelp"
-                : status === "listening"
-                  ? "voiceListening"
-                  : status === "starting"
-                    ? "voiceStarting"
-                    : "voicePhoneReady"),
-        )}
-      </small>
-    </section>
+      <span id={hintId} className="sr-only" role="status">
+        {hint}
+      </span>
+    </div>
   );
 }

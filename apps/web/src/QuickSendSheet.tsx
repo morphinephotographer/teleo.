@@ -105,30 +105,32 @@ export function QuickSendSheet({
         </div>
       ) : (
         <div className="quick-send-content">
-          <textarea
-            ref={editor}
-            aria-invalid={
-              issue === "tooLong" || issue === "invalid" || undefined
-            }
-            aria-describedby="quick-send-count quick-send-reason"
-            aria-label={t("quickSendTitle")}
-            placeholder={t("quickSendPlaceholder")}
-            value={body}
-            disabled={busy}
-            onChange={(e) => {
-              setBody(e.target.value);
-              setError(null);
-            }}
-          />
-          <output
-            id="quick-send-count"
-            className={
-              "quick-send-count" + (issue === "tooLong" ? " invalid" : "")
-            }
-            aria-live="polite"
-          >
-            {body.length} / {QUICK_SEND_LIMIT} {t("quickSendCharacters")}
-          </output>
+          <div className="quick-send-editor">
+            <textarea
+              ref={editor}
+              aria-invalid={
+                issue === "tooLong" || issue === "invalid" || undefined
+              }
+              aria-describedby="quick-send-count quick-send-reason"
+              aria-label={t("quickSendTitle")}
+              placeholder={t("quickSendPlaceholder")}
+              value={body}
+              disabled={busy}
+              onChange={(e) => {
+                setBody(e.target.value);
+                setError(null);
+              }}
+            />
+            <output
+              id="quick-send-count"
+              className={
+                "quick-send-count" + (issue === "tooLong" ? " invalid" : "")
+              }
+              aria-live="polite"
+            >
+              {body.length} / {QUICK_SEND_LIMIT} {t("quickSendCharacters")}
+            </output>
+          </div>
           <div className="quick-send-tools">
             <button
               disabled={busy}

@@ -328,7 +328,7 @@ export function RemoteController({
     )
       return;
     const anchor = textOffsetAtView(scroll.current, content, guidePosition);
-    seekQueue.current?.push(c.maximum ? state.position / c.maximum : 0, anchor);
+    seekQueue.current?.push(fraction, anchor);
     clearTimeout(gestureTimer.current);
     if (!fingerDown.current)
       gestureTimer.current = setTimeout(finishScroll, 180);
@@ -581,6 +581,12 @@ export function RemoteController({
     >
       <header className="remote-header">
         <Wordmark />
+        <RemoteMicrophone
+          offer={voiceOffer}
+          connected={connected}
+          onFrame={onVoiceFrame}
+          t={t}
+        />
         <span
           className={"remote-connection " + (connected ? "online" : "")}
           role="status"
@@ -715,12 +721,6 @@ export function RemoteController({
           <span>−{clockTime(time.remaining)}</span>
         </div>
       </div>
-      <RemoteMicrophone
-        offer={voiceOffer}
-        connected={connected}
-        onFrame={onVoiceFrame}
-        t={t}
-      />
       <div className="remote-playback">
         <IconButton
           name="minus"

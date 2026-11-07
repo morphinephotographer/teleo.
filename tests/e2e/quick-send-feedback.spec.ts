@@ -75,6 +75,12 @@ for (const locale of ["en", "uk", "ru"] as const)
           name: t.quickSendSubmit,
           exact: true,
         });
+      const editor = sheet.locator(".quick-send-editor");
+      const count = editor.locator("#quick-send-count");
+      await expect(count).toBeVisible();
+      const field = (await editor.boundingBox())!;
+      const counter = (await count.boundingBox())!;
+      expect(counter.y + counter.height).toBeLessThan(field.y + field.height);
       await expect(submit).toBeDisabled();
       await expect(sheet.locator("#quick-send-reason")).toHaveText(
         t.quickSendEmpty,

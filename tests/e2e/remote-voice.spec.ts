@@ -194,11 +194,13 @@ test("phone speech moves the host, requires a tap and stops when switched to loc
       phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
     ).toHaveCount(0);
     await expect(host.locator(".reader")).not.toHaveClass(/is-listening/);
-    expect(
-      await phone.evaluate(() =>
-        Number((window as unknown as SpeechTestWindow).micAborts),
-      ),
-    ).toBeGreaterThan(0);
+    await expect
+      .poll(() =>
+        phone.evaluate(
+          () => (window as unknown as SpeechTestWindow).micAborts ?? 0,
+        ),
+      )
+      .toBeGreaterThan(0);
   } finally {
     await close();
   }

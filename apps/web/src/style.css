@@ -2549,12 +2549,6 @@ input[type="checkbox"] {
   .remote-v06 .remote-paragraphs button {
     height: 52px;
   }
-  .remote-quick-trigger {
-    grid-column: 2;
-    grid-row: 5;
-    height: 44px;
-    width: 44px;
-  }
 }
 @media (max-width: 600px) {
   .action-dialog,
@@ -7215,11 +7209,15 @@ input[type="checkbox"] {
 .remote-v06 .remote-header .remote-mic {
   display: grid;
   place-items: center;
-  width: 44px;
+  min-width: 64px;
   height: 44px;
-  padding: 0;
-  border-radius: 50%;
+  padding: 4px 8px;
+  gap: 2px;
+  border-radius: 12px;
   background: var(--surface);
+  font-size: 10px;
+  line-height: 1;
+  white-space: nowrap;
 }
 .remote-mic-hint {
   position: absolute;
@@ -7236,7 +7234,7 @@ input[type="checkbox"] {
   width: 20px;
   height: 20px;
 }
-.remote-v06 .remote-header .remote-mic.active {
+.remote-v06 .remote-header .remote-mic.ready {
   background: var(--ink);
   color: var(--surface);
 }
@@ -7246,10 +7244,23 @@ input[type="checkbox"] {
   }
   .reader-top .voice-source-picker > button {
     font-size: 10px;
+    gap: 4px;
+  }
+  .reader-top .voice-source-picker .picker-trigger > span:first-child {
+    white-space: normal;
+    text-overflow: clip;
   }
 }
 
 @media (orientation: landscape) and (max-height: 600px) {
+  .remote-v12 .remote-playback > button {
+    width: 72px;
+    height: 72px;
+  }
+  .remote-v12 .remote-playback > .remote-main-play {
+    width: 88px;
+    height: 88px;
+  }
   .remote-v12 .remote-text-frame {
     grid-column: 1;
     grid-row: 2 / 5;
@@ -7324,4 +7335,28 @@ input[type="checkbox"] {
 .top-settings .welcome-preference > p {
   grid-column: 1 / -1;
   grid-row: 3;
+}
+
+.remote-mic.active svg {
+  color: #ff7569;
+}
+.remote-mic-setup > p {
+  margin: 4px 18px;
+  line-height: 1.5;
+}
+.voice-status.voice-phone-status {
+  min-height: 26px;
+  margin: 0;
+  padding: 4px 22px;
+  font-size: 12px;
+  gap: 7px;
+  white-space: normal;
+}
+.voice-phone-status svg {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+}
+.voice-phone-status.listening svg {
+  color: #ff7569;
 }

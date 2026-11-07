@@ -134,15 +134,33 @@ async function paired(browser: Browser, hostSupported = true, preview = false) {
     .click();
   await expect(
     phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
-  ).toBeDisabled();
+  ).toHaveCount(0);
+  if (preview) {
+    const t = dictionaries.en;
+    await phone
+      .getByRole("button", { name: t.voicePhoneSetup, exact: true })
+      .click();
+    const help = phone.getByRole("dialog", { name: t.voicePhone });
+    await expect(help).toContainText(t.voicePhoneHelp);
+    await help.getByRole("button", { name: t.back, exact: true }).click();
+  }
   await chooseSelect(
     host.getByRole("combobox", { name: "Microphone source", exact: true }),
     "phone",
   );
+  await expect(host.locator(".voice-phone-status")).toHaveText(
+    dictionaries.en.voicePhoneGuide,
+  );
   await host.locator(".reader-voice").click();
+  await expect(host.locator(".voice-phone-status")).toHaveText(
+    dictionaries.en.voicePhoneWaiting,
+  );
   await expect(
     phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
   ).toBeEnabled();
+  await expect(phone.locator(".remote-mic")).toHaveText(
+    dictionaries.en.voicePhoneTap,
+  );
   return {
     host,
     phone,
@@ -200,7 +218,7 @@ test("phone speech moves the host, requires a tap and stops when switched to loc
     );
     await expect(
       phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await expect(host.locator(".reader")).not.toHaveClass(/is-listening/);
     expect(
       await phone.evaluate(() =>
@@ -226,6 +244,9 @@ test("host without speech API can use phone; permission denial does not enable l
     await expect(
       host.getByRole("alert").filter({ hasText: "denied" }),
     ).toBeVisible();
+    await expect(phone.locator(".remote-mic-hint")).toHaveText(
+      dictionaries.en.voicePermission,
+    );
     expect(
       await host.evaluate(() =>
         Number((window as unknown as SpeechTestWindow).micStarts || 0),
@@ -251,7 +272,7 @@ test("hiding phone stops capture and late transcripts cannot restart the host", 
     await expect(host.locator(".reader")).not.toHaveClass(/is-listening/);
     await expect(
       phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await phone.evaluate(() =>
       (window as unknown as SpeechTestWindow).say(
         "hello everyone and welcome to our presentation",
@@ -297,7 +318,7 @@ test("stop and new consent cancel queued speech and restart capture cleanly", as
     await expect(host.locator(".reader")).not.toHaveClass(/is-listening/);
     await expect(
       phone.getByRole("button", { name: "Use iPhone microphone", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await host.locator(".reader-voice").click();
     await start(phone);
     const words = text.split(/\s+/).slice(0, 120);
@@ -510,6 +531,188 @@ test("phone recognition restarts after a seek and can resume if Safari requires 
     await expect(
       host.getByRole("alert").filter({ hasText: hint }),
     ).toBeHidden();
+  } finally {
+    await close();
+  }
+});
+
+test("phone voice survives text controls, preview changes and display settings", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser, true, true);
+  const t = dictionaries.en;
+  try {
+    await start(phone);
+    const assertActive = async () => {
+      await expect(phone.locator(".remote-connection")).toHaveClass(/online/);
+      await expect(phone.locator(".remote-mic")).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+      await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+      expect(
+        await phone.evaluate(
+          () => (window as unknown as SpeechTestWindow).micStarts,
+        ),
+      ).toBe(1);
+    };
+    const article = host.locator(".reading-viewport article");
+    await phone.locator(".remote-quick-trigger").click();
+    const quick = phone.locator(".remote-quick-menu");
+    for (const [label, value, property, css] of [
+      [t.fontSize, "52", "font-size", "52px"],
+      [t.lineHeight, "1.9", "line-height", "98.8px"],
+      [t.textWidth, "620", "max-width", "620px"],
+    ]) {
+      await quick.getByRole("slider", { name: label, exact: true }).fill(value);
+      if (property === "line-height") {
+        await expect
+          .poll(() => article.evaluate((el) => el.style.lineHeight))
+          .toBe(value);
+      } else {
+        await expect(article).toHaveCSS(property, css);
+      }
+      await assertActive();
+    }
+    await quick
+      .getByRole("button", { name: t.alignRight, exact: true })
+      .click();
+    await expect(article).toHaveCSS("text-align", "right");
+    await quick.getByRole("button", { name: t.close, exact: true }).click();
+    await phone.getByRole("button", { name: t.advancedSettings }).click();
+    const advanced = phone.locator(".remote-settings-page");
+    for (const name of [
+      t.mirrorHorizontal,
+      t.mirrorVertical,
+      t.focusLine,
+      t.focus,
+      t.showText,
+    ]) {
+      const control = advanced.getByRole("checkbox", { name, exact: true });
+      const wasChecked = await control.isChecked();
+      await control.click();
+      await expect(control).toBeChecked({ checked: !wasChecked });
+      await assertActive();
+      await control.click();
+      await expect(control).toBeChecked({ checked: wasChecked });
+    }
+    await advanced.getByRole("button", { name: t.back, exact: true }).click();
+    const view = host.locator(".reading-viewport");
+    const before = await view.evaluate((el) => el.scrollTop);
+    const words = text.split(/\s+/).slice(0, 140);
+    await phone.evaluate(
+      (value) => (window as unknown as SpeechTestWindow).say(value),
+      words.join(" "),
+    );
+    await expect
+      .poll(() => view.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(before + 40);
+    await assertActive();
+  } finally {
+    await close();
+  }
+});
+
+async function sendNewScript(phone: Page, body: string) {
+  const t = dictionaries.en;
+  await phone
+    .getByRole("button", { name: t.quickSendTitle, exact: true })
+    .click();
+  const sheet = phone.locator(".quick-send-sheet");
+  await sheet.getByRole("textbox").fill(body);
+  await sheet.getByRole("radio", { name: t.quickSendLibrary }).check();
+  await sheet.getByRole("button", { name: t.quickSendSubmit }).click();
+  await sheet.getByRole("button", { name: t.quickSendContinue }).click();
+}
+
+test("a new script received while reading keeps the same phone microphone and follows its words", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser);
+  const t = dictionaries.en;
+  try {
+    await start(phone);
+    const newBody = Array.from(
+      { length: 28 },
+      (_, i) =>
+        `Voyage ${i + 1}. The midnight expedition crossed an ancient mountain trail. Our guide described the silver constellations and the hidden valley beyond the summit.`,
+    ).join("\n\n");
+    await sendNewScript(phone, newBody);
+    const view = host.locator(".reading-viewport");
+    await expect(view).toContainText("Voyage 28");
+    await expect(phone.locator(".remote-mic")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+    expect(
+      await phone.evaluate(
+        () => (window as unknown as SpeechTestWindow).micStarts,
+      ),
+    ).toBe(1);
+    // Let the matcher discard buffered speech immediately following the change.
+    await phone.waitForTimeout(350);
+    const words = newBody.split(/\s+/);
+    for (const count of [32, 70, 110]) {
+      await phone.evaluate(
+        (value) => (window as unknown as SpeechTestWindow).say(value),
+        words.slice(0, count).join(" "),
+      );
+      await phone.waitForTimeout(280);
+    }
+    await expect
+      .poll(() => view.evaluate((el) => el.scrollTop))
+      .toBeGreaterThan(40);
+    const picker = host
+      .locator("header")
+      .getByRole("combobox", { name: t.currentScript, exact: true });
+    await picker.click();
+    const list = host.locator(
+      `[id="${await picker.getAttribute("aria-controls")}"]`,
+    );
+    await list.getByRole("option", { name: t.untitled }).click();
+    await expect(view).toContainText("Chapter 30");
+    await expect(phone.locator(".remote-mic")).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    await expect(host.locator(".reader")).toHaveClass(/is-listening/);
+  } finally {
+    await close();
+  }
+});
+
+test("a script in another language waits for a new microphone tap without losing pairing", async ({
+  browser,
+}) => {
+  const { host, phone, close } = await paired(browser);
+  try {
+    await start(phone);
+    const body =
+      "Сьогодні ми розповідаємо історію про мандрівку українськими горами. ".repeat(
+        48,
+      );
+    await sendNewScript(phone, body);
+    await expect(host.locator(".reading-viewport")).toContainText(
+      "українськими горами",
+    );
+    await expect(phone.locator(".remote-connection")).toHaveClass(/online/);
+    await expect(phone.locator(".remote-mic")).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(
+      await phone.evaluate(
+        () => (window as unknown as SpeechTestWindow).micStarts,
+      ),
+    ).toBe(1);
+    await start(phone);
+    await expect(host.locator(".voice-status")).toContainText("Listening");
+    expect(
+      await phone.evaluate(
+        () => (window as unknown as SpeechTestWindow).micStarts,
+      ),
+    ).toBe(2);
   } finally {
     await close();
   }

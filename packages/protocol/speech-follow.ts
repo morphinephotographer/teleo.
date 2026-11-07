@@ -153,11 +153,11 @@ export class SpeechFollower {
   }
 
   /** Manual move (tap, scroll). Keeps the session; ignores speech said before the jump. */
-  jump(offset: number, now = 0) {
+  jump(offset: number, now = 0, transcript = this.lastTranscript) {
     this.confirmed = this.advancePastAnnotations(this.clamp(offset));
     this.matchStart = this.confirmed;
     this.recent = [];
-    this.anchor = this.lastTranscript;
+    this.anchor = transcript;
     this.lastJumpAt = now;
     this.pending = null;
     return this.confirmed;

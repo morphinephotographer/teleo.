@@ -263,6 +263,7 @@ function App() {
   );
   const voiceGrant = useRef<{
     offer: VoiceOffer;
+    target: string;
     lastSeen: number;
     heard: boolean;
   } | null>(null);
@@ -354,6 +355,9 @@ function App() {
     engine.maximum = script.body.trim()
       ? Math.max(0, view.scrollHeight - view.clientHeight)
       : 0;
+    // Cached pixel coordinates belong to the previous typography or guide.
+    voiceScroll.current.desired = -1;
+    voiceScroll.current.value = -1;
     const saved = geometry.current;
     if (saved?.script === script.scriptId) {
       const anchor = {
@@ -685,7 +689,12 @@ function App() {
         target: controlTargetRef.current,
         language,
       };
-      voiceGrant.current = { offer, lastSeen: Date.now(), heard: false };
+      voiceGrant.current = {
+        offer,
+        target: offer.target,
+        lastSeen: Date.now(),
+        heard: false,
+      };
       voice.startRemote(script.body, from);
       remote.current.voice(offer);
     } else voice.start(script.body, language, from);
@@ -832,7 +841,7 @@ function App() {
   useEffect(() => {
     if (!reading) return;
     return () => stopVoice();
-  }, [reading, selected, current?.body]);
+  }, [reading]);
   useEffect(() => {
     void sender.current?.script(current);
   }, [current?.scriptId, current?.title, current?.body]);
@@ -1126,6 +1135,36 @@ function App() {
     focusPosition,
     letterSpacing,
   ]);
+  useLayoutEffect(() => {
+    if (!reading) return;
+    if (!current || !viewport.current) {
+      stopVoice();
+      return;
+    }
+    const grant = voiceGrant.current;
+    if (!grant) {
+      if (voice.running || voice.paused) stopVoice();
+      return;
+    }
+    if (grant.target === controlTarget) return;
+    const language =
+      voiceLanguage === "auto"
+        ? speechLanguage(current.body, locale)
+        : voiceLanguage;
+    if (language !== grant.offer.language) {
+      // Changing the recognition language requires a new start on the phone.
+      startVoice();
+      return;
+    }
+    grant.target = controlTarget;
+    voiceScroll.current.userAt = 0;
+    voiceScroll.current.painted = -1;
+    highlightRegistry()?.delete(voiceHighlight);
+    voice.retargetRemote(
+      current.body,
+      textOffsetAtView(viewport.current, previewOffsets, focusPosition),
+    );
+  }, [reading, controlTarget]);
   useEffect(() => {
     if (!reading || !viewport.current) return;
     const observer = new ResizeObserver(() => restoreGeometryRef.current());
@@ -1396,7 +1435,7 @@ function App() {
           if (
             grant &&
             frame.session === grant.offer.session &&
-            grant.offer.target === controlTargetRef.current &&
+            grant.target === controlTargetRef.current &&
             reading
           ) {
             grant.lastSeen = Date.now();
@@ -2862,15 +2901,13 @@ function App() {
                   onClick={() => command({ action: "pause" })}
                 />
               )}
-              {voiceOn && (
+              {voiceOn && voiceSource === "local" && (
                 <span className={"voice-status " + voiceStatus} role="status">
                   <span className="voice-dot" aria-hidden="true" />
                   {t(
                     voiceStatus === "listening"
                       ? "voiceListening"
-                      : voiceSource === "phone"
-                        ? "voicePhoneWaiting"
-                        : "voiceStarting",
+                      : "voiceStarting",
                   )}
                 </span>
               )}
@@ -2914,6 +2951,23 @@ function App() {
                 </Popover>
               )}
             </div>
+            {voiceSource === "phone" &&
+              remoteStatus === "connected" &&
+              !voiceError && (
+                <p
+                  className={"voice-status voice-phone-status " + voiceStatus}
+                  role="status"
+                >
+                  <Icon name="remote" />
+                  {t(
+                    voiceStatus === "listening"
+                      ? "voicePhoneListening"
+                      : voiceOn
+                        ? "voicePhoneWaiting"
+                        : "voicePhoneGuide",
+                  )}
+                </p>
+              )}
             {fullscreenIssue && (
               <p className="reader-fullscreen-feedback" role="status">
                 {t(

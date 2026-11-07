@@ -11,7 +11,7 @@ import {
   type VoiceError,
 } from "./voice-follow";
 import type { Key } from "./i18n";
-import { Icon } from "./ui";
+import { Icon, Sheet } from "./ui";
 
 /** Capture starts only in the phone's button handler, never on a host message. */
 export function RemoteMicrophone({
@@ -25,6 +25,7 @@ export function RemoteMicrophone({
   onFrame: (frame: VoiceFrame) => boolean;
   t: (key: Key) => string;
 }) {
+  const [helpOpen, setHelpOpen] = useState(false);
   const [status, setStatus] = useState<VoiceStatus>("off");
   const [error, setError] = useState<VoiceError | null>(null);
   const send = useRef(onFrame);
@@ -71,7 +72,10 @@ export function RemoteMicrophone({
   const stopRef = useRef(stop);
   stopRef.current = stop;
   useEffect(() => {
-    if (offer) setError(null);
+    if (offer || !connected) {
+      setError(null);
+      setHelpOpen(false);
+    }
     return () => stopRef.current(false);
   }, [offer?.session, connected]);
   useEffect(() => {
@@ -141,7 +145,18 @@ export function RemoteMicrophone({
   const hintId = useId();
   const on = status === "starting" || status === "listening";
   const supported = voiceFollowSupported();
-  const label = t(on ? "voicePhoneStop" : "voicePhoneStart");
+  const label = t(
+    !offer ? "voicePhoneSetup" : on ? "voicePhoneStop" : "voicePhoneStart",
+  );
+  const caption = t(
+    !offer
+      ? "voicePhoneSetup"
+      : error === "voicePaused"
+        ? "voicePhoneResume"
+        : status === "listening"
+          ? "voiceListening"
+          : "voicePhoneTap",
+  );
   const hint = t(
     (error === "voicePaused" ? "voicePhonePaused" : error) ||
       (!supported
@@ -158,23 +173,42 @@ export function RemoteMicrophone({
     <div className="remote-microphone">
       <button
         type="button"
-        className={on ? "remote-mic active" : "remote-mic"}
-        disabled={!connected || !offer || !supported}
+        className={"remote-mic" + (on ? " active" : offer ? " ready" : "")}
+        disabled={!connected || !supported}
         aria-label={label}
         aria-describedby={hintId}
-        aria-pressed={on}
+        aria-pressed={offer ? on : undefined}
+        aria-haspopup={offer ? undefined : "dialog"}
         title={hint}
-        onClick={() => (on ? stop() : start())}
+        onClick={() => {
+          if (!offer) setHelpOpen(true);
+          else if (on) stop();
+          else start();
+        }}
       >
         <Icon name="microphone" />
+        <span aria-hidden="true">
+          {caption}
+          {status === "starting" ? "…" : ""}
+        </span>
       </button>
       <span
         id={hintId}
-        className={error === "voicePaused" ? "remote-mic-hint" : "sr-only"}
+        className={error ? "remote-mic-hint" : "sr-only"}
         role="status"
       >
         {hint}
       </span>
+      <Sheet
+        open={helpOpen && connected && !offer}
+        className="remote-advanced remote-settings-page remote-mic-setup"
+        title={t("voicePhone")}
+        closeLabel={t("close")}
+        backLabel={t("back")}
+        onClose={() => setHelpOpen(false)}
+      >
+        <p>{t("voicePhoneHelp")}</p>
+      </Sheet>
     </div>
   );
 }

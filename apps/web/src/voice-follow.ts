@@ -255,14 +255,24 @@ export class VoiceFollow {
   startRemote(text: string, from: number) {
     this.stop(false);
     this.follower = new SpeechFollower(text, from);
+    this.lastTranscript = "";
     this.remoteInput = true;
     this.active = true;
     this.onPosition(this.follower.position);
     this.onStatus("starting");
   }
+  retargetRemote(text: string, from: number) {
+    if (!this.remoteInput || !this.active) return;
+    this.follower = new SpeechFollower(text, from);
+    this.onPosition(
+      this.follower.jump(from, performance.now(), this.lastTranscript),
+    );
+  }
+
   receiveTranscript(text: string, restart: boolean) {
     if (!this.remoteInput || !this.active || !this.follower) return;
     if (restart) this.follower.restart();
+    this.lastTranscript = text;
     const before = this.follower.position;
     const after = this.follower.match(text, performance.now());
     if (after !== before) this.onPosition(after);

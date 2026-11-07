@@ -1,7 +1,13 @@
 export const en = {
   voiceSource: "Microphone source",
   voiceLocal: "This device",
-  voicePhone: "iPhone remote",
+  voicePhone: "iPhone microphone",
+  voicePhoneSetup: "Mic setup",
+  voicePhoneTap: "Start mic",
+  voicePhoneResume: "Resume mic",
+  voicePhoneListening: "Listening on iPhone",
+  voicePhoneGuide:
+    "Click the microphone here, then tap Start mic on your iPhone.",
   voicePhoneStart: "Use iPhone microphone",
   voicePhoneStop: "Stop iPhone microphone",
   voicePhonePaused:
@@ -10,7 +16,7 @@ export const en = {
   voicePhoneReady:
     "Keep this screen open while reading. Tap to allow the microphone.",
   voicePhoneHelp:
-    "In Reader on the computer, choose iPhone remote and press the microphone.",
+    "On the computer, open Reader, choose iPhone microphone, then click the microphone. Return here and tap Start mic. Keep iPhone near the speaker. The text on the computer follows the words they say.",
   voicePhoneDisconnected:
     "The iPhone microphone stopped or the connection was lost. Start voice follow again.",
   voiceFollow: "Follow my voice",
@@ -22,7 +28,7 @@ export const en = {
   voiceHelp:
     "In Reader, press the microphone and read aloud: the text follows the words you say and already-read text dims. Tap a word to continue from it. Scroll manually to catch up. Play switches back to steady scrolling. Text in [square brackets] never needs to be spoken.",
   voicePrivacy:
-    "Your browser or its speech provider processes audio. With iPhone remote selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
+    "Your browser or its speech provider processes audio. With iPhone microphone selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
   voiceUnsupported:
     "This browser does not support speech recognition. Use Chrome, Edge or Safari for voice follow.",
   voicePermission:
@@ -38,7 +44,7 @@ export const en = {
   helpVoice:
     "Voice follow: in Reader, press the microphone and read aloud. The text follows your voice, read text dims, and tapping a word continues from it. Choose the speech language in Settings → Follow my voice. Works in browsers with speech recognition (Chrome, Edge, Safari).",
   privacyVoice:
-    "Your browser or its speech provider processes audio. With iPhone remote selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
+    "Your browser or its speech provider processes audio. With iPhone microphone selected, recognized phrases travel through the paired connection to the computer. teleo. does not store audio or recognized phrases.",
   voiceLanguageError:
     "The browser cannot recognize this language. Choose another speech language in Settings → Follow my voice.",
   offShort: "Off",
@@ -416,7 +422,12 @@ export type Key = keyof typeof en;
 export const uk: Record<Key, string> = {
   voiceSource: "Джерело мікрофона",
   voiceLocal: "Цей пристрій",
-  voicePhone: "Пульт iPhone",
+  voicePhone: "Мікрофон iPhone",
+  voicePhoneSetup: "Налаштувати",
+  voicePhoneTap: "Увімкнути",
+  voicePhoneResume: "Продовжити",
+  voicePhoneListening: "Слухаємо через iPhone",
+  voicePhoneGuide: "Натисніть мікрофон тут, а потім «Увімкнути» на iPhone.",
   voicePhoneStart: "Увімкнути мікрофон iPhone",
   voicePhoneStop: "Вимкнути мікрофон iPhone",
   voicePhonePaused:
@@ -425,7 +436,7 @@ export const uk: Record<Key, string> = {
   voicePhoneReady:
     "Залишайте цей екран відкритим під час читання. Натисніть, щоб дозволити мікрофон.",
   voicePhoneHelp:
-    "На комп’ютері в режимі читання виберіть Пульт iPhone і натисніть мікрофон.",
+    "На комп’ютері відкрийте режим читання, виберіть «Мікрофон iPhone» й натисніть значок мікрофона. Потім натисніть «Увімкнути» тут. Тримайте iPhone поруч із тим, хто читає. Текст на комп’ютері рухатиметься за його словами.",
   voicePhoneDisconnected:
     "Мікрофон iPhone зупинився або з’єднання втрачено. Увімкніть стеження за голосом знову.",
   voiceFollow: "Стежити за голосом",
@@ -831,7 +842,12 @@ export const uk: Record<Key, string> = {
 export const ru: Record<Key, string> = {
   voiceSource: "Источник микрофона",
   voiceLocal: "Это устройство",
-  voicePhone: "Пульт iPhone",
+  voicePhone: "Микрофон iPhone",
+  voicePhoneSetup: "Настроить",
+  voicePhoneTap: "Включить",
+  voicePhoneResume: "Продолжить",
+  voicePhoneListening: "Слушаем через iPhone",
+  voicePhoneGuide: "Нажмите микрофон здесь, затем «Включить» на iPhone.",
   voicePhoneStart: "Включить микрофон iPhone",
   voicePhoneStop: "Выключить микрофон iPhone",
   voicePhonePaused:
@@ -840,7 +856,7 @@ export const ru: Record<Key, string> = {
   voicePhoneReady:
     "Оставляйте этот экран открытым во время чтения. Нажмите, чтобы разрешить микрофон.",
   voicePhoneHelp:
-    "На компьютере в режиме чтения выберите Пульт iPhone и нажмите микрофон.",
+    "На компьютере откройте режим чтения, выберите «Микрофон iPhone» и нажмите значок микрофона. Затем нажмите «Включить» здесь. Держите iPhone рядом с тем, кто читает. Текст на компьютере будет двигаться вслед за его словами.",
   voicePhoneDisconnected:
     "Микрофон iPhone остановился или соединение потеряно. Включите слежение за голосом заново.",
   voiceFollow: "Следить за голосом",

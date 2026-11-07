@@ -593,7 +593,6 @@ export function RemoteController({
           aria-label={t(status || "pairHelp")}
           title={t(status || "pairHelp")}
         >
-          <i />
           <Icon name="monitor" />
           <span className="sr-only">{t(status || "pairHelp")}</span>
         </span>
@@ -804,10 +803,6 @@ export function RemoteController({
           aria-label={t("textSettings")}
           role="region"
         >
-          <div className="remote-inline-heading">
-            <h2>{t("textSettings")}</h2>
-            <IconButton name="close" label={t("close")} onClick={closeQuick} />
-          </div>
           <div ref={quickRef} className="quick-typography">
             {(
               [
@@ -828,14 +823,15 @@ export function RemoteController({
                 onChange={(v) => pref(key, v)}
               />
             ))}
-            <div className="quick-alignment">
-              <AlignmentControl
-                t={t}
-                value={c?.alignment}
-                disabled={!connected || !c?.alignment}
-                onChange={align}
-              />
-            </div>
+          </div>
+          <div className="quick-alignment">
+            <AlignmentControl
+              t={t}
+              value={c?.alignment}
+              disabled={!connected || !c?.alignment}
+              onChange={align}
+            />
+            <IconButton name="close" label={t("close")} onClick={closeQuick} />
           </div>
         </section>
       )}

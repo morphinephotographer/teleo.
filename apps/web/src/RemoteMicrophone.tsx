@@ -186,11 +186,11 @@ export function RemoteMicrophone({
           else start();
         }}
       >
-        <Icon name="microphone" />
         <span aria-hidden="true">
           {caption}
           {status === "starting" ? "…" : ""}
         </span>
+        <Icon name="microphone" />
       </button>
       <span
         id={hintId}
@@ -199,16 +199,18 @@ export function RemoteMicrophone({
       >
         {hint}
       </span>
-      <Sheet
-        open={helpOpen && connected && !offer}
-        className="remote-advanced remote-settings-page remote-mic-setup"
-        title={t("voicePhone")}
-        closeLabel={t("close")}
-        backLabel={t("back")}
-        onClose={() => setHelpOpen(false)}
-      >
-        <p>{t("voicePhoneHelp")}</p>
-      </Sheet>
+      {helpOpen && connected && !offer && (
+        <Sheet
+          open
+          className="remote-advanced remote-settings-page remote-mic-setup"
+          title={t("voicePhone")}
+          closeLabel={t("close")}
+          backLabel={t("back")}
+          onClose={() => setHelpOpen(false)}
+        >
+          <p>{t("voicePhoneHelp")}</p>
+        </Sheet>
+      )}
     </div>
   );
 }

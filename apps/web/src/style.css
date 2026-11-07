@@ -2186,17 +2186,10 @@ input[type="checkbox"] {
 .remote-connection {
   display: flex;
   align-items: center;
-  gap: 10px;
   color: #bbb;
 }
-.remote-connection i {
-  width: 7px;
-  height: 7px;
-  background: #777;
-  border-radius: 50%;
-}
-.remote-connection.online i {
-  background: #47d78b;
+.remote-connection.online > svg > rect {
+  fill: #47d78b;
 }
 .remote-v06 .remote-text {
   flex: 1;
@@ -2413,12 +2406,10 @@ input[type="checkbox"] {
   border-bottom: 1px solid #ffffff08;
 }
 .quick-symbol {
-  border-radius: 50%;
   width: 44px;
   height: 44px;
   display: grid;
   place-items: center;
-  background: #ffffff08;
 }
 .quick-symbol svg {
   width: 24px;
@@ -2433,7 +2424,7 @@ input[type="checkbox"] {
   min-width: 0;
 }
 .quick-slider output {
-  text-align: right;
+  text-align: center;
   font-size: 14px;
   font-variant-numeric: tabular-nums;
   color: #eee;
@@ -3158,9 +3149,6 @@ input[type="checkbox"] {
   overflow: auto;
   overscroll-behavior: contain;
 }
-.quick-alignment {
-  padding: 12px 0 0;
-}
 .remote-quick-menu .alignment-control {
   background: var(--subtle);
   border-color: var(--line);
@@ -3639,22 +3627,6 @@ input[type="checkbox"] {
   background: #202122;
   overflow: hidden;
 }
-.remote-v12 .remote-inline-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: 0 0 36px;
-}
-.remote-v12 .remote-inline-heading h2 {
-  font-size: 18px;
-  font-weight: 500;
-  margin: 0;
-}
-.remote-v12 .remote-inline-heading .icon-button {
-  width: 44px;
-  height: 44px;
-  min-height: 44px;
-}
 .remote-v12 .quick-typography {
   overflow: auto;
   min-height: 0;
@@ -3669,7 +3641,23 @@ input[type="checkbox"] {
   height: 36px;
 }
 .remote-v12 .quick-alignment {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
   padding-top: 4px;
+}
+.remote-v12 .quick-alignment > .icon-button {
+  width: 42px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+}
+.remote-v12 .quick-alignment .alignment-control > button {
+  min-width: 0;
+  padding: 0;
 }
 .remote-v12.current-text .remote-text {
   font-size: 22px !important;
@@ -3744,6 +3732,9 @@ input[type="checkbox"] {
 @media (orientation: landscape) and (max-height: 600px) {
   .remote-v12 .remote-script-title {
     display: none;
+  }
+  .remote-v12:has(> .remote-quick-menu) > .remote-timeline {
+    visibility: hidden;
   }
   .remote-v12 .remote-quick-menu {
     grid-column: 1;
@@ -4216,7 +4207,7 @@ input[type="checkbox"] {
   flex: 1;
   min-height: 40px;
 }
-.remote-v12 .remote-inline-heading .icon-button,
+.remote-v12 .quick-alignment > .icon-button,
 .remote-quick-menu .sheet-heading > .icon-button,
 .settings-sheet .sheet-heading > .icon-button {
   border: 0;
@@ -7207,17 +7198,34 @@ input[type="checkbox"] {
   font-size: 11px;
 }
 .remote-v06 .remote-header .remote-mic {
-  display: grid;
-  place-items: center;
-  min-width: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-width: 44px;
   height: 44px;
-  padding: 4px 8px;
-  gap: 2px;
-  border-radius: 12px;
-  background: var(--surface);
+  padding: 0 4px;
+  border-radius: 22px;
+  background: transparent;
+  color: var(--muted);
+}
+.remote-v06 .remote-header .remote-mic.ready,
+.remote-v06 .remote-header .remote-mic.active {
+  color: var(--ink);
+}
+.remote-mic > span {
   font-size: 10px;
   line-height: 1;
   white-space: nowrap;
+}
+.remote-mic > svg {
+  flex-shrink: 0;
+}
+.remote-v06 .remote-header > .icon-button svg,
+.remote-v06 .remote-header .remote-connection > svg,
+.remote-v06 .remote-header .remote-mic > svg {
+  width: 20px;
+  height: 20px;
 }
 .remote-mic-hint {
   position: absolute;
@@ -7229,14 +7237,6 @@ input[type="checkbox"] {
   color: var(--ink);
   font-size: 12px;
   pointer-events: none;
-}
-.remote-mic svg {
-  width: 20px;
-  height: 20px;
-}
-.remote-v06 .remote-header .remote-mic.ready {
-  background: var(--ink);
-  color: var(--surface);
 }
 @media (max-width: 520px) {
   .reader-top .voice-source-picker {

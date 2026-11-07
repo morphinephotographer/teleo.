@@ -401,7 +401,10 @@ test("phone seeks animate during drag; fixed 18pt text stays on the host guide t
       "max-width",
       "1000px",
     );
-    await phone.locator(".remote-inline-heading").getByRole("button").click();
+    await phone
+      .locator(".quick-alignment")
+      .getByRole("button", { name: t.close, exact: true })
+      .click();
     await expect
       .poll(async () =>
         Math.abs(

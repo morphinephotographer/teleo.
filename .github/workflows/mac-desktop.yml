@@ -1,0 +1,44 @@
+name: Mac app (desktop shell)
+
+on:
+  push:
+    branches: [claude/mac-desktop-app]
+    paths: ["apps/desktop/**", ".github/workflows/mac-desktop.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build app and DMG
+        run: |
+          swift --version
+          bash apps/desktop/build.sh 2>&1 | tee build.log
+      - name: Smoke test (launch for 8 s)
+        run: |
+          APP="apps/desktop/dist/teleo..app"
+          "$APP/Contents/MacOS/teleo" & PID=$!
+          sleep 8
+          if kill -0 $PID 2>/dev/null; then echo "running ok"; kill $PID; else echo "app exited early"; exit 1; fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: teleo-mac
+          path: |
+            apps/desktop/dist/*.dmg
+            apps/desktop/dist/*.zip
+      - name: Publish build to branch mac-desktop-builds
+        run: |
+          mkdir /tmp/pub && cp apps/desktop/dist/*.dmg build.log /tmp/pub/
+          git config user.name "teleo build bot"
+          git config user.email "actions@users.noreply.github.com"
+          git checkout --orphan mac-desktop-builds
+          git rm -rf --cached . >/dev/null
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          cp /tmp/pub/* .
+          git add -A
+          git commit -m "teleo. Mac build ${GITHUB_SHA::7}"
+          git push -f origin mac-desktop-builds

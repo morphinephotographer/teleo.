@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>en</string>
+		<string>ru</string>
+		<string>uk</string>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>teleo</string>
+	<key>CFBundleIdentifier</key>
+	<string>cc.teleo.desktop</string>
+	<key>CFBundleName</key>
+	<string>teleo.</string>
+	<key>CFBundleDisplayName</key>
+	<string>teleo.</string>
+	<key>CFBundleIconFile</key>
+	<string>AppIcon</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__VERSION__</string>
+	<key>CFBundleVersion</key>
+	<string>__BUILD__</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.productivity</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>Your words. Your pace.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>teleo. listens to your voice so the text can follow you while you read.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>teleo. recognises your speech so the text can follow you while you read.</string>
+	<key>WKAppBoundDomains</key>
+	<array>
+		<string>teleo.cc</string>
+	</array>
+</dict>
+</plist>

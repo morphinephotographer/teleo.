@@ -2,7 +2,7 @@ name: Mac app (desktop shell)
 
 on:
   push:
-    branches: [claude/mac-desktop-app]
+    branches: [main]
     paths: ["apps/desktop/**", ".github/workflows/mac-desktop.yml"]
   workflow_dispatch:
 
@@ -39,24 +39,10 @@ jobs:
           VERSION=$(node -p "require('./package.json').version")
           TAG="mac-v$VERSION"
           DMG="apps/desktop/dist/teleo-$VERSION.dmg"
-          NOTES="Нативное приложение teleo. для Mac (Apple Silicon + Intel). Скачай teleo-$VERSION.dmg, открой и перетащи teleo. в «Программы». Первый запуск: правый клик по значку → «Открыть» → «Открыть»."
+          NOTES="teleo. for Mac (Apple silicon + Intel). Download teleo-$VERSION.dmg, open it and drag teleo. to Applications. First launch: right-click the app → Open → Open (the app is not notarized)."
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$DMG" --clobber
           else
-            gh release create "$TAG" "$DMG" --target "$GITHUB_SHA" --title "teleo. для Mac $VERSION" --notes "$NOTES" --latest
+            gh release create "$TAG" "$DMG" --target "$GITHUB_SHA" --title "teleo. for Mac $VERSION" --notes "$NOTES" --latest
           fi
-          gh release view "$TAG" --json url,assets --jq '.url, .assets[].name' | tee release.txt
-      - name: Publish build (or logs) to branch mac-desktop-builds
-        if: always()
-        run: |
-          mkdir /tmp/pub && cp apps/desktop/dist/*.dmg build.log smoke.log release.txt /tmp/pub/ 2>/dev/null || true
-          echo "${{ job.status }}" > /tmp/pub/STATUS
-          git config user.name "teleo build bot"
-          git config user.email "actions@users.noreply.github.com"
-          git checkout --orphan mac-desktop-builds
-          git rm -rf --cached . >/dev/null
-          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
-          cp /tmp/pub/* .
-          git add -A
-          git commit -m "teleo. Mac build ${GITHUB_SHA::7}"
-          git push -f origin mac-desktop-builds
+          gh release view "$TAG" --json url,assets --jq '.url, .assets[].name'
